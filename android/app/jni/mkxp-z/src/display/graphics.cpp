@@ -1236,8 +1236,13 @@ void Graphics::update(bool checkForShutdown) {
         /* A reset (F12, "Restart game") or quit leaves the pause the normal way, so the
          * surface is bound again first; it's processed at the start of the next update.
          * (Handling it in here jumped past the rebind and the restarted game froze.) */
-        while (rmxpSpeed == 0 && !(checkForShutdown && (p->threadData->rqReset || p->threadData->rqTerm)))
+        while (rmxpSpeed == 0 && !(checkForShutdown && (p->threadData->rqReset || p->threadData->rqTerm))) {
             SDL_Delay(20);
+            /* When the app goes to the background, the event thread waits (holding SDL's
+             * activity lock) for this thread to reach the sync point. Without this the pause
+             * never reached it: deadlock, and Android froze on the next focus change (ANR). */
+            p->checkSyncLock();
+        }
         SDL_GL_MakeCurrent(p->threadData->window, p->threadData->glContext);
     }
     
