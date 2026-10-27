@@ -57,8 +57,8 @@ public class OptionsMenu implements TouchControls.Actions
         mActivity = activity;
         mGamePath = gamePath;
         mPrefs = activity.getSharedPreferences("rmxp_opciones", Activity.MODE_PRIVATE);
-        controls = new TouchControls(activity, mPrefs, this);
         pad = new PadMapper(mPrefs, this);
+        controls = new TouchControls(activity, mPrefs, this, pad);
     }
 
     private int pref(String key, int def) { return mPrefs.getInt(key, def); }
@@ -152,6 +152,7 @@ public class OptionsMenu implements TouchControls.Actions
             row.setOnClickListener(v -> TouchControls.pickKey(mActivity, true, k -> {
                 pad.setKey(b.getKey(), k);
                 row.setText(b.getValue() + "  →  " + Teclas.nombre(k));
+                controls.rebuild(); // el botón en pantalla con el mismo nombre también cambia
             }));
             box.addView(row);
         }
@@ -159,7 +160,7 @@ public class OptionsMenu implements TouchControls.Actions
         scroll.addView(box);
         new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_input).setView(scroll)
             .setPositiveButton(R.string.rmxp_edit_done, null)
-            .setNeutralButton(R.string.rmxp_edit_reset, (d, w) -> pad.reset())
+            .setNeutralButton(R.string.rmxp_edit_reset, (d, w) -> { pad.reset(); controls.rebuild(); })
             .show();
     }
 

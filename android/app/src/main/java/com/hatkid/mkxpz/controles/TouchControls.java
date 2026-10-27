@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
 import android.graphics.drawable.GradientDrawable;
 import android.hardware.input.InputManager;
 import android.os.Handler;
@@ -55,14 +54,16 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     private final SharedPreferences mPrefs;
     private final Actions mActions;
     private final int mAccent;
+    private final PadMapper mPad;
     private FrameLayout mLayer;
     private List<Control> mControls;
     private boolean mEditing, mShown = true, mUserVisible = true;
     private View mToolbar;
 
-    public TouchControls(Activity activity, SharedPreferences prefs, Actions actions)
+    public TouchControls(Activity activity, SharedPreferences prefs, Actions actions, PadMapper pad)
     {
         mActivity = activity;
+        mPad = pad;
         mPrefs = prefs;
         mActions = actions;
         mAccent = activity.getColor(R.color.rmxp_ambar);
@@ -87,11 +88,15 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
 
     // ------------------------------------------------------------ dibujar
 
-    private void rebuild()
+    /** Vuelve a dibujar todo (también después de cambiar el mapeo del mando). */
+    public void rebuild()
     {
         mLayer.removeAllViews();
-        for (Control c : mControls)
+        for (Control c : mControls) {
+            if (c.mando != 0)
+                c.tecla = mPad.keyFor(c.mando); // misma tecla que el botón del mando
             mLayer.addView(new ControlView(mActivity, c, mAccent, this));
+        }
         placeAll();
         if (mEditing)
             mLayer.addView(mToolbar);
@@ -246,7 +251,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             updateVisibility();
             onDone.run();
         });
-        done.setBackgroundTintList(ColorStateList.valueOf(mAccent));
+        ((GradientDrawable) done.getBackground()).setColor(mAccent);
         done.setTextColor(mActivity.getColor(R.color.rmxp_tinta));
         bar.addView(done);
         FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -257,7 +262,14 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
 
     private Button toolButton(int text, View.OnClickListener click)
     {
-        Button b = new Button(mActivity, null, 0, R.style.RmxpButton);
+        Button b = new Button(mActivity);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(mActivity.getColor(R.color.rmxp_pizarra));
+        bg.setCornerRadius(dp(14));
+        b.setBackground(bg);
+        b.setTextColor(mActivity.getColor(R.color.rmxp_niebla));
+        b.setAllCaps(false);
+        b.setPadding(Math.round(dp(16)), 0, Math.round(dp(16)), 0);
         b.setText(text);
         b.setOnClickListener(click);
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Math.round(dp(44)));
@@ -359,6 +371,8 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             key.setText(mActivity.getString(R.string.rmxp_edit_key) + ": " + Teclas.nombre(c.tecla));
             key.setOnClickListener(v -> pickKey(mActivity, true, k -> {
                 c.tecla = k;
+                if (c.mando != 0)
+                    mPad.setKey(c.mando, k); // el botón del mando también cambia
                 key.setText(mActivity.getString(R.string.rmxp_edit_key) + ": " + Teclas.nombre(k));
                 rebuild();
                 save();

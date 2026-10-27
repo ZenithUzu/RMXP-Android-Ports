@@ -773,7 +773,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                     if (context instanceof Activity) {
                         Window window = ((Activity) context).getWindow();
                         if (window != null) {
-                            if ((msg.obj instanceof Integer) && ((Integer) msg.obj != 0)) {
+                            // RMXP-Android-Ports: the game is always full screen (bars made the picture shrink)
+                            if (true) {
                                 int flags = View.SYSTEM_UI_FLAG_FULLSCREEN |
                                         View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
                                         View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |

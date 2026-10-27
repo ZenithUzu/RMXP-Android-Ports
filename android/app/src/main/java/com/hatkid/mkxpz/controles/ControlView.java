@@ -106,14 +106,21 @@ public class ControlView extends View
                 path.moveTo(cx, cy - s); path.lineTo(cx + 2 * s, cy); path.lineTo(cx, cy + s); path.close();
                 canvas.drawPath(path, p);
                 break;
-            case Control.TECLADO:
+            case Control.TECLADO: {
+                // Marco del teclado, dos filas de teclas y la barra espaciadora
                 p.setStyle(Paint.Style.STROKE);
                 p.setStrokeWidth(dp(1.6f));
-                canvas.drawRoundRect(cx - 2 * s, cy - 1.3f * s, cx + 2 * s, cy + 1.3f * s, dp(3), dp(3), p);
-                canvas.drawLine(cx - s, cy + 0.6f * s, cx + s, cy + 0.6f * s, p);
-                for (int i = -1; i <= 1; i++)
-                    canvas.drawPoint(cx + i * s, cy - 0.3f * s, p);
+                canvas.drawRoundRect(cx - 2.2f * s, cy - 1.4f * s, cx + 2.2f * s, cy + 1.4f * s, dp(3), dp(3), p);
+                p.setStyle(Paint.Style.FILL);
+                float k = s * 0.5f;
+                for (int row = 0; row < 2; row++)
+                    for (int col = 0; col < 5; col++) {
+                        float kx = cx - 1.6f * s + col * 0.8f * s, ky = cy - 0.8f * s + row * 0.7f * s;
+                        canvas.drawRect(kx - k / 2, ky - k / 2, kx + k / 2, ky + k / 2, p);
+                    }
+                canvas.drawRect(cx - s, cy + 0.65f * s, cx + s, cy + 0.65f * s + k, p);
                 break;
+            }
             default: // menú u ocultar: tres líneas
                 for (int i = -1; i <= 1; i++)
                     canvas.drawRect(cx - 1.6f * s, cy + i * 0.8f * s - dp(1.2f), cx + 1.6f * s, cy + i * 0.8f * s + dp(1.2f), p);

@@ -24,6 +24,7 @@ public class Control
     public int color;           // ARGB
     public float opacidad;      // 0.1 - 1
     public boolean pastilla;    // forma alargada en vez de círculo
+    public int mando;           // botón de mando que comparte la tecla (KEYCODE_BUTTON_*), 0 = ninguno
 
     static Control boton(String id, String etiqueta, int tecla, float x, float y, int tam, boolean pastilla)
     {
@@ -46,19 +47,36 @@ public class Control
         l.add(boton("y", "Y", KeyEvent.KEYCODE_D, 0.76f, 0.70f, 60, false));       // especial
         l.add(boton("l", "L", KeyEvent.KEYCODE_Q, 0.07f, 0.12f, 64, true));
         l.add(boton("r", "R", KeyEvent.KEYCODE_W, 0.93f, 0.12f, 64, true));
+        for (Control c : l)
+            c.mando = mandoPorDefecto(c.id);
         l.add(boton("esc", "Esc", KeyEvent.KEYCODE_ESCAPE, 0.40f, 0.92f, 60, true));
         l.add(boton("enter", "Enter", KeyEvent.KEYCODE_ENTER, 0.60f, 0.92f, 60, true));
         l.add(boton("shift", "Shift", KeyEvent.KEYCODE_SHIFT_LEFT, 0.50f, 0.92f, 60, true));
-        l.add(boton("teclado", "", TECLADO, 0.44f, 0.08f, 44, false));
-        l.add(boton("turbo", "", TURBO, 0.56f, 0.08f, 44, false));
+        // A los lados, debajo de L y R, para no tapar el juego
+        l.add(boton("teclado", "", TECLADO, 0.07f, 0.33f, 52, false));
+        l.add(boton("turbo", "", TURBO, 0.93f, 0.33f, 52, false));
         return l;
+    }
+
+    /** Los botones A/B/X/Y/L/R comparten tecla con los del mando ("Mando y teclado"). */
+    static int mandoPorDefecto(String id)
+    {
+        switch (id) {
+            case "a": return KeyEvent.KEYCODE_BUTTON_A;
+            case "b": return KeyEvent.KEYCODE_BUTTON_B;
+            case "x": return KeyEvent.KEYCODE_BUTTON_X;
+            case "y": return KeyEvent.KEYCODE_BUTTON_Y;
+            case "l": return KeyEvent.KEYCODE_BUTTON_L1;
+            case "r": return KeyEvent.KEYCODE_BUTTON_R1;
+        }
+        return 0;
     }
 
     JSONObject toJson() throws JSONException
     {
         return new JSONObject().put("id", id).put("cruceta", cruceta).put("tecla", tecla)
             .put("etiqueta", etiqueta).put("x", x).put("y", y).put("tam", tam)
-            .put("color", color).put("opacidad", opacidad).put("pastilla", pastilla);
+            .put("color", color).put("opacidad", opacidad).put("pastilla", pastilla).put("mando", mando);
     }
 
     static Control fromJson(JSONObject o) throws JSONException
@@ -68,6 +86,7 @@ public class Control
         c.cruceta = o.optBoolean("cruceta");
         c.color = o.optInt("color", 0xFFFFFFFF);
         c.opacidad = (float) o.optDouble("opacidad", 1);
+        c.mando = o.optInt("mando", mandoPorDefecto(c.id));
         return c;
     }
 
