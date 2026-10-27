@@ -361,8 +361,12 @@ public class MainActivity extends SDLActivity
     public void onWindowFocusChanged(boolean hasFocus)
     {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus)
+        if (hasFocus) {
             hideSystemBars();
+            // Resume here, not in onResume: by now the new drawing surface exists
+            if (mMenu != null)
+                mMenu.onBackground(false);
+        }
     }
 
     @Override
@@ -378,8 +382,6 @@ public class MainActivity extends SDLActivity
     {
         super.onResume();
         hideSystemBars();
-        if (mMenu != null)
-            mMenu.onBackground(false);
     }
 
     @Override

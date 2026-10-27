@@ -9,7 +9,6 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.BatteryManager;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -134,6 +133,16 @@ public class Medidor
         }
     }
 
+    /** Memoria en uso (RSS) leída de /proc: rápida, a diferencia de Debug.getPss() (~50 ms). */
+    private static long ramMb()
+    {
+        try (RandomAccessFile f = new RandomAccessFile("/proc/self/statm", "r")) {
+            return Long.parseLong(f.readLine().split(" ")[1]) * 4096 / 1048576; // páginas de 4 KB
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     private void update()
     {
         long now = SystemClock.elapsedRealtime();
@@ -144,7 +153,7 @@ public class Medidor
             List<String> items = new ArrayList<>();
             if (on(0)) items.add(Math.round((frames - mLastFrames) / seconds) + " FPS");
             if (on(1)) items.add("x" + mSpeed.getAsInt());
-            if (on(2)) items.add("RAM " + Debug.getPss() / 1024 + " MB");
+            if (on(2)) items.add("RAM " + ramMb() + " MB");
             if (on(3) && cpu >= 0 && mLastCpu >= 0) {
                 int cores = Runtime.getRuntime().availableProcessors();
                 items.add("CPU " + Math.round((cpu - mLastCpu) / seconds / cores) + " %");

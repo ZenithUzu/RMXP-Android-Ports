@@ -1226,11 +1226,19 @@ void Graphics::update(bool checkForShutdown) {
         setFixedAspectRatio(screen != 1);
     }
     
-    /* Paused while the options menu is open */
-    while (rmxpSpeed == 0) {
-        SDL_Delay(20);
-        if (checkForShutdown)
-            p->checkShutDownReset();
+    /* Paused while the options menu is open or the app is in the background.
+     * The GL context lives on this (Ruby) thread, but SDL backs it up and restores it from
+     * the event thread, so it never moved to the new surface after returning from another
+     * app: the picture froze and the next swap blocked the UI (ANR). Let go of the surface
+     * while paused and bind to the window's current one when resuming. */
+    if (rmxpSpeed == 0) {
+        SDL_GL_MakeCurrent(p->threadData->window, NULL);
+        while (rmxpSpeed == 0) {
+            SDL_Delay(20);
+            if (checkForShutdown)
+                p->checkShutDownReset();
+        }
+        SDL_GL_MakeCurrent(p->threadData->window, p->threadData->glContext);
     }
     
     int fps = rmxpFps;
