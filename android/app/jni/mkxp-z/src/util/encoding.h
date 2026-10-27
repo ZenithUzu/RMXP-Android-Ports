@@ -42,6 +42,11 @@ static std::string convertString(std::string &str) {
     
     iconv_t cd = iconv_open("UTF-8", charset.c_str());
     
+    // RMXP-Android-Ports: uchardet can guess a charset libiconv doesn't know.
+    // Using the invalid handle crashed the app on start; keep the text as-is instead.
+    if (cd == (iconv_t)-1)
+        return std::string(str);
+    
     size_t inLen = str.size();
     size_t outLen = inLen * 4;
     std::string buf(outLen, '\0');

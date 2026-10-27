@@ -43,7 +43,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = os.path.join(REPO, "android")
 HOME = os.path.join(os.path.expanduser("~"), "RMXP-Android-Ports")
 # Motor ya compilado (librerías .so). Se publica con .github/workflows/motor.yml.
-MOTOR_VERSION = "motor-v1"
+MOTOR_VERSION = "motor-v2"
 MOTOR_URL = "https://github.com/ZenithUzu/RMXP-Android-Ports/releases/download/%s/motor-android.zip" % MOTOR_VERSION
 WINDOWS = os.name == "nt"
 
@@ -319,7 +319,8 @@ def stage_game(root, work, info, soundfont, log):
             conf["midiSoundFont"] = own
             log("Música MIDI: se usa el SoundFont del juego (%s)." % own)
     with open(os.path.join(game, "mkxp.json"), "w", encoding="utf-8") as f:
-        json.dump(conf, f, ensure_ascii=False, indent=2)
+        # Solo ASCII: así el motor no intenta adivinar la codificación del archivo (se caía con algunas)
+        json.dump(conf, f, ensure_ascii=True, indent=2)
     return assets
 
 

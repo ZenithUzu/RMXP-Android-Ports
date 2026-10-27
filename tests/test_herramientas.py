@@ -63,6 +63,13 @@ class Utilidades(unittest.TestCase):
         self.assertIn("rmxp-internet.rb", conf["preloadScript"])
         self.assertTrue(os.path.exists(os.path.join(root, "Game.exe")))  # el original no se toca
 
+    def test_mkxp_json_solo_ascii(self):
+        root = make_game({"Game.ini": "[Game]\n", "mkxp.json": '{"windowTitle": "Pokémon Ñandú"}'})
+        assets = rmxp_port.stage_game(root, tempfile.mkdtemp(), {"title": "T"}, None, lambda t: None)
+        raw = open(os.path.join(assets, "game", "mkxp.json"), "rb").read()
+        self.assertTrue(raw.isascii())
+        self.assertEqual(json.loads(raw)["windowTitle"], "Pokémon Ñandú")
+
     def test_usa_soundfont_del_juego(self):
         root = make_game({"Game.ini": "[Game]\n"})
         os.makedirs(os.path.join(root, "Audio"))
