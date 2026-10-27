@@ -20,7 +20,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
@@ -44,7 +43,7 @@ public class OptionsMenu
     private final SharedPreferences mPrefs;
     private final String mGamePath;
 
-    private View mRoot, mPanel, mScanlines, mCorner;
+    private View mRoot, mPanel, mScanlines;
     private ImageButton mTurboButton;
     private TextView mSpeedValue, mFilterHint, mScreenHint, mHzHint, mFpsLabel;
     private boolean mTurbo = false;
@@ -79,24 +78,15 @@ public class OptionsMenu
         mScanlines.setBackground(linesDrawable);
         layout.addView(mScanlines, 1, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Botones redondos arriba al centro (lejos de L y R): teclado, turbo y menú
-        LinearLayout corner = new LinearLayout(mActivity);
-        ImageButton keyboard = roundButton(R.drawable.rmxp_ic_keyboard, R.string.rmxp_keyboard, dp);
-        keyboard.setOnClickListener(v -> toggleKeyboard());
-        mTurboButton = roundButton(R.drawable.rmxp_ic_turbo, R.string.rmxp_turbo, dp);
+        // Botones redondos arriba al centro (lejos de L y R): teclado, turbo y menú.
+        // Cada uno va directo en el layout para poder moverlo u ocultarlo en "Editar controles".
+        mTurboButton = roundButton(layout, R.id.rmxp_btn_turbo, R.drawable.rmxp_ic_turbo, R.string.rmxp_turbo, dp, 0);
         mTurboButton.setOnClickListener(v -> { mTurbo = !mTurbo; applySpeed(); });
-        ImageButton menuButton = roundButton(R.drawable.rmxp_ic_menu, R.string.rmxp_menu, dp);
+        ImageButton keyboard = roundButton(layout, R.id.rmxp_btn_keyboard, R.drawable.rmxp_ic_keyboard, R.string.rmxp_keyboard, dp, RelativeLayout.START_OF);
+        keyboard.setOnClickListener(v -> toggleKeyboard());
+        ImageButton menuButton = roundButton(layout, R.id.rmxp_btn_menu, R.drawable.rmxp_ic_menu, R.string.rmxp_menu, dp, RelativeLayout.END_OF);
         menuButton.setOnClickListener(v -> open());
-        corner.addView(keyboard);
-        corner.addView(mTurboButton);
-        corner.addView(menuButton);
-        RelativeLayout.LayoutParams cornerParams = new RelativeLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cornerParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-        cornerParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        cornerParams.topMargin = Math.round(8 * dp);
-        layout.addView(corner, cornerParams);
-        mCorner = corner;
+        java.util.List<View> extra = java.util.Arrays.asList(keyboard, mTurboButton, menuButton);
 
         // Medidor de FPS arriba a la izquierda
         mFpsLabel = new TextView(mActivity);
@@ -115,8 +105,7 @@ public class OptionsMenu
             }
         });
 
-        mEditor = new ControlsEditor(mActivity, mGamepad, mPrefs, () -> { mCorner.setVisibility(View.VISIBLE); applySpeed(); });
-        mEditor.applySaved();
+        mEditor = new ControlsEditor(mActivity, mGamepad, mPrefs, extra, this::applySpeed);
 
         // Menú (oculto hasta que se abre)
         mRoot = LayoutInflater.from(mActivity).inflate(R.layout.rmxp_menu, layout, false);
@@ -128,17 +117,23 @@ public class OptionsMenu
         applyAll();
     }
 
-    private ImageButton roundButton(int icon, int description, float dp)
+    /** Botón redondo arriba al centro; "side" lo pone a un lado del turbo (0 = el turbo). */
+    private ImageButton roundButton(ViewGroup layout, int id, int icon, int description, float dp, int side)
     {
         ImageButton b = new ImageButton(mActivity);
+        b.setId(id);
         b.setImageResource(icon);
         b.setBackgroundResource(R.drawable.rmxp_round_button);
         b.setContentDescription(mActivity.getString(description));
         int size = Math.round(44 * dp);
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(size, size);
-        p.leftMargin = Math.round(8 * dp);
-        b.setLayoutParams(p);
-        b.setAlpha(0.85f);
+        RelativeLayout.LayoutParams p = new RelativeLayout.LayoutParams(size, size);
+        p.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+        if (side == 0)
+            p.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        else
+            p.addRule(side, R.id.rmxp_btn_turbo);
+        p.topMargin = p.leftMargin = p.rightMargin = Math.round(6 * dp);
+        layout.addView(b, p);
         return b;
     }
 
@@ -178,7 +173,6 @@ public class OptionsMenu
         mRoot.findViewById(R.id.rmxp_pad_edit).setOnClickListener(v -> {
             // El juego sigue en pausa mientras se editan los controles
             mRoot.setVisibility(View.GONE);
-            mCorner.setVisibility(View.GONE);
             save("controles", 1);
             applyPad();
             mEditor.start((ViewGroup) mRoot.getParent());
@@ -334,7 +328,8 @@ public class OptionsMenu
 
     private void applyPad()
     {
-        mGamepad.applyLook(pref("opacidad", 30), pref("tamano", 100), pref("controles", 1) == 1);
+        mGamepad.applyLook(pref("opacidad", 30), pref("controles", 1) == 1);
+        mEditor.apply(pref("tamano", 100));
     }
 
     // ---------------------------------------------------------------- abrir / cerrar

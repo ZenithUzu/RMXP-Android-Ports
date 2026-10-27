@@ -108,6 +108,11 @@ public class GamepadButton extends ImageView
         setForeground(foregroundDrawable);
     }
 
+    public int getKey()
+    {
+        return mKey;
+    }
+
     public void setForegroundText(String text)
     {
         this.mForegroundDrawable = null;

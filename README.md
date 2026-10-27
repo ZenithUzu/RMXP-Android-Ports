@@ -18,8 +18,8 @@ solo.
 | **Filtros** | *Nítido suave* (recomendado: píxeles parejos que llenan la pantalla), *Píxel* (escala exacta), *Nítido*, *Suave* y líneas de pantalla antigua. |
 | **Hz y FPS** | Elige los Hz de la pantalla (Auto, 60 o el máximo) y si el juego corre a sus propios FPS o a los de la pantalla (60 Hz = 60 fps, 120 Hz = 120 fps). Medidor de FPS opcional. |
 | **Velocidad rápida hasta x10** | Botón de avance rápido en pantalla; la velocidad (x2 a x10) se elige en el menú. |
-| **Menú de opciones** | Botón ☰ arriba al centro, el botón Atrás del teléfono o Select en un mando. Pausa el juego mientras está abierto. |
-| **Controles** | Botones con Enter, Esc y teclado de Android. *Editar controles*: arrastra los botones a donde quieras y cambia la tecla de cada uno. Opacidad y tamaño ajustables. Funcionan mandos USB y Bluetooth. |
+| **Menú de opciones** | Botón Atrás del teléfono o Select en un mando (el botón ☰ se puede mostrar en *Editar controles*). Pausa el juego mientras está abierto. |
+| **Controles** | Botones Enter y Esc, y botón de teclado de Android. *Editar controles*: cada botón se puede mover, cambiar de tecla, de tamaño y de transparencia, u ocultar. Funcionan mandos USB y Bluetooth. |
 | **Internet** | HTTP y HTTPS nativos. Los fangames viejos que se conectan con `wininet.dll` se redirigen solos a la conexión de Android. |
 | **Actualizaciones seguras** | La versión nueva se prepara aparte y solo reemplaza a la vieja cuando está completa. Las partidas nunca se borran ni se sobrescriben. |
 | **Firma del autor** | Cada juego recibe su propia firma, a nombre de su creador (se lee del Léeme o Readme del juego). |

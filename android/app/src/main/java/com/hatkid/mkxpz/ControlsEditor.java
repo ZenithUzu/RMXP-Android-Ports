@@ -13,15 +13,20 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import com.hatkid.mkxpz.gamepad.Gamepad;
 import com.hatkid.mkxpz.gamepad.GamepadButton;
 
 /**
- * RMXP-Android-Ports: modo para editar los controles en pantalla.
- * Arrastrar un grupo (cruceta, botones) lo mueve; tocar un botón cambia su tecla.
- * Posiciones y teclas se guardan en las preferencias y se aplican al abrir el juego.
+ * RMXP-Android-Ports: editor de controles en pantalla. Cada control (cruceta, cada botón,
+ * teclado, turbo y menú) se puede mover, ocultar, cambiar de tamaño y de transparencia;
+ * los botones del mando también de tecla. Todo se guarda en las preferencias.
  */
 public class ControlsEditor
 {
@@ -37,14 +42,17 @@ public class ControlsEditor
     private final Activity mActivity;
     private final Gamepad mGamepad;
     private final SharedPreferences mPrefs;
+    private final List<View> mExtra; // teclado, turbo, menú
     private final Runnable mOnDone;
     private View mOverlay;
+    private float mGlobalSize = 1f;
 
-    public ControlsEditor(Activity activity, Gamepad gamepad, SharedPreferences prefs, Runnable onDone)
+    public ControlsEditor(Activity activity, Gamepad gamepad, SharedPreferences prefs, List<View> extra, Runnable onDone)
     {
         mActivity = activity;
         mGamepad = gamepad;
         mPrefs = prefs;
+        mExtra = extra;
         mOnDone = onDone;
     }
 
@@ -53,12 +61,35 @@ public class ControlsEditor
         return mActivity.getResources().getResourceEntryName(v.getId());
     }
 
-    /** Aplica las posiciones y teclas guardadas (al abrir la app). */
-    public void applySaved()
+    private List<View> controls()
     {
-        for (View group : mGamepad.movableGroups()) {
-            group.setTranslationX(mPrefs.getFloat("x_" + name(group), 0));
-            group.setTranslationY(mPrefs.getFloat("y_" + name(group), 0));
+        List<View> all = new ArrayList<>(mGamepad.controls());
+        all.addAll(mExtra);
+        return all;
+    }
+
+    private boolean hidden(View v)
+    {
+        // El botón de menú viene oculto: Atrás (o Select en un mando) ya abre el menú
+        return mPrefs.getBoolean("oculto_" + name(v), v.getId() == R.id.rmxp_btn_menu);
+    }
+
+    /** Aplica posición, tamaño, transparencia, visibilidad y tecla de cada control. */
+    public void apply(int globalSizePercent)
+    {
+        mGlobalSize = globalSizePercent / 100f;
+        for (View v : controls()) {
+            String n = name(v);
+            v.setTranslationX(mPrefs.getFloat("x_" + n, 0));
+            v.setTranslationY(mPrefs.getFloat("y_" + n, 0));
+            float scale = mGlobalSize * mPrefs.getInt("tam_" + n, 100) / 100f;
+            v.setScaleX(scale);
+            v.setScaleY(scale);
+            v.setAlpha(mPrefs.getInt("opa_" + n, 100) / 100f);
+            // INVISIBLE (no GONE) para que los demás no cambien de lugar; tampoco recibe toques
+            v.setVisibility(hidden(v) && !isActive() ? View.INVISIBLE : View.VISIBLE);
+            if (isActive() && hidden(v))
+                v.setAlpha(0.25f); // en el editor se ven tenues para poder volver a mostrarlos
         }
         for (GamepadButton b : mGamepad.buttons()) {
             int key = mPrefs.getInt("tecla_" + name(b), 0);
@@ -67,6 +98,8 @@ public class ControlsEditor
         }
     }
 
+    public boolean isActive() { return mOverlay != null; }
+
     @SuppressLint("ClickableViewAccessibility")
     public void start(ViewGroup layout)
     {
@@ -74,7 +107,6 @@ public class ControlsEditor
         FrameLayout overlay = new FrameLayout(mActivity);
         overlay.setBackgroundColor(0x33000000);
 
-        // Barra de instrucciones arriba
         LinearLayout bar = new LinearLayout(mActivity);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setBackgroundResource(R.drawable.rmxp_panel_bar);
@@ -98,9 +130,8 @@ public class ControlsEditor
         doneParams.leftMargin = Math.round(8 * dp);
         bar.addView(done, doneParams);
         overlay.addView(bar, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
+            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
 
-        // Arrastrar y tocar
         float slop = 8 * dp;
         overlay.setOnTouchListener(new View.OnTouchListener() {
             View dragging;
@@ -111,7 +142,7 @@ public class ControlsEditor
             public boolean onTouch(View v, MotionEvent e) {
                 switch (e.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
-                        dragging = groupAt(e.getRawX(), e.getRawY());
+                        dragging = controlAt(e.getRawX(), e.getRawY());
                         if (dragging == null)
                             return false;
                         startX = e.getRawX();
@@ -134,15 +165,12 @@ public class ControlsEditor
                     case MotionEvent.ACTION_UP:
                         if (dragging == null)
                             return false;
-                        if (moved) {
+                        if (moved)
                             mPrefs.edit()
                                 .putFloat("x_" + name(dragging), dragging.getTranslationX())
                                 .putFloat("y_" + name(dragging), dragging.getTranslationY()).apply();
-                        } else {
-                            GamepadButton b = buttonAt(e.getRawX(), e.getRawY());
-                            if (b != null)
-                                chooseKey(b);
-                        }
+                        else
+                            editControl(dragging);
                         dragging = null;
                         return true;
                 }
@@ -152,40 +180,100 @@ public class ControlsEditor
 
         mOverlay = overlay;
         layout.addView(overlay, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        apply(Math.round(mGlobalSize * 100));
     }
 
     private void stop(ViewGroup layout)
     {
         layout.removeView(mOverlay);
         mOverlay = null;
+        apply(Math.round(mGlobalSize * 100));
         mOnDone.run();
     }
 
-    public boolean isActive() { return mOverlay != null; }
-
-    private boolean contains(View v, float rawX, float rawY)
+    private View controlAt(float x, float y)
     {
         Rect r = new Rect();
-        return v.getVisibility() == View.VISIBLE && v.getGlobalVisibleRect(r) && r.contains((int) rawX, (int) rawY);
-    }
-
-    private View groupAt(float x, float y)
-    {
-        for (View g : mGamepad.movableGroups())
-            if (contains(g, x, y))
-                return g;
+        List<View> all = controls();
+        for (int i = all.size() - 1; i >= 0; i--) { // los de arriba primero
+            View v = all.get(i);
+            if (v.getVisibility() == View.VISIBLE && v.getGlobalVisibleRect(r) && r.contains((int) x, (int) y))
+                return v;
+        }
         return null;
     }
 
-    private GamepadButton buttonAt(float x, float y)
+    /** Ventana con las opciones de un control: tecla, tamaño, transparencia y visible. */
+    private void editControl(View control)
     {
-        for (GamepadButton b : mGamepad.buttons())
-            if (contains(b, x, y))
-                return b;
-        return null;
+        String n = name(control);
+        float dp = mActivity.getResources().getDisplayMetrics().density;
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = Math.round(20 * dp);
+        box.setPadding(pad, Math.round(8 * dp), pad, 0);
+
+        if (control instanceof GamepadButton) {
+            GamepadButton b = (GamepadButton) control;
+            Button key = new Button(mActivity);
+            key.setText(mActivity.getString(R.string.rmxp_edit_key) + ": " + Gamepad.keyLabel(b.getKey()));
+            key.setAllCaps(false);
+            key.setOnClickListener(v -> chooseKey(b, key));
+            box.addView(key);
+        }
+
+        box.addView(label(R.string.rmxp_pad_size));
+        SeekBar size = new SeekBar(mActivity);
+        size.setMax(150); // 50 % a 200 %
+        size.setProgress(mPrefs.getInt("tam_" + n, 100) - 50);
+        box.addView(size);
+
+        box.addView(label(R.string.rmxp_edit_opacity));
+        SeekBar opacity = new SeekBar(mActivity);
+        opacity.setMax(90); // 10 % a 100 %
+        opacity.setProgress(mPrefs.getInt("opa_" + n, 100) - 10);
+        box.addView(opacity);
+
+        Switch visible = new Switch(mActivity);
+        visible.setText(R.string.rmxp_edit_visible);
+        visible.setChecked(!hidden(control));
+        box.addView(visible);
+
+        SeekBar.OnSeekBarChangeListener live = new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
+                float scale = mGlobalSize * (size.getProgress() + 50) / 100f;
+                control.setScaleX(scale);
+                control.setScaleY(scale);
+                control.setAlpha((opacity.getProgress() + 10) / 100f);
+            }
+            public void onStartTrackingTouch(SeekBar s) {}
+            public void onStopTrackingTouch(SeekBar s) {}
+        };
+        size.setOnSeekBarChangeListener(live);
+        opacity.setOnSeekBarChangeListener(live);
+
+        new AlertDialog.Builder(mActivity)
+            .setView(box)
+            .setPositiveButton(R.string.rmxp_edit_done, (d, w) -> {
+                mPrefs.edit()
+                    .putInt("tam_" + n, size.getProgress() + 50)
+                    .putInt("opa_" + n, opacity.getProgress() + 10)
+                    .putBoolean("oculto_" + n, !visible.isChecked()).apply();
+                apply(Math.round(mGlobalSize * 100));
+            })
+            .setOnCancelListener(d -> apply(Math.round(mGlobalSize * 100)))
+            .show();
     }
 
-    private void chooseKey(GamepadButton button)
+    private TextView label(int text)
+    {
+        TextView t = new TextView(mActivity);
+        t.setText(text);
+        t.setPadding(0, Math.round(12 * mActivity.getResources().getDisplayMetrics().density), 0, 0);
+        return t;
+    }
+
+    private void chooseKey(GamepadButton button, Button shown)
     {
         String[] labels = new String[KEYS.length];
         for (int i = 0; i < KEYS.length; i++)
@@ -195,6 +283,7 @@ public class ControlsEditor
             .setItems(labels, (d, which) -> {
                 mGamepad.setButtonKey(button, KEYS[which]);
                 mPrefs.edit().putInt("tecla_" + name(button), KEYS[which]).apply();
+                shown.setText(mActivity.getString(R.string.rmxp_edit_key) + ": " + labels[which]);
             })
             .show();
     }
@@ -202,14 +291,13 @@ public class ControlsEditor
     private void reset()
     {
         SharedPreferences.Editor ed = mPrefs.edit();
-        for (View g : mGamepad.movableGroups()) {
-            g.setTranslationX(0);
-            g.setTranslationY(0);
-            ed.remove("x_" + name(g)).remove("y_" + name(g));
+        for (View v : controls()) {
+            String n = name(v);
+            ed.remove("x_" + n).remove("y_" + n).remove("tam_" + n).remove("opa_" + n)
+              .remove("oculto_" + n).remove("tecla_" + n);
         }
-        for (GamepadButton b : mGamepad.buttons())
-            ed.remove("tecla_" + name(b));
         ed.apply();
         mGamepad.resetKeys();
+        apply(Math.round(mGlobalSize * 100));
     }
 }

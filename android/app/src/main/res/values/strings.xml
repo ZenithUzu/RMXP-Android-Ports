@@ -48,9 +48,12 @@
     <string name="rmxp_fps_hint">Igual a la pantalla: 60 Hz = 60 fps, 120 Hz = 120 fps. Con Essentials v20 o más nuevo se ve más fluido; en juegos más viejos el juego también corre más rápido.</string>
     <string name="rmxp_fps_show">Mostrar FPS</string>
     <string name="rmxp_pad_edit">Editar controles</string>
-    <string name="rmxp_edit_hint">Arrastra un grupo de botones para moverlo. Toca un botón para cambiar su tecla.</string>
+    <string name="rmxp_edit_hint">Arrastra un botón para moverlo. Tócalo para cambiar su tecla, tamaño o transparencia, u ocultarlo.</string>
     <string name="rmxp_edit_reset">Restablecer</string>
     <string name="rmxp_edit_done">Listo</string>
     <string name="rmxp_edit_choose">Tecla para este botón</string>
     <string name="rmxp_keyboard">Teclado</string>
+    <string name="rmxp_edit_key">Tecla</string>
+    <string name="rmxp_edit_opacity">Transparencia</string>
+    <string name="rmxp_edit_visible">Visible</string>
 </resources>

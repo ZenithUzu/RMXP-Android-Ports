@@ -18,8 +18,8 @@ itself.
 | **Filters** | *Sharp smooth* (recommended: even pixels that fill the screen), *Pixel* (exact scaling), *Sharp*, *Smooth*, and old-screen scanlines. |
 | **Hz and FPS** | Pick the screen's Hz (Auto, 60 or max) and whether the game runs at its own FPS or the screen's (60 Hz = 60 fps, 120 Hz = 120 fps). Optional FPS counter. |
 | **Fast forward up to x10** | On-screen fast-forward button; pick the speed (x2 to x10) in the menu. |
-| **Options menu** | The ☰ button at the top center, the phone's Back button, or Select on a controller. The game pauses while it's open. |
-| **Controls** | Enter, Esc and Android keyboard buttons. *Edit controls*: drag buttons anywhere and change each one's key. Adjustable opacity and size. USB and Bluetooth controllers work. |
+| **Options menu** | The phone's Back button or Select on a controller (the ☰ button can be shown in *Edit controls*). The game pauses while it's open. |
+| **Controls** | Enter and Esc buttons plus an Android keyboard button. *Edit controls*: move, remap, resize, change the transparency of, or hide each button. USB and Bluetooth controllers work. |
 | **Internet** | Native HTTP and HTTPS. Older fangames that go online through `wininet.dll` are redirected to Android's connection automatically. |
 | **Safe updates** | The new version is prepared on the side and only replaces the old one once it's complete. Saves are never deleted or overwritten. |
 | **Author signature** | Each game gets its own signature in its creator's name (read from the game's Readme). |

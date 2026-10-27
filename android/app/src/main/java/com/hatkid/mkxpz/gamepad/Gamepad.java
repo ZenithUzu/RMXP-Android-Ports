@@ -56,6 +56,8 @@ public class Gamepad
     private GamepadButton gpadBtnCTRL;
     private GamepadButton gpadBtnALT;
     private GamepadButton gpadBtnSHIFT;
+    private GamepadButton gpadBtnENTER;
+    private GamepadButton gpadBtnESC;
 
     public void init(GamepadConfig gpadConfig, boolean invisible)
     {
@@ -88,6 +90,8 @@ public class Gamepad
         gpadBtnCTRL = layout.findViewById(R.id.button_CTRL);
         gpadBtnALT = layout.findViewById(R.id.button_ALT);
         gpadBtnSHIFT = layout.findViewById(R.id.button_SHIFT);
+        gpadBtnENTER = layout.findViewById(R.id.button_ENTER);
+        gpadBtnESC = layout.findViewById(R.id.button_ESC);
 
         // Setup in-screen gamepad listeners
         mGamepadLayout.setOnTouchListener((view, motionEvent) -> false);
@@ -105,8 +109,8 @@ public class Gamepad
         ViewUtils.changeOpacity(mGamepadLayout, mGamepadConfig.opacity);
     }
 
-    /** RMXP-Android-Ports: groups that can be dragged (D-pad, button clusters). */
-    public java.util.List<View> movableGroups()
+    /** RMXP-Android-Ports: every control (D-pad and each button), to move it, resize it or hide it. */
+    public java.util.List<View> controls()
     {
         java.util.List<View> groups = new java.util.ArrayList<>();
         for (int i = 0; mGamepadLayout != null && i < mGamepadLayout.getChildCount(); i++)
@@ -118,7 +122,7 @@ public class Gamepad
     public GamepadButton[] buttons()
     {
         return new GamepadButton[] { gpadBtnA, gpadBtnB, gpadBtnC, gpadBtnX, gpadBtnY, gpadBtnZ,
-            gpadBtnL, gpadBtnR, gpadBtnCTRL, gpadBtnALT, gpadBtnSHIFT };
+            gpadBtnL, gpadBtnR, gpadBtnCTRL, gpadBtnALT, gpadBtnSHIFT, gpadBtnENTER, gpadBtnESC };
     }
 
     /** Short label for a key code: "ENTER", "ESC", "Z"... */
@@ -157,31 +161,13 @@ public class Gamepad
         gpadBtn.setOnKeyUpListener(key -> mOnKeyUpListener.onKeyUp(key));
     }
 
-    /**
-     * RMXP-Android-Ports: opacity (10-100), size (50-150 %) and visibility from the options menu.
-     * Size uses view scaling (not ViewUtils.resize) so it can change live without adding up.
-     */
-    public void applyLook(int opacity, int sizePercent, boolean visible)
+    /** RMXP-Android-Ports: overall opacity (10-100) and visibility from the options menu. */
+    public void applyLook(int opacity, boolean visible)
     {
         if (mGamepadLayout == null)
             return;
         mGamepadLayout.setVisibility(visible ? View.VISIBLE : View.GONE);
         ViewUtils.changeOpacity(mGamepadLayout, opacity);
-        float scale = sizePercent / 100f;
-        for (int i = 0; i < mGamepadLayout.getChildCount(); i++) {
-            View child = mGamepadLayout.getChildAt(i);
-            int[] rules = ((RelativeLayout.LayoutParams) child.getLayoutParams()).getRules();
-            boolean end = rules[RelativeLayout.ALIGN_PARENT_END] != 0;
-            boolean middle = rules[RelativeLayout.CENTER_HORIZONTAL] != 0 && rules[RelativeLayout.ALIGN_PARENT_START] == 0;
-            boolean bottom = rules[RelativeLayout.ALIGN_PARENT_BOTTOM] != 0;
-            // Grow from the screen corner each group sits in, so nothing slides off screen
-            child.post(() -> {
-                child.setPivotX(end ? child.getWidth() : middle ? child.getWidth() / 2f : 0);
-                child.setPivotY(bottom ? child.getHeight() : 0);
-                child.setScaleX(scale);
-                child.setScaleY(scale);
-            });
-        }
     }
 
     public void showView()
@@ -220,6 +206,8 @@ public class Gamepad
         setGamepadButtonKey(gpadBtnCTRL, mGamepadConfig.keycodeCTRL);
         setGamepadButtonKey(gpadBtnALT, mGamepadConfig.keycodeALT);
         setGamepadButtonKey(gpadBtnSHIFT, mGamepadConfig.keycodeSHIFT);
+        setGamepadButtonKey(gpadBtnENTER, mGamepadConfig.keycodeENTER);
+        setGamepadButtonKey(gpadBtnESC, mGamepadConfig.keycodeESC);
     }
 
     public boolean processGamepadEvent(KeyEvent evt)
