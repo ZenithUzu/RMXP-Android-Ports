@@ -24,6 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # El Ruby de Ubuntu instala gemas en /var/lib/gems (sin permiso); este no
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.1"
+
       - name: Instalar SDK, NDK y fuentes de dependencias
         run: bash tools/setup.sh
 
