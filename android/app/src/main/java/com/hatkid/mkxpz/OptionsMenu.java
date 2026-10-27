@@ -248,9 +248,10 @@ public class OptionsMenu implements TouchControls.Actions
         // La opción vieja "Llenar" (pantalla = 1) equivale a estirar al 100 %
         int stretch = mPrefs.contains("estirar") ? pref("estirar", 0) : pref("pantalla", 0) * 100;
         mStretchValue.setText(stretch + " %");
-        // Filtro fijo "nítido suave": píxeles parejos que llenan la pantalla
-        MainActivity.nativeSetVideo(3, 0);
+        // Filtro fijo "nítido" (vecino más cercano, como Kirin). Va después de nativeSetStretch,
+        // que por dentro pide el filtro 3 (suave y borroso); la última orden es la que vale.
         MainActivity.nativeSetStretch(stretch);
+        MainActivity.nativeSetVideo(0, 0);
     }
 
     /**
