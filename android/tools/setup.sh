@@ -53,10 +53,7 @@ if (( license_status[1] != 0 )); then
   echo "Android SDK license acceptance failed (exit ${license_status[1]})." >&2
   exit "${license_status[1]}"
 fi
-if (( license_status[0] != 0 && license_status[0] != 141 )); then
-  echo "Failed to supply Android SDK license responses." >&2
-  exit "${license_status[0]}"
-fi
+# yes always ends with an error when sdkmanager closes the pipe (141 or 1, depending on the shell)
 "$SDKMANAGER" \
   "platform-tools" \
   "platforms;android-33" \
