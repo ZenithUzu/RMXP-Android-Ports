@@ -112,7 +112,12 @@ public class OptionsMenu implements TouchControls.Actions
             SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_F12);
             SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_F12);
         });
-        mRoot.findViewById(R.id.rmxp_quit).setOnClickListener(v -> mActivity.finish());
+        mRoot.findViewById(R.id.rmxp_quit).setOnClickListener(v -> {
+            // Cerrar la app de golpe: con el juego en pausa, el cierre normal de SDL se queda
+            // esperando al hilo del juego y el proceso sigue vivo (al volver: pantalla negra).
+            mActivity.finishAndRemoveTask();
+            android.os.Process.killProcess(android.os.Process.myPid());
+        });
         mRoot.findViewById(R.id.rmxp_pad_edit).setOnClickListener(v -> {
             // El juego sigue en pausa mientras se editan los controles
             mRoot.setVisibility(View.GONE);
@@ -299,11 +304,22 @@ public class OptionsMenu implements TouchControls.Actions
     /** Muestra u oculta el teclado de Android (para escribir nombres; Enter confirma). */
     private void toggleKeyboard()
     {
-        if (SDLActivity.isScreenKeyboardShown()) {
-            InputMethodManager imm = (InputMethodManager) mActivity.getSystemService(Activity.INPUT_METHOD_SERVICE);
-            imm.hideSoftInputFromWindow(mActivity.getWindow().getDecorView().getWindowToken(), 0);
+        // SDL cree que el teclado sigue abierto si el jugador lo cerró con Atrás o el gesto;
+        // en Android 11+ se pregunta al sistema si de verdad se ve.
+        boolean shown;
+        if (Build.VERSION.SDK_INT >= 30) {
+            android.view.WindowInsets in = mActivity.getWindow().getDecorView().getRootWindowInsets();
+            shown = in != null && in.isVisible(android.view.WindowInsets.Type.ime());
+        } else {
+            shown = SDLActivity.isScreenKeyboardShown();
+        }
+        if (shown) {
+            SDLActivity.sendMessage(3, 0); // COMMAND_TEXTEDIT_HIDE: oculta y devuelve el foco al juego
         } else {
             SDLActivity.showTextInput(0, 0, 1, 1);
+            // showSoftInput a veces llega antes de que el campo tenga foco; esto lo abre al instante
+            if (Build.VERSION.SDK_INT >= 30)
+                mHandler.post(() -> mActivity.getWindow().getInsetsController().show(android.view.WindowInsets.Type.ime()));
         }
     }
 
