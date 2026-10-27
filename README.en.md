@@ -47,7 +47,7 @@ prebuilt engine from this repository's releases.
      don't exist on Android (such as `Win32API` calls or `.wmv` videos).
    - **Name, Author and Version**: taken from `Game.ini` and the Readme. If the
      author isn't found, type it in.
-   - **Icon** (PNG) and **SoundFont** (`.sf2`, only for games with MIDI music): optional.
+   - **Icon** (PNG) and **SoundFont** (`.sf2`, only for games with MIDI music): optional. If the game already ships a `.sf2`, it is used automatically.
 4. Press **Crear APK**. The first time takes a few minutes while Gradle
    downloads what it needs; later builds are much faster.
 

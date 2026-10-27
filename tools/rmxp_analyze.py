@@ -259,7 +259,9 @@ def analyze(root):
             elif e == ".dll" and not low.startswith("rgss") and low != "zlib1.dll":
                 dlls.append(fn)
     I["tamano_mb"] = round(size / 1048576, 1)
-    if exts[".mid"] or exts[".midi"]:
+    if exts[".sf2"]:
+        I["soundfont"] = "el juego trae su propio SoundFont: la música MIDI va a sonar"
+    elif exts[".mid"] or exts[".midi"]:
         A("Tiene %d archivos MIDI: hay que poner un SoundFont (.sf2) y configurar "
           "\"midiSoundFont\" en mkxp.json, si no, no habra musica." % (exts[".mid"] + exts[".midi"]))
     for bad, why in ((".wma", "audio WMA"), (".avi", "video AVI"), (".wmv", "video WMV"), (".mpg", "video MPG")):

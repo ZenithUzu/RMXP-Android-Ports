@@ -271,6 +271,15 @@ def strip_json_comments(text):
     return re.sub(r",(\s*[}\]])", r"\1", "".join(out))  # comas sobrantes
 
 
+def find_soundfont(game):
+    """Primer .sf2 dentro del juego (el de la carpeta principal primero), como ruta relativa."""
+    for d, _, files in sorted(os.walk(game), key=lambda w: (w[0].count(os.sep), w[0])):
+        for f in sorted(files):
+            if f.lower().endswith(".sf2"):
+                return os.path.relpath(os.path.join(d, f), game).replace(os.sep, "/")
+    return None
+
+
 def stage_game(root, work, info, soundfont, log):
     """Copia el juego a work/assets/game, sin .exe/.dll, con los parches y mkxp.json."""
     assets = os.path.join(work, "assets")
@@ -304,6 +313,11 @@ def stage_game(root, work, info, soundfont, log):
     if soundfont:
         shutil.copy2(soundfont, os.path.join(game, "soundfont.sf2"))
         conf["midiSoundFont"] = "soundfont.sf2"
+    elif not conf.get("midiSoundFont"):
+        own = find_soundfont(game)
+        if own:
+            conf["midiSoundFont"] = own
+            log("Música MIDI: se usa el SoundFont del juego (%s)." % own)
     with open(os.path.join(game, "mkxp.json"), "w", encoding="utf-8") as f:
         json.dump(conf, f, ensure_ascii=False, indent=2)
     return assets

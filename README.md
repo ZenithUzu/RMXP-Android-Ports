@@ -47,7 +47,7 @@ motor ya compilado desde las versiones (releases) de este repositorio.
      Android (por ejemplo, llamadas `Win32API` o videos `.wmv`).
    - **Nombre, Autor y Versión**: los saca de `Game.ini` y del Léeme. Si el
      autor no aparece, escríbelo tú.
-   - **Icono** (PNG) y **SoundFont** (`.sf2`, solo para juegos con música MIDI): opcionales.
+   - **Icono** (PNG) y **SoundFont** (`.sf2`, solo para juegos con música MIDI): opcionales. Si el juego ya trae un `.sf2`, se usa solo.
 4. Presiona **Crear APK**. La primera vez tarda unos minutos porque Gradle
    descarga lo que necesita; las siguientes, mucho menos.
 

@@ -63,6 +63,14 @@ class Utilidades(unittest.TestCase):
         self.assertIn("rmxp-internet.rb", conf["preloadScript"])
         self.assertTrue(os.path.exists(os.path.join(root, "Game.exe")))  # el original no se toca
 
+    def test_usa_soundfont_del_juego(self):
+        root = make_game({"Game.ini": "[Game]\n"})
+        os.makedirs(os.path.join(root, "Audio"))
+        open(os.path.join(root, "Audio", "musica.sf2"), "w").close()
+        assets = rmxp_port.stage_game(root, tempfile.mkdtemp(), {"title": "T"}, None, lambda t: None)
+        conf = json.load(open(os.path.join(assets, "game", "mkxp.json"), encoding="utf-8"))
+        self.assertEqual(conf["midiSoundFont"], "Audio/musica.sf2")
+
 
 if __name__ == "__main__":
     unittest.main()
