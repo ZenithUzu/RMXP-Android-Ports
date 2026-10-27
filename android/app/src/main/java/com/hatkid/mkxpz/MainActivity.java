@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.MotionEvent;
 import android.view.InputDevice;
 import android.os.Build;
@@ -60,6 +61,10 @@ public class MainActivity extends SDLActivity
     public static native void nativeSetSpeed(int speed);
     /** filter: 0 sharp, 1 smooth, 2 pixel perfect, 3 sharp smooth. screen: 0 original, 1 fill, 2 wide. */
     public static native void nativeSetVideo(int filter, int screen);
+    /** 0 = the game's own frame rate, otherwise frames per second (screen Hz). */
+    public static native void nativeSetFps(int fps);
+    /** Frames shown so far, for the FPS counter. */
+    public static native int nativeGetDrawnFrames();
     private boolean mGamepadInvisible = false;
 
     /** True when the APK ships a game under assets/game. */
@@ -252,6 +257,12 @@ public class MainActivity extends SDLActivity
     {
         super.onCreate(savedInstanceState);
 
+        if (Build.VERSION.SDK_INT >= 28) {
+            android.view.WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            getWindow().setAttributes(lp);
+        }
+
         mStorageManager = (StorageManager) getSystemService(STORAGE_SERVICE);
 
         // Get main OBB filepath
@@ -328,6 +339,40 @@ public class MainActivity extends SDLActivity
             // onStart: Resume SDL thread
             runSDLThread();
         }
+    }
+
+    // RMXP-Android-Ports: full screen without status/navigation bars, also over the camera cutout
+    private void hideSystemBars()
+    {
+        getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN |
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus)
+    {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus)
+            hideSystemBars();
+    }
+
+    @Override
+    protected void onPause()
+    {
+        if (mMenu != null)
+            mMenu.onBackground(true);
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+        hideSystemBars();
+        if (mMenu != null)
+            mMenu.onBackground(false);
     }
 
     @Override

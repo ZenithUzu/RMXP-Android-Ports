@@ -23,17 +23,15 @@
     <string name="rmxp_screen">Pantalla</string>
     <string name="rmxp_screen_original">Original</string>
     <string name="rmxp_screen_fill">Llenar</string>
-    <string name="rmxp_screen_wide">Panorámica</string>
     <string name="rmxp_screen_hint_0">Proporción original del juego, con bordes a los lados.</string>
     <string name="rmxp_screen_hint_1">Estira la imagen hasta los bordes.</string>
-    <string name="rmxp_screen_hint_2">Muestra más mapa a los lados. Experimental: algunos menús pueden quedar descolocados. Se aplica al reiniciar el juego.</string>
     <string name="rmxp_scanlines">Líneas de pantalla antigua</string>
 
     <string name="rmxp_hz">Fluidez de pantalla</string>
     <string name="rmxp_hz_auto">Auto</string>
     <string name="rmxp_hz_60">60 Hz</string>
     <string name="rmxp_hz_max">Máximo</string>
-    <string name="rmxp_hz_hint">Pantalla a %1$d Hz. El juego siempre corre a su velocidad original; esto solo cambia qué tan parejo se ve y cuánta batería gasta.</string>
+    <string name="rmxp_hz_hint">Pantalla a %1$d Hz. Más Hz se ve más parejo pero gasta más batería.</string>
 
     <string name="rmxp_controls">Controles en pantalla</string>
     <string name="rmxp_pad_show">Mostrar controles</string>
@@ -43,4 +41,16 @@
     <string name="rmxp_resume">Volver al juego</string>
     <string name="rmxp_reset">Reiniciar juego</string>
     <string name="rmxp_quit">Salir</string>
+
+    <string name="rmxp_fps">FPS del juego</string>
+    <string name="rmxp_fps_game">Los del juego</string>
+    <string name="rmxp_fps_screen">Igual a la pantalla</string>
+    <string name="rmxp_fps_hint">Igual a la pantalla: 60 Hz = 60 fps, 120 Hz = 120 fps. Con Essentials v20 o más nuevo se ve más fluido; en juegos más viejos el juego también corre más rápido.</string>
+    <string name="rmxp_fps_show">Mostrar FPS</string>
+    <string name="rmxp_pad_edit">Editar controles</string>
+    <string name="rmxp_edit_hint">Arrastra un grupo de botones para moverlo. Toca un botón para cambiar su tecla.</string>
+    <string name="rmxp_edit_reset">Restablecer</string>
+    <string name="rmxp_edit_done">Listo</string>
+    <string name="rmxp_edit_choose">Tecla para este botón</string>
+    <string name="rmxp_keyboard">Teclado</string>
 </resources>

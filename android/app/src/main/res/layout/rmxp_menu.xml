@@ -83,7 +83,6 @@
             <RadioGroup android:id="@+id/rmxp_screen" style="@style/RmxpChipRow">
                 <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_screen_original" />
                 <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_screen_fill" />
-                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_screen_wide" />
             </RadioGroup>
             <TextView
                 android:id="@+id/rmxp_screen_hint"
@@ -105,6 +104,17 @@
                 android:id="@+id/rmxp_hz_hint"
                 style="@style/RmxpHint" />
 
+            <TextView style="@style/RmxpSection" android:text="@string/rmxp_fps" />
+            <RadioGroup android:id="@+id/rmxp_fps" style="@style/RmxpChipRow">
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_fps_game" />
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_fps_screen" />
+            </RadioGroup>
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_fps_hint" />
+            <Switch
+                android:id="@+id/rmxp_fps_show"
+                style="@style/RmxpSwitch"
+                android:text="@string/rmxp_fps_show" />
+
             <!-- Controles -->
             <TextView style="@style/RmxpSection" android:text="@string/rmxp_controls" />
             <Switch
@@ -122,6 +132,11 @@
                 android:id="@+id/rmxp_pad_size"
                 style="@style/RmxpSlider"
                 android:max="100" />
+            <Button
+                android:id="@+id/rmxp_pad_edit"
+                style="@style/RmxpButton"
+                android:layout_marginTop="10dp"
+                android:text="@string/rmxp_pad_edit" />
 
             <!-- Acciones -->
             <Button

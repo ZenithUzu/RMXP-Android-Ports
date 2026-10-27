@@ -24,7 +24,7 @@ public class GamepadConfig
     public final Integer keycodeZ = KeyEvent.KEYCODE_D;
     public final Integer keycodeL = KeyEvent.KEYCODE_Q;
     public final Integer keycodeR = KeyEvent.KEYCODE_W;
-    public final Integer keycodeCTRL = KeyEvent.KEYCODE_CTRL_LEFT;
-    public final Integer keycodeALT = KeyEvent.KEYCODE_ALT_LEFT;
+    public final Integer keycodeCTRL = KeyEvent.KEYCODE_ENTER;   // RMXP-Android-Ports: Enter (escribir nombres, Essentials)
+    public final Integer keycodeALT = KeyEvent.KEYCODE_ESCAPE;  // RMXP-Android-Ports: Esc
     public final Integer keycodeSHIFT = KeyEvent.KEYCODE_SHIFT_LEFT;
 }

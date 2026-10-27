@@ -68,8 +68,20 @@
 #include <atomic>
 
 /* RMXP-Android-Ports: values set from the Java options menu (MainActivity). */
-static std::atomic<int> rmxpSpeed(1);  /* 0 = paused, 1 = normal, 2..10 = fast forward */
+std::atomic<int> rmxpSpeed(1);         /* 0 = paused, 1 = normal, 2..10 = fast forward (also read by sharedstate.cpp) */
 static std::atomic<int> rmxpVideo(-1); /* filter * 10 + screen mode, -1 = nothing new */
+static std::atomic<int> rmxpFps(0);    /* forced frame rate (screen Hz), 0 = the game's own */
+static std::atomic<int> rmxpDrawn(0);  /* frames shown on screen, for the FPS counter */
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_hatkid_mkxpz_MainActivity_nativeSetFps(JNIEnv *, jclass, jint fps) {
+    rmxpFps = fps > 0 ? std::max(10, std::min((int)fps, 240)) : 0;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_hatkid_mkxpz_MainActivity_nativeGetDrawnFrames(JNIEnv *, jclass) {
+    return rmxpDrawn;
+}
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_hatkid_mkxpz_MainActivity_nativeSetSpeed(JNIEnv *, jclass, jint speed) {
@@ -1010,6 +1022,9 @@ struct GraphicsPrivate {
     void swapGLBuffer() {
         fpsLimiter.delay();
         SDL_GL_SwapWindow(threadData->window);
+#ifdef __ANDROID__
+        ++rmxpDrawn;
+#endif
         
         ++frameCount;
         
@@ -1204,6 +1219,13 @@ void Graphics::update(bool checkForShutdown) {
             p->checkShutDownReset();
     }
     
+    int fps = rmxpFps;
+    if (fps > 0 && fps != p->frameRate) {
+        p->frameRate = fps;
+        p->ffSpeed = 0; /* forces the limiter update below */
+        shState->input().recalcRepeat((unsigned int)fps);
+    }
+    
     int speed = rmxpSpeed;
     if (speed != p->ffSpeed) {
         p->ffSpeed = speed;
@@ -1360,6 +1382,10 @@ DEF_ATTR_RD_SIMPLE(Graphics, FrameRate, int, p->frameRate)
 DEF_ATTR_SIMPLE(Graphics, FrameCount, int, p->frameCount)
 
 void Graphics::setFrameRate(int value) {
+#ifdef __ANDROID__
+    if (rmxpFps > 0) /* the player chose "match the screen" in the options menu */
+        return;
+#endif
     p->frameRate = clamp(value, 10, 120);
     
     if (p->threadData->config.syncToRefreshrate)

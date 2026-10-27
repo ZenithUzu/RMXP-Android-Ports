@@ -22,17 +22,15 @@
     <string name="rmxp_screen">Screen</string>
     <string name="rmxp_screen_original">Original</string>
     <string name="rmxp_screen_fill">Fill</string>
-    <string name="rmxp_screen_wide">Widescreen</string>
     <string name="rmxp_screen_hint_0">The game\'s original shape, with borders on the sides.</string>
     <string name="rmxp_screen_hint_1">Stretches the picture to the edges.</string>
-    <string name="rmxp_screen_hint_2">Shows more of the map on the sides. Experimental: some menus may end up misplaced. Applies after restarting the game.</string>
     <string name="rmxp_scanlines">Old-screen lines</string>
 
     <string name="rmxp_hz">Screen smoothness</string>
     <string name="rmxp_hz_auto">Auto</string>
     <string name="rmxp_hz_60">60 Hz</string>
     <string name="rmxp_hz_max">Max</string>
-    <string name="rmxp_hz_hint">Screen at %1$d Hz. The game always runs at its original speed; this only changes how even it looks and how much battery it uses.</string>
+    <string name="rmxp_hz_hint">Screen at %1$d Hz. More Hz looks smoother but uses more battery.</string>
 
     <string name="rmxp_controls">On-screen controls</string>
     <string name="rmxp_pad_show">Show controls</string>
@@ -42,4 +40,16 @@
     <string name="rmxp_resume">Back to game</string>
     <string name="rmxp_reset">Restart game</string>
     <string name="rmxp_quit">Quit</string>
+
+    <string name="rmxp_fps">Game FPS</string>
+    <string name="rmxp_fps_game">The game\'s own</string>
+    <string name="rmxp_fps_screen">Match the screen</string>
+    <string name="rmxp_fps_hint">Match the screen: 60 Hz = 60 fps, 120 Hz = 120 fps. Essentials v20 and newer look smoother; older games also run faster.</string>
+    <string name="rmxp_fps_show">Show FPS</string>
+    <string name="rmxp_pad_edit">Edit controls</string>
+    <string name="rmxp_edit_hint">Drag a group of buttons to move it. Tap a button to change its key.</string>
+    <string name="rmxp_edit_reset">Reset</string>
+    <string name="rmxp_edit_done">Done</string>
+    <string name="rmxp_edit_choose">Key for this button</string>
+    <string name="rmxp_keyboard">Keyboard</string>
 </resources>

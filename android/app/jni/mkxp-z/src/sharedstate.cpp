@@ -363,10 +363,34 @@ Font &SharedState::defaultFont() const
 	return *p->defaultFont;
 }
 
+#ifdef __ANDROID__
+#include <atomic>
+#include <mutex>
+extern std::atomic<int> rmxpSpeed; /* graphics.cpp */
+#endif
+
 unsigned long long SharedState::runTime() {
     if (!p) return 0;
     const auto now = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(now - p->startupTime).count();
+    long long real = std::chrono::duration_cast<std::chrono::microseconds>(now - p->startupTime).count();
+#ifdef __ANDROID__
+    /* RMXP-Android-Ports: the game's clock (System.uptime) runs `speed` times faster
+     * while fast forwarding and stops while paused. Essentials v21 times its animations
+     * and movement with this clock, so more frames alone didn't speed it up. */
+    static std::mutex lock;
+    static long long baseReal = 0, baseGame = 0;
+    static int baseSpeed = 1;
+    std::lock_guard<std::mutex> guard(lock);
+    int speed = rmxpSpeed;
+    if (speed != baseSpeed) {
+        baseGame += (real - baseReal) * baseSpeed;
+        baseReal = real;
+        baseSpeed = speed;
+    }
+    return baseGame + (real - baseReal) * baseSpeed;
+#else
+    return real;
+#endif
 }
 
 unsigned int SharedState::genTimeStamp()

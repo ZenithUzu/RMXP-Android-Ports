@@ -105,13 +105,50 @@ public class Gamepad
         ViewUtils.changeOpacity(mGamepadLayout, mGamepadConfig.opacity);
     }
 
+    /** RMXP-Android-Ports: groups that can be dragged (D-pad, button clusters). */
+    public java.util.List<View> movableGroups()
+    {
+        java.util.List<View> groups = new java.util.ArrayList<>();
+        for (int i = 0; mGamepadLayout != null && i < mGamepadLayout.getChildCount(); i++)
+            groups.add(mGamepadLayout.getChildAt(i));
+        return groups;
+    }
+
+    /** RMXP-Android-Ports: every button, to remap its key. */
+    public GamepadButton[] buttons()
+    {
+        return new GamepadButton[] { gpadBtnA, gpadBtnB, gpadBtnC, gpadBtnX, gpadBtnY, gpadBtnZ,
+            gpadBtnL, gpadBtnR, gpadBtnCTRL, gpadBtnALT, gpadBtnSHIFT };
+    }
+
+    /** Short label for a key code: "ENTER", "ESC", "Z"... */
+    public static String keyLabel(int keycode)
+    {
+        return KeyEvent.keyCodeToString(keycode)
+            .replace("KEYCODE_", "")
+            .replace("_LEFT", "")
+            .replace("_RIGHT", "")
+            .replace("ESCAPE", "ESC")
+            .replace("SPACE", "ESPACIO");
+    }
+
+    public void resetKeys()
+    {
+        initGamepadButtons();
+        for (GamepadButton b : buttons())
+            b.invalidate();
+    }
+
+    public void setButtonKey(GamepadButton gpadBtn, int keycode)
+    {
+        setGamepadButtonKey(gpadBtn, keycode);
+        gpadBtn.invalidate();
+    }
+
     private void setGamepadButtonKey(GamepadButton gpadBtn, Integer keycode)
     {
         // Prepare label for gamepad button
-        String btnLabel = KeyEvent.keyCodeToString(keycode)
-            .replace("KEYCODE_", "")
-            .replace("_LEFT", "")
-            .replace("_RIGHT", "");
+        String btnLabel = keyLabel(keycode);
 
         // Set gamepad button
         gpadBtn.setForegroundText(btnLabel);

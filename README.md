@@ -14,12 +14,12 @@ solo.
 
 | | |
 |---|---|
-| **Pantalla panorámica** | Muestra más mapa a los lados en pantallas alargadas, en vez de dejar bordes negros. También hay "Original" y "Llenar". |
+| **Pantalla completa** | Sin barras de Android. *Original* respeta la forma del juego; *Llenar* estira hasta los bordes. |
 | **Filtros** | *Nítido suave* (recomendado: píxeles parejos que llenan la pantalla), *Píxel* (escala exacta), *Nítido*, *Suave* y líneas de pantalla antigua. |
-| **Fluidez y Hz** | En *Auto* elige una frecuencia de pantalla múltiplo de 40 y 60 fps (por ejemplo 120 Hz), para que cada cuadro dure lo mismo y no haya tirones. *60 Hz* ahorra batería. El juego siempre corre a su velocidad original. |
+| **Hz y FPS** | Elige los Hz de la pantalla (Auto, 60 o el máximo) y si el juego corre a sus propios FPS o a los de la pantalla (60 Hz = 60 fps, 120 Hz = 120 fps). Medidor de FPS opcional. |
 | **Velocidad rápida hasta x10** | Botón de avance rápido en pantalla; la velocidad (x2 a x10) se elige en el menú. |
-| **Menú de opciones** | Botón ☰ arriba a la derecha, el botón Atrás del teléfono o Select en un mando. Pausa el juego mientras está abierto. |
-| **Controles** | Controles en pantalla con opacidad y tamaño ajustables. Funcionan mandos USB y Bluetooth. |
+| **Menú de opciones** | Botón ☰ arriba al centro, el botón Atrás del teléfono o Select en un mando. Pausa el juego mientras está abierto. |
+| **Controles** | Botones con Enter, Esc y teclado de Android. *Editar controles*: arrastra los botones a donde quieras y cambia la tecla de cada uno. Opacidad y tamaño ajustables. Funcionan mandos USB y Bluetooth. |
 | **Internet** | HTTP y HTTPS nativos. Los fangames viejos que se conectan con `wininet.dll` se redirigen solos a la conexión de Android. |
 | **Actualizaciones seguras** | La versión nueva se prepara aparte y solo reemplaza a la vieja cuando está completa. Las partidas nunca se borran ni se sobrescriben. |
 | **Firma del autor** | Cada juego recibe su propia firma, a nombre de su creador (se lee del Léeme o Readme del juego). |

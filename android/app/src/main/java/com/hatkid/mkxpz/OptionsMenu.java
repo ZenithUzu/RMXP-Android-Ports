@@ -9,7 +9,9 @@ import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.ShapeDrawable;
 import android.os.Build;
-import android.util.DisplayMetrics;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.inputmethod.InputMethodManager;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -26,31 +28,29 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import java.io.File;
-import java.io.FileOutputStream;
 
 import org.libsdl.app.SDLActivity;
 import com.hatkid.mkxpz.gamepad.Gamepad;
 
 /**
- * RMXP-Android-Ports: menú de opciones, botones de turbo y menú, filtro de líneas y Hz.
- * Las opciones se guardan en SharedPreferences y se mandan al motor con
- * MainActivity.nativeSetSpeed / nativeSetVideo (ver graphics.cpp).
+ * RMXP-Android-Ports: menú de opciones, botones de teclado/turbo/menú, medidor de FPS,
+ * filtro de líneas, Hz y editor de controles. Las opciones se guardan en SharedPreferences
+ * y se mandan al motor con MainActivity.native* (ver graphics.cpp).
  */
 public class OptionsMenu
 {
-    // Archivo que lee patches/rmxp-panoramica.rb al arrancar el juego
-    public static final String WIDE_FILE = "rmxp_pantalla.txt";
-
     private final Activity mActivity;
     private final Gamepad mGamepad;
     private final SharedPreferences mPrefs;
     private final String mGamePath;
 
-    private View mRoot, mPanel, mScanlines;
+    private View mRoot, mPanel, mScanlines, mCorner;
     private ImageButton mTurboButton;
-    private TextView mSpeedValue, mFilterHint, mScreenHint, mHzHint;
+    private TextView mSpeedValue, mFilterHint, mScreenHint, mHzHint, mFpsLabel;
     private boolean mTurbo = false;
     private int mHz = 60;
+    private ControlsEditor mEditor;
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public OptionsMenu(Activity activity, Gamepad gamepad, String gamePath)
     {
@@ -79,21 +79,44 @@ public class OptionsMenu
         mScanlines.setBackground(linesDrawable);
         layout.addView(mScanlines, 1, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Botones redondos arriba a la derecha: turbo y menú
+        // Botones redondos arriba al centro (lejos de L y R): teclado, turbo y menú
         LinearLayout corner = new LinearLayout(mActivity);
+        ImageButton keyboard = roundButton(R.drawable.rmxp_ic_keyboard, R.string.rmxp_keyboard, dp);
+        keyboard.setOnClickListener(v -> toggleKeyboard());
         mTurboButton = roundButton(R.drawable.rmxp_ic_turbo, R.string.rmxp_turbo, dp);
         mTurboButton.setOnClickListener(v -> { mTurbo = !mTurbo; applySpeed(); });
         ImageButton menuButton = roundButton(R.drawable.rmxp_ic_menu, R.string.rmxp_menu, dp);
         menuButton.setOnClickListener(v -> open());
+        corner.addView(keyboard);
         corner.addView(mTurboButton);
         corner.addView(menuButton);
         RelativeLayout.LayoutParams cornerParams = new RelativeLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         cornerParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-        cornerParams.addRule(RelativeLayout.ALIGN_PARENT_END);
+        cornerParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
         cornerParams.topMargin = Math.round(8 * dp);
-        cornerParams.rightMargin = Math.round(8 * dp);
         layout.addView(corner, cornerParams);
+        mCorner = corner;
+
+        // Medidor de FPS arriba a la izquierda
+        mFpsLabel = new TextView(mActivity);
+        mFpsLabel.setTextColor(mActivity.getColor(R.color.rmxp_ambar));
+        mFpsLabel.setTextSize(13);
+        mFpsLabel.setShadowLayer(3, 0, 0, Color.BLACK);
+        mFpsLabel.setPadding(Math.round(12 * dp), Math.round(6 * dp), 0, 0);
+        layout.addView(mFpsLabel, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        mHandler.post(new Runnable() {
+            int last = MainActivity.nativeGetDrawnFrames();
+            public void run() {
+                int now = MainActivity.nativeGetDrawnFrames();
+                mFpsLabel.setText((now - last) + " FPS" + (mTurbo && !isOpen() ? "  x" + pref("velocidad", 5) : ""));
+                last = now;
+                mHandler.postDelayed(this, 1000);
+            }
+        });
+
+        mEditor = new ControlsEditor(mActivity, mGamepad, mPrefs, () -> { mCorner.setVisibility(View.VISIBLE); applySpeed(); });
+        mEditor.applySaved();
 
         // Menú (oculto hasta que se abre)
         mRoot = LayoutInflater.from(mActivity).inflate(R.layout.rmxp_menu, layout, false);
@@ -136,6 +159,8 @@ public class OptionsMenu
         chips(R.id.rmxp_filter, "filtro", 3, v -> applyVideo());
         chips(R.id.rmxp_screen, "pantalla", 0, v -> applyVideo());
         chips(R.id.rmxp_hz, "hz", 0, v -> applyHz());
+        chips(R.id.rmxp_fps, "fps", 0, v -> applyHz());
+        toggle(R.id.rmxp_fps_show, "ver_fps", 0, v -> mFpsLabel.setVisibility(v == 1 ? View.VISIBLE : View.GONE));
         toggle(R.id.rmxp_scanlines, "lineas", 0, v -> applyScanlines());
         toggle(R.id.rmxp_pad_show, "controles", 1, v -> applyPad());
         slider(R.id.rmxp_pad_opacity, "opacidad", 30, 10, v -> applyPad());
@@ -150,6 +175,14 @@ public class OptionsMenu
             SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_F12);
         });
         mRoot.findViewById(R.id.rmxp_quit).setOnClickListener(v -> mActivity.finish());
+        mRoot.findViewById(R.id.rmxp_pad_edit).setOnClickListener(v -> {
+            // El juego sigue en pausa mientras se editan los controles
+            mRoot.setVisibility(View.GONE);
+            mCorner.setVisibility(View.GONE);
+            save("controles", 1);
+            applyPad();
+            mEditor.start((ViewGroup) mRoot.getParent());
+        });
     }
 
     private interface Changed { void run(int value); }
@@ -224,6 +257,20 @@ public class OptionsMenu
         applyHz();
         applyScanlines();
         applyPad();
+        mFpsLabel.setVisibility(pref("ver_fps", 0) == 1 ? View.VISIBLE : View.GONE);
+        //noinspection ResultOfMethodCallIgnored
+        new File(mGamePath, "rmxp_pantalla.txt").delete(); // de la panorámica que se quitó
+    }
+
+    /** Muestra u oculta el teclado de Android (para escribir nombres; Enter confirma). */
+    private void toggleKeyboard()
+    {
+        if (SDLActivity.isScreenKeyboardShown()) {
+            InputMethodManager imm = (InputMethodManager) mActivity.getSystemService(Activity.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(mActivity.getWindow().getDecorView().getWindowToken(), 0);
+        } else {
+            SDLActivity.showTextInput(0, 0, 1, 1);
+        }
     }
 
     private void applySpeed()
@@ -237,32 +284,16 @@ public class OptionsMenu
 
     private void applyVideo()
     {
-        int filter = pref("filtro", 3), screen = pref("pantalla", 0);
+        int filter = pref("filtro", 3), screen = Math.min(pref("pantalla", 0), 1);
         MainActivity.nativeSetVideo(filter, screen);
 
         String[] filterHints = {
             mActivity.getString(R.string.rmxp_filter_hint_0), mActivity.getString(R.string.rmxp_filter_hint_1),
             mActivity.getString(R.string.rmxp_filter_hint_2), mActivity.getString(R.string.rmxp_filter_hint_3) };
         String[] screenHints = {
-            mActivity.getString(R.string.rmxp_screen_hint_0), mActivity.getString(R.string.rmxp_screen_hint_1),
-            mActivity.getString(R.string.rmxp_screen_hint_2) };
+            mActivity.getString(R.string.rmxp_screen_hint_0), mActivity.getString(R.string.rmxp_screen_hint_1) };
         mFilterHint.setText(filterHints[filter]);
         mScreenHint.setText(screenHints[screen]);
-
-        // Panorámica: el parche de Ruby lee la proporción de la pantalla al arrancar
-        File wide = new File(mGamePath, WIDE_FILE);
-        if (screen == 2) {
-            DisplayMetrics m = new DisplayMetrics();
-            mActivity.getWindowManager().getDefaultDisplay().getRealMetrics(m);
-            float ratio = (float) Math.max(m.widthPixels, m.heightPixels) / Math.min(m.widthPixels, m.heightPixels);
-            try (FileOutputStream out = new FileOutputStream(wide)) {
-                out.write(String.valueOf(ratio).getBytes());
-            } catch (Exception ignored) {
-            }
-        } else {
-            //noinspection ResultOfMethodCallIgnored
-            wide.delete();
-        }
     }
 
     /**
@@ -292,6 +323,8 @@ public class OptionsMenu
             }
         }
         mHzHint.setText(mActivity.getString(R.string.rmxp_hz_hint, mHz));
+        // "Igual a la pantalla": el juego corre a tantos fps como Hz tenga la pantalla
+        MainActivity.nativeSetFps(pref("fps", 0) == 1 ? mHz : 0);
     }
 
     private void applyScanlines()
@@ -308,7 +341,7 @@ public class OptionsMenu
 
     public void open()
     {
-        if (isOpen())
+        if (isOpen() || mEditor.isActive())
             return;
         MainActivity.nativeSetSpeed(0); // pausa el juego
         mRoot.setVisibility(View.VISIBLE);
@@ -323,6 +356,15 @@ public class OptionsMenu
             return;
         mRoot.setVisibility(View.GONE);
         applySpeed(); // quita la pausa
+    }
+
+    /** Al salir a otra app el juego se pausa (no dibuja sin pantalla); al volver sigue. */
+    public void onBackground(boolean background)
+    {
+        if (background)
+            MainActivity.nativeSetSpeed(0);
+        else if (!isOpen() && !mEditor.isActive())
+            applySpeed();
     }
 
     public void toggle()
