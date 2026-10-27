@@ -253,7 +253,10 @@ def analyze(root):
             e = os.path.splitext(fn)[1].lower()
             exts[e] += 1
             size += os.path.getsize(os.path.join(d, fn))
-            if e == ".dll" and not fn.lower().startswith("rgss"):
+            low = fn.lower()
+            if e == ".dll" and "ruby" in low:
+                I["motor_pc"] = "mkxp-z (buena señal: es el mismo motor que usa la app)"
+            elif e == ".dll" and not low.startswith("rgss") and low != "zlib1.dll":
                 dlls.append(fn)
     I["tamano_mb"] = round(size / 1048576, 1)
     if exts[".mid"] or exts[".midi"]:
