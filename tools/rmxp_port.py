@@ -544,6 +544,10 @@ def gui(initial=None):
             fields[k].delete(0, "end")
             fields[k].insert(0, info[k])
         drop_text.config(text=os.path.basename(path), fg=C["ambar"])
+        state["sf2"] = None  # el del juego se usa solo (stage_game); el botón es para cambiarlo
+        own = find_soundfont(path)
+        sf2_lbl.config(text="Música MIDI: la del juego (%s)" % own if own else "Música MIDI: sin SoundFont",
+                       fg=C["niebla"] if own else C["liquen"])
         logbox.delete("1.0", "end")
         report = rmxp_analyze.analyze(path)
         write("Revisión: %s" % report.get("veredicto", "?"), "ok" if not report["problemas"] else "error")
