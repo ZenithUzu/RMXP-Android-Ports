@@ -1233,11 +1233,11 @@ void Graphics::update(bool checkForShutdown) {
      * while paused and bind to the window's current one when resuming. */
     if (rmxpSpeed == 0) {
         SDL_GL_MakeCurrent(p->threadData->window, NULL);
-        while (rmxpSpeed == 0) {
+        /* A reset (F12, "Restart game") or quit leaves the pause the normal way, so the
+         * surface is bound again first; it's processed at the start of the next update.
+         * (Handling it in here jumped past the rebind and the restarted game froze.) */
+        while (rmxpSpeed == 0 && !(checkForShutdown && (p->threadData->rqReset || p->threadData->rqTerm)))
             SDL_Delay(20);
-            if (checkForShutdown)
-                p->checkShutDownReset();
-        }
         SDL_GL_MakeCurrent(p->threadData->window, p->threadData->glContext);
     }
     
