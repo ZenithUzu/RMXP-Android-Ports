@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Panel lateral: solo redondeado del lado del juego -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/rmxp_tinta" />
+    <corners android:topLeftRadius="20dp" android:bottomLeftRadius="20dp" />
+</shape>

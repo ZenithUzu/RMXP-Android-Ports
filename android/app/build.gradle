@@ -1,0 +1,116 @@
+plugins {
+    id 'com.android.application'
+}
+
+def targetAbis = (project.findProperty('targetAbis') ?: 'arm64-v8a').toString().split(',').toList()
+if (targetAbis.any { !(it in ['arm64-v8a', 'armeabi-v7a']) }) {
+    throw new GradleException('targetAbis must contain arm64-v8a and/or armeabi-v7a')
+}
+
+// RMXP-Android-Ports: la herramienta de Windows (tools/rmxp_port.py) pasa estos datos con -P.
+def prop = { String name, def fallback -> project.findProperty(name) ?: fallback }
+// Carpeta con las librerías del motor ya compiladas (lib/<abi>/*.so). Sin ella se compila con el NDK.
+def prebuiltLibs = prop('prebuiltLibs', null)
+
+android {
+    namespace 'com.hatkid.mkxpz'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId prop('gameId', 'com.hatkid.mkxpz')
+        minSdk 23
+        targetSdk 33
+        versionCode prop('gameVersionCode', '13').toInteger()
+        versionName prop('gameVersionName', '0.1.3')
+        resValue 'string', 'app_name', prop('gameName', 'mkxp-z')
+        archivesBaseName = prop('gameFile', "mkxp-z-$versionName")
+        if (prebuiltLibs == null) {
+            ndk.debugSymbolLevel = 'FULL'
+            externalNativeBuild {
+                ndkBuild {
+                    abiFilters.addAll(targetAbis)
+                }
+            }
+        }
+    }
+
+    // Firma propia de cada juego: la misma llave en cada versión permite actualizar sin perder partidas
+    if (project.hasProperty('keyStore')) {
+        signingConfigs {
+            game {
+                storeFile file(prop('keyStore', ''))
+                storePassword prop('keyPassword', '')
+                keyAlias prop('keyAlias', 'juego')
+                keyPassword prop('keyPassword', '')
+            }
+        }
+    }
+
+    sourceSets {
+        // Juego (assets/game/...) e icono preparados por la herramienta, fuera del proyecto
+        if (project.hasProperty('gameAssets'))
+            main.assets.srcDirs = [prop('gameAssets', '')]
+        if (project.hasProperty('gameRes'))
+            release.res.srcDirs += [prop('gameRes', '')]
+        if (prebuiltLibs != null)
+            main.jniLibs.srcDirs = [prebuiltLibs]
+    }
+
+    buildTypes {
+        release {
+            if (project.hasProperty('keyStore'))
+                signingConfig signingConfigs.game
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+
+        debug {
+            debuggable true
+            jniDebuggable true
+        }
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include(*targetAbis)
+            universalApk(targetAbis.size() > 1)
+        }
+    }
+
+    packagingOptions {
+        // La app extrae las librerías al instalarse (android:extractNativeLibs="true")
+        jniLibs.useLegacyPackaging true
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    if (prebuiltLibs == null) {
+        externalNativeBuild {
+            ndkBuild {
+                path "jni/Android.mk"
+            }
+        }
+    }
+    ndkVersion '23.2.8568313'
+
+    // Audio-stripped variant: built with `./gradlew assembleDebug -PstripAudio`.
+    // Excludes the game's bundled Audio tree from the APK.
+    aaptOptions {
+        if (project.hasProperty('stripAudio')) {
+            ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!Audio"
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.intuit.sdp:sdp-android:1.1.0'
+}

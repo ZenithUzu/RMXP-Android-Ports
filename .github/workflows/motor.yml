@@ -1,0 +1,40 @@
+# Compila el motor (mkxp-z + Ruby + SDL para Android) y lo publica como
+# "motor-android.zip" en una versión (release) del repo. La herramienta de
+# Windows (tools/rmxp_port.py) lo descarga, así nadie necesita compilar C++.
+name: Motor de Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Nombre de la versión (debe coincidir con MOTOR_VERSION en tools/rmxp_port.py)"
+        required: true
+        default: "motor-v1"
+
+permissions:
+  contents: write
+
+jobs:
+  motor:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar SDK, NDK y fuentes de dependencias
+        run: bash tools/setup.sh
+
+      - name: Compilar el motor (arm64-v8a y armeabi-v7a)
+        run: bash tools/build.sh --solo-motor
+
+      - name: Publicar la versión
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ inputs.version }}" build/motor-android.zip \
+            --title "Motor de Android (${{ inputs.version }})" \
+            --notes "Librerías del motor compiladas desde el commit ${{ github.sha }} por GitHub Actions. La herramienta (Portar.bat) las descarga sola; no hace falta bajarlas a mano. Código fuente: este mismo repositorio (GPL-2.0-or-later)." \
+            || gh release upload "${{ inputs.version }}" build/motor-android.zip --clobber

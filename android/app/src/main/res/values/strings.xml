@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="rmxp_paused">En pausa</string>
+    <string name="rmxp_preparing">Preparando el juego, espera un momento…</string>
+    <string name="rmxp_update_failed">No se pudo actualizar el juego. Tus partidas siguen intactas; abre la app de nuevo para reintentar.</string>
+    <string name="rmxp_menu">Opciones</string>
+    <string name="rmxp_turbo">Velocidad rápida</string>
+
+    <string name="rmxp_speed">Velocidad rápida</string>
+    <string name="rmxp_speed_hint">El botón de avance rápido cambia entre velocidad normal y esta.</string>
+
+    <string name="rmxp_filter">Filtro</string>
+    <string name="rmxp_filter_sharp">Nítido</string>
+    <string name="rmxp_filter_smooth">Suave</string>
+    <string name="rmxp_filter_pixel">Píxel</string>
+    <string name="rmxp_filter_best">Nítido suave</string>
+    <string name="rmxp_filter_hint_0">Píxeles duros. Puede verse disparejo si la escala no es exacta.</string>
+    <string name="rmxp_filter_hint_1">Difumina los bordes. Bueno para fotos y fondos pintados.</string>
+    <string name="rmxp_filter_hint_2">Cada píxel del mismo tamaño. Deja bordes negros más grandes.</string>
+    <string name="rmxp_filter_hint_3">Recomendado: píxeles nítidos y parejos que llenan la pantalla.</string>
+
+    <string name="rmxp_screen">Pantalla</string>
+    <string name="rmxp_screen_original">Original</string>
+    <string name="rmxp_screen_fill">Llenar</string>
+    <string name="rmxp_screen_wide">Panorámica</string>
+    <string name="rmxp_screen_hint_0">Proporción original del juego, con bordes a los lados.</string>
+    <string name="rmxp_screen_hint_1">Estira la imagen hasta los bordes.</string>
+    <string name="rmxp_screen_hint_2">Muestra más mapa a los lados. Experimental: algunos menús pueden quedar descolocados. Se aplica al reiniciar el juego.</string>
+    <string name="rmxp_scanlines">Líneas de pantalla antigua</string>
+
+    <string name="rmxp_hz">Fluidez de pantalla</string>
+    <string name="rmxp_hz_auto">Auto</string>
+    <string name="rmxp_hz_60">60 Hz</string>
+    <string name="rmxp_hz_max">Máximo</string>
+    <string name="rmxp_hz_hint">Pantalla a %1$d Hz. El juego siempre corre a su velocidad original; esto solo cambia qué tan parejo se ve y cuánta batería gasta.</string>
+
+    <string name="rmxp_controls">Controles en pantalla</string>
+    <string name="rmxp_pad_show">Mostrar controles</string>
+    <string name="rmxp_pad_opacity">Opacidad</string>
+    <string name="rmxp_pad_size">Tamaño</string>
+
+    <string name="rmxp_resume">Volver al juego</string>
+    <string name="rmxp_reset">Reiniciar juego</string>
+    <string name="rmxp_quit">Salir</string>
+</resources>

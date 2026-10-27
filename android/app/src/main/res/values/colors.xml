@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- RMXP-Android-Ports: paleta "farol de ruta nocturna" -->
+    <color name="rmxp_tinta">#F00F2629</color>    <!-- fondo del menú (94 % opaco) -->
+    <color name="rmxp_pizarra">#1A3A3E</color>    <!-- botones y opciones sin elegir -->
+    <color name="rmxp_musgo">#2E5B5F</color>      <!-- bordes y pistas de los deslizadores -->
+    <color name="rmxp_niebla">#E9F3F0</color>     <!-- texto principal -->
+    <color name="rmxp_liquen">#8DB1AA</color>     <!-- texto secundario -->
+    <color name="rmxp_ambar">#F2B544</color>      <!-- lo elegido y el turbo encendido -->
+    <color name="rmxp_coral">#E46F5E</color>      <!-- salir -->
+    <color name="rmxp_velo">#66000000</color>     <!-- oscurece el juego detrás del menú -->
+</resources>

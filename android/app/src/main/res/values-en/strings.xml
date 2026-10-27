@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rmxp_paused">Paused</string>
+    <string name="rmxp_preparing">Getting the game ready, one moment…</string>
+    <string name="rmxp_update_failed">The game couldn\'t be updated. Your saves are safe; open the app again to retry.</string>
+    <string name="rmxp_menu">Options</string>
+    <string name="rmxp_turbo">Fast forward</string>
+
+    <string name="rmxp_speed">Fast forward</string>
+    <string name="rmxp_speed_hint">The fast-forward button switches between normal speed and this one.</string>
+
+    <string name="rmxp_filter">Filter</string>
+    <string name="rmxp_filter_sharp">Sharp</string>
+    <string name="rmxp_filter_smooth">Smooth</string>
+    <string name="rmxp_filter_pixel">Pixel</string>
+    <string name="rmxp_filter_best">Sharp smooth</string>
+    <string name="rmxp_filter_hint_0">Hard pixels. Can look uneven when the scale isn\'t exact.</string>
+    <string name="rmxp_filter_hint_1">Softens edges. Good for photos and painted backgrounds.</string>
+    <string name="rmxp_filter_hint_2">Every pixel the same size. Leaves bigger black borders.</string>
+    <string name="rmxp_filter_hint_3">Recommended: crisp, even pixels that fill the screen.</string>
+
+    <string name="rmxp_screen">Screen</string>
+    <string name="rmxp_screen_original">Original</string>
+    <string name="rmxp_screen_fill">Fill</string>
+    <string name="rmxp_screen_wide">Widescreen</string>
+    <string name="rmxp_screen_hint_0">The game\'s original shape, with borders on the sides.</string>
+    <string name="rmxp_screen_hint_1">Stretches the picture to the edges.</string>
+    <string name="rmxp_screen_hint_2">Shows more of the map on the sides. Experimental: some menus may end up misplaced. Applies after restarting the game.</string>
+    <string name="rmxp_scanlines">Old-screen lines</string>
+
+    <string name="rmxp_hz">Screen smoothness</string>
+    <string name="rmxp_hz_auto">Auto</string>
+    <string name="rmxp_hz_60">60 Hz</string>
+    <string name="rmxp_hz_max">Max</string>
+    <string name="rmxp_hz_hint">Screen at %1$d Hz. The game always runs at its original speed; this only changes how even it looks and how much battery it uses.</string>
+
+    <string name="rmxp_controls">On-screen controls</string>
+    <string name="rmxp_pad_show">Show controls</string>
+    <string name="rmxp_pad_opacity">Opacity</string>
+    <string name="rmxp_pad_size">Size</string>
+
+    <string name="rmxp_resume">Back to game</string>
+    <string name="rmxp_reset">Restart game</string>
+    <string name="rmxp_quit">Quit</string>
+</resources>
