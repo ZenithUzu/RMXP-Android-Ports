@@ -10,22 +10,12 @@
     <string name="rmxp_speed">Velocidad rápida</string>
     <string name="rmxp_speed_hint">El botón de avance rápido cambia entre velocidad normal y esta.</string>
 
-    <string name="rmxp_filter">Filtro</string>
-    <string name="rmxp_filter_sharp">Nítido</string>
-    <string name="rmxp_filter_smooth">Suave</string>
-    <string name="rmxp_filter_pixel">Píxel</string>
-    <string name="rmxp_filter_best">Nítido suave</string>
-    <string name="rmxp_filter_hint_0">Píxeles duros. Puede verse disparejo si la escala no es exacta.</string>
-    <string name="rmxp_filter_hint_1">Difumina los bordes. Bueno para fotos y fondos pintados.</string>
-    <string name="rmxp_filter_hint_2">Cada píxel del mismo tamaño. Deja bordes negros más grandes.</string>
-    <string name="rmxp_filter_hint_3">Recomendado: píxeles nítidos y parejos que llenan la pantalla.</string>
 
     <string name="rmxp_screen">Pantalla</string>
     <string name="rmxp_screen_original">Original</string>
     <string name="rmxp_screen_fill">Llenar</string>
     <string name="rmxp_screen_hint_0">Proporción original del juego, con bordes a los lados.</string>
     <string name="rmxp_screen_hint_1">Estira la imagen hasta los bordes.</string>
-    <string name="rmxp_scanlines">Líneas de pantalla antigua</string>
 
     <string name="rmxp_hz">Fluidez de pantalla</string>
     <string name="rmxp_hz_auto">Auto</string>
@@ -35,7 +25,6 @@
 
     <string name="rmxp_controls">Controles en pantalla</string>
     <string name="rmxp_pad_show">Mostrar controles</string>
-    <string name="rmxp_pad_opacity">Opacidad</string>
     <string name="rmxp_pad_size">Tamaño</string>
 
     <string name="rmxp_resume">Volver al juego</string>
@@ -48,12 +37,20 @@
     <string name="rmxp_fps_hint">Igual a la pantalla: 60 Hz = 60 fps, 120 Hz = 120 fps. Con Essentials v20 o más nuevo se ve más fluido; en juegos más viejos el juego también corre más rápido.</string>
     <string name="rmxp_fps_show">Mostrar FPS</string>
     <string name="rmxp_pad_edit">Editar controles</string>
-    <string name="rmxp_edit_hint">Arrastra un botón para moverlo. Tócalo para cambiar su tecla, tamaño o transparencia, u ocultarlo.</string>
+    <string name="rmxp_edit_hint">Arrastra para mover. Toca un control para editarlo.</string>
     <string name="rmxp_edit_reset">Restablecer</string>
     <string name="rmxp_edit_done">Listo</string>
-    <string name="rmxp_edit_choose">Tecla para este botón</string>
+    <string name="rmxp_edit_choose">Elegir tecla o acción</string>
     <string name="rmxp_keyboard">Teclado</string>
     <string name="rmxp_edit_key">Tecla</string>
     <string name="rmxp_edit_opacity">Transparencia</string>
-    <string name="rmxp_edit_visible">Visible</string>
+    <string name="rmxp_edit_add">Añadir</string>
+    <string name="rmxp_edit_opacity_all">Opacidad</string>
+    <string name="rmxp_edit_label">Etiqueta (ej. A, Correr)</string>
+    <string name="rmxp_edit_pill">Forma alargada</string>
+    <string name="rmxp_edit_color">Color</string>
+    <string name="rmxp_edit_delete">Eliminar</string>
+    <string name="rmxp_input">Mando y teclado</string>
+    <string name="rmxp_input_hint">Qué tecla del juego manda cada botón de un mando conectado. El teclado físico funciona directo.</string>
+    <string name="rmxp_pad_auto_hint">Se ocultan solos al conectar un mando o teclado, y vuelven al tocar la pantalla.</string>
 </resources>

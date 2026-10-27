@@ -15,11 +15,10 @@ itself.
 | | |
 |---|---|
 | **Full screen** | No Android bars. *Original* keeps the game's shape; *Fill* stretches to the edges. |
-| **Filters** | *Sharp smooth* (recommended: even pixels that fill the screen), *Pixel* (exact scaling), *Sharp*, *Smooth*, and old-screen scanlines. |
 | **Hz and FPS** | Pick the screen's Hz (Auto, 60 or max) and whether the game runs at its own FPS or the screen's (60 Hz = 60 fps, 120 Hz = 120 fps). Optional FPS counter. |
 | **Fast forward up to x10** | On-screen fast-forward button; pick the speed (x2 to x10) in the menu. |
 | **Options menu** | The phone's Back button or Select on a controller (the ☰ button can be shown in *Edit controls*). The game pauses while it's open. |
-| **Controls** | Enter and Esc buttons plus an Android keyboard button. *Edit controls*: move, remap, resize, change the transparency of, or hide each button. USB and Bluetooth controllers work. |
+| **Controls** | Kirin style: translucent buttons with a label and key. In *Edit controls* you can add, delete, move and map buttons (every key, plus keyboard, turbo and menu) and change their color, shape, size and opacity. *Gamepad and keyboard*: its own mapping for gamepads, with comfortable defaults. Controls hide when a gamepad or keyboard is connected. |
 | **Internet** | Native HTTP and HTTPS. Older fangames that go online through `wininet.dll` are redirected to Android's connection automatically. |
 | **Safe updates** | The new version is prepared on the side and only replaces the old one once it's complete. Saves are never deleted or overwritten. |
 | **Author signature** | Each game gets its own signature in its creator's name (read from the game's Readme). |

@@ -28,8 +28,6 @@ import android.content.res.AssetManager;
 import android.widget.Toast;
 
 import org.libsdl.app.SDLActivity;
-import com.hatkid.mkxpz.gamepad.Gamepad;
-import com.hatkid.mkxpz.gamepad.GamepadConfig;
 
 public class MainActivity extends SDLActivity
 {
@@ -51,8 +49,6 @@ public class MainActivity extends SDLActivity
 
     private StorageManager mStorageManager;
 
-    // In-screen gamepad
-    private final Gamepad mGamepad = new Gamepad();
 
     // RMXP-Android-Ports: options menu, fast forward and video settings
     private OptionsMenu mMenu;
@@ -65,7 +61,6 @@ public class MainActivity extends SDLActivity
     public static native void nativeSetFps(int fps);
     /** Frames shown so far, for the FPS counter. */
     public static native int nativeGetDrawnFrames();
-    private boolean mGamepadInvisible = false;
 
     /** True when the APK ships a game under assets/game. */
     private boolean hasBundledAssets()
@@ -279,16 +274,9 @@ public class MainActivity extends SDLActivity
             e.printStackTrace();
         }
 
-        // Setup in-screen gamepad
-        mGamepadInvisible = (isAndroidTV() || isChromebook());
-        GamepadConfig gpadConfig = new GamepadConfig();
-        mGamepad.init(gpadConfig, mGamepadInvisible);
-        mGamepad.setOnKeyDownListener(SDLActivity::onNativeKeyDown);
-        mGamepad.setOnKeyUpListener(SDLActivity::onNativeKeyUp);
-
+        // RMXP-Android-Ports: on-screen controls, physical gamepad mapping and options menu
         if (mLayout != null) {
-            mGamepad.attachTo(this, mLayout);
-            mMenu = new OptionsMenu(this, mGamepad, new File(getFilesDir(), EXTRACTED_DIR).getAbsolutePath());
+            mMenu = new OptionsMenu(this, new File(getFilesDir(), EXTRACTED_DIR).getAbsolutePath());
             mMenu.attachTo(mLayout);
         }
     }
@@ -389,31 +377,27 @@ public class MainActivity extends SDLActivity
     @Override
     public boolean dispatchKeyEvent(KeyEvent evt)
     {
-        if (mMenu != null && (evt.getKeyCode() == KeyEvent.KEYCODE_BUTTON_SELECT ||
-            (evt.getKeyCode() == KeyEvent.KEYCODE_BACK && !isFromGamepad(evt)))) {
-            if (evt.getAction() == KeyEvent.ACTION_UP)
+        if (mMenu == null)
+            return super.dispatchKeyEvent(evt);
+
+        // The phone's Back opens/closes the menu (a gamepad's Back is mapped like B)
+        if (evt.getKeyCode() == KeyEvent.KEYCODE_BACK && !isFromGamepad(evt)) {
+            if (evt.getAction() == KeyEvent.ACTION_UP && !mMenu.controls.isEditing())
                 mMenu.toggle();
             return true;
         }
 
         // While the menu is open, the keys move around the menu instead of the game
-        if (mMenu != null && mMenu.isOpen())
+        if (mMenu.isOpen())
             return getWindow().superDispatchKeyEvent(evt);
 
-        if (
-            evt.getKeyCode() != KeyEvent.KEYCODE_BACK &&
-            evt.getKeyCode() != KeyEvent.KEYCODE_VOLUME_UP &&
-            evt.getKeyCode() != KeyEvent.KEYCODE_VOLUME_DOWN &&
-            evt.getKeyCode() != KeyEvent.KEYCODE_VOLUME_MUTE
-        ) {
-            // Hide gamepad view on key events when visible
-            if (!mGamepadInvisible) {
-                mGamepad.hideView();
-                mGamepadInvisible = true;
-            }
-        }
+        int code = evt.getKeyCode();
+        boolean volume = code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN || code == KeyEvent.KEYCODE_VOLUME_MUTE;
+        InputDevice device = evt.getDevice();
+        if (!volume && device != null && !device.isVirtual())
+            mMenu.controls.onPhysicalInput(); // a real gamepad/keyboard is in use: hide on-screen controls
 
-        if (mGamepad.processGamepadEvent(evt))
+        if (mMenu.pad.onKey(evt))
             return true;
 
         return super.dispatchKeyEvent(evt);
@@ -428,11 +412,9 @@ public class MainActivity extends SDLActivity
     @Override
     public boolean dispatchTouchEvent(MotionEvent evt)
     {
-        // Show gamepad view on touch when hidden
-        if (mGamepadInvisible) {
-            mGamepad.showView();
-            mGamepadInvisible = false;
-        }
+        // Touching the screen brings the on-screen controls back
+        if (mMenu != null && evt.getActionMasked() == MotionEvent.ACTION_DOWN)
+            mMenu.controls.onScreenTouched();
 
         return super.dispatchTouchEvent(evt);
     }
@@ -440,7 +422,7 @@ public class MainActivity extends SDLActivity
     @Override
     public boolean onGenericMotionEvent(MotionEvent evt)
     {
-        if (mGamepad.processDPadEvent(evt))
+        if (mMenu != null && mMenu.pad.onMotion(evt))
             return true;
 
         return super.onGenericMotionEvent(evt);

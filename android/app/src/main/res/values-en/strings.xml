@@ -9,22 +9,12 @@
     <string name="rmxp_speed">Fast forward</string>
     <string name="rmxp_speed_hint">The fast-forward button switches between normal speed and this one.</string>
 
-    <string name="rmxp_filter">Filter</string>
-    <string name="rmxp_filter_sharp">Sharp</string>
-    <string name="rmxp_filter_smooth">Smooth</string>
-    <string name="rmxp_filter_pixel">Pixel</string>
-    <string name="rmxp_filter_best">Sharp smooth</string>
-    <string name="rmxp_filter_hint_0">Hard pixels. Can look uneven when the scale isn\'t exact.</string>
-    <string name="rmxp_filter_hint_1">Softens edges. Good for photos and painted backgrounds.</string>
-    <string name="rmxp_filter_hint_2">Every pixel the same size. Leaves bigger black borders.</string>
-    <string name="rmxp_filter_hint_3">Recommended: crisp, even pixels that fill the screen.</string>
 
     <string name="rmxp_screen">Screen</string>
     <string name="rmxp_screen_original">Original</string>
     <string name="rmxp_screen_fill">Fill</string>
     <string name="rmxp_screen_hint_0">The game\'s original shape, with borders on the sides.</string>
     <string name="rmxp_screen_hint_1">Stretches the picture to the edges.</string>
-    <string name="rmxp_scanlines">Old-screen lines</string>
 
     <string name="rmxp_hz">Screen smoothness</string>
     <string name="rmxp_hz_auto">Auto</string>
@@ -34,7 +24,6 @@
 
     <string name="rmxp_controls">On-screen controls</string>
     <string name="rmxp_pad_show">Show controls</string>
-    <string name="rmxp_pad_opacity">Opacity</string>
     <string name="rmxp_pad_size">Size</string>
 
     <string name="rmxp_resume">Back to game</string>
@@ -47,12 +36,20 @@
     <string name="rmxp_fps_hint">Match the screen: 60 Hz = 60 fps, 120 Hz = 120 fps. Essentials v20 and newer look smoother; older games also run faster.</string>
     <string name="rmxp_fps_show">Show FPS</string>
     <string name="rmxp_pad_edit">Edit controls</string>
-    <string name="rmxp_edit_hint">Drag a button to move it. Tap it to change its key, size or transparency, or to hide it.</string>
+    <string name="rmxp_edit_hint">Drag to move. Tap a control to edit it.</string>
     <string name="rmxp_edit_reset">Reset</string>
     <string name="rmxp_edit_done">Done</string>
-    <string name="rmxp_edit_choose">Key for this button</string>
+    <string name="rmxp_edit_choose">Choose a key or action</string>
     <string name="rmxp_keyboard">Keyboard</string>
     <string name="rmxp_edit_key">Key</string>
     <string name="rmxp_edit_opacity">Transparency</string>
-    <string name="rmxp_edit_visible">Visible</string>
+    <string name="rmxp_edit_add">Add</string>
+    <string name="rmxp_edit_opacity_all">Opacity</string>
+    <string name="rmxp_edit_label">Label (e.g. A, Run)</string>
+    <string name="rmxp_edit_pill">Wide shape</string>
+    <string name="rmxp_edit_color">Color</string>
+    <string name="rmxp_edit_delete">Delete</string>
+    <string name="rmxp_input">Gamepad and keyboard</string>
+    <string name="rmxp_input_hint">Which game key each button of a connected gamepad sends. A physical keyboard works as is.</string>
+    <string name="rmxp_pad_auto_hint">They hide when a gamepad or keyboard is connected, and come back when you touch the screen.</string>
 </resources>

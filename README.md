@@ -15,11 +15,10 @@ solo.
 | | |
 |---|---|
 | **Pantalla completa** | Sin barras de Android. *Original* respeta la forma del juego; *Llenar* estira hasta los bordes. |
-| **Filtros** | *Nítido suave* (recomendado: píxeles parejos que llenan la pantalla), *Píxel* (escala exacta), *Nítido*, *Suave* y líneas de pantalla antigua. |
 | **Hz y FPS** | Elige los Hz de la pantalla (Auto, 60 o el máximo) y si el juego corre a sus propios FPS o a los de la pantalla (60 Hz = 60 fps, 120 Hz = 120 fps). Medidor de FPS opcional. |
 | **Velocidad rápida hasta x10** | Botón de avance rápido en pantalla; la velocidad (x2 a x10) se elige en el menú. |
 | **Menú de opciones** | Botón Atrás del teléfono o Select en un mando (el botón ☰ se puede mostrar en *Editar controles*). Pausa el juego mientras está abierto. |
-| **Controles** | Botones Enter y Esc, y botón de teclado de Android. *Editar controles*: cada botón se puede mover, cambiar de tecla, de tamaño y de transparencia, u ocultar. Funcionan mandos USB y Bluetooth. |
+| **Controles** | Estilo Kirin: botones translúcidos con etiqueta y tecla. En *Editar controles* puedes añadir, borrar, mover y mapear botones (todas las teclas, más teclado, turbo y menú), y cambiar su color, forma, tamaño y opacidad. *Mando y teclado*: mapeo propio para mandos, con valores cómodos por defecto. Los controles se ocultan solos al conectar un mando o teclado. |
 | **Internet** | HTTP y HTTPS nativos. Los fangames viejos que se conectan con `wininet.dll` se redirigen solos a la conexión de Android. |
 | **Actualizaciones seguras** | La versión nueva se prepara aparte y solo reemplaza a la vieja cuando está completa. Las partidas nunca se borran ni se sobrescriben. |
 | **Firma del autor** | Cada juego recibe su propia firma, a nombre de su creador (se lee del Léeme o Readme del juego). |

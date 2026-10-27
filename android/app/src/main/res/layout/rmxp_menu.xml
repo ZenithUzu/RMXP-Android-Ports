@@ -68,17 +68,6 @@
                 android:text="@string/rmxp_speed_hint" />
 
             <!-- Imagen -->
-            <TextView style="@style/RmxpSection" android:text="@string/rmxp_filter" />
-            <RadioGroup android:id="@+id/rmxp_filter" style="@style/RmxpChipRow">
-                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_filter_sharp" />
-                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_filter_smooth" />
-                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_filter_pixel" />
-                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_filter_best" />
-            </RadioGroup>
-            <TextView
-                android:id="@+id/rmxp_filter_hint"
-                style="@style/RmxpHint" />
-
             <TextView style="@style/RmxpSection" android:text="@string/rmxp_screen" />
             <RadioGroup android:id="@+id/rmxp_screen" style="@style/RmxpChipRow">
                 <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_screen_original" />
@@ -87,11 +76,6 @@
             <TextView
                 android:id="@+id/rmxp_screen_hint"
                 style="@style/RmxpHint" />
-
-            <Switch
-                android:id="@+id/rmxp_scanlines"
-                style="@style/RmxpSwitch"
-                android:text="@string/rmxp_scanlines" />
 
             <!-- Fluidez -->
             <TextView style="@style/RmxpSection" android:text="@string/rmxp_hz" />
@@ -122,21 +106,17 @@
                 style="@style/RmxpSwitch"
                 android:layout_marginTop="4dp"
                 android:text="@string/rmxp_pad_show" />
-            <TextView style="@style/RmxpLabel" android:text="@string/rmxp_pad_opacity" />
-            <SeekBar
-                android:id="@+id/rmxp_pad_opacity"
-                style="@style/RmxpSlider"
-                android:max="90" />
-            <TextView style="@style/RmxpLabel" android:text="@string/rmxp_pad_size" />
-            <SeekBar
-                android:id="@+id/rmxp_pad_size"
-                style="@style/RmxpSlider"
-                android:max="100" />
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_pad_auto_hint" />
             <Button
                 android:id="@+id/rmxp_pad_edit"
                 style="@style/RmxpButton"
                 android:layout_marginTop="10dp"
                 android:text="@string/rmxp_pad_edit" />
+            <Button
+                android:id="@+id/rmxp_input"
+                style="@style/RmxpButton"
+                android:layout_marginTop="8dp"
+                android:text="@string/rmxp_input" />
 
             <!-- Acciones -->
             <Button

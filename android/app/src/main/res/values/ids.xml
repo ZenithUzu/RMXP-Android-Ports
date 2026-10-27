@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- RMXP-Android-Ports: botones de arriba (sus nombres guardan su posición y tamaño) -->
-    <item name="rmxp_btn_keyboard" type="id" />
-    <item name="rmxp_btn_turbo" type="id" />
-    <item name="rmxp_btn_menu" type="id" />
-</resources>
