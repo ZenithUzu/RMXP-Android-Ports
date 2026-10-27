@@ -377,7 +377,7 @@ def gradle_build(project, info, assets, res, motor, sdk, java_home, log):
     outdir = os.path.join(HOME, "apks")
     os.makedirs(outdir, exist_ok=True)
     final = os.path.join(outdir, "%s v%s.apk" % (re.sub(r'[\\/:*?"<>|]', "", info["title"]), info["version"]))
-    shutil.copy2(apk, final + ".part")
+    shutil.move(apk, final + ".part")  # mover, no copiar: así no quedan dos APK
     os.replace(final + ".part", final)  # el APK anterior solo se reemplaza cuando el nuevo está completo
     return final
 
@@ -429,9 +429,15 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
 
     motor = get_motor(log, motor_dir)
     work = os.path.join(HOME, "trabajo", slug(info["title"], "juego"))
-    assets = stage_game(root, work, info, soundfont, log)
-    res = make_icon_res(icon, work)
-    apk = gradle_build(project, info, assets, res, motor, sdk, java_home, log)
+    try:
+        assets = stage_game(root, work, info, soundfont, log)
+        res = make_icon_res(icon, work)
+        apk = gradle_build(project, info, assets, res, motor, sdk, java_home, log)
+    finally:
+        # La copia del juego y los archivos intermedios de Gradle ocupan casi lo mismo que el
+        # juego cada uno; solo se necesitan mientras se compila.
+        shutil.rmtree(work, ignore_errors=True)
+        shutil.rmtree(os.path.join(ANDROID, "app", "build"), ignore_errors=True)
     log("APK listo: " + apk)
     if install:
         adb_install(apk, project, sdk, log)
