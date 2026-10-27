@@ -14,12 +14,12 @@ solo.
 
 | | |
 |---|---|
-| **Pantalla completa** | Sin barras de Android. *Original* respeta la forma del juego; *Llenar* estira hasta los bordes. |
-| **Hz y FPS** | Elige los Hz de la pantalla (Auto, 60 o el máximo) y si el juego corre a sus propios FPS o a los de la pantalla (60 Hz = 60 fps, 120 Hz = 120 fps). Medidor de FPS opcional. |
+| **Pantalla** | Sin barras de Android. *Estirar imagen* de 0 % (forma original) a 100 % (llena todo); un punto intermedio usa más pantalla sin deformar tanto. Las opciones de "tamaño de ventana" de los juegos se ignoran, porque en el teléfono no aplican. |
+| **Hz, FPS y medidor** | Elige los Hz de la pantalla y si el juego corre a sus FPS o a los de la pantalla (60 Hz = 60 fps). *Medidor de rendimiento*: FPS, velocidad, RAM y CPU de la app y batería, en el color que quieras; se arrastra a cualquier lugar. |
 | **Velocidad rápida hasta x10** | Botón de avance rápido en pantalla; la velocidad (x2 a x10) se elige en el menú. |
 | **Menú de opciones** | Botón Atrás del teléfono o Select en un mando (el botón ☰ se puede mostrar en *Editar controles*). Pausa el juego mientras está abierto. |
 | **Controles** | Estilo Kirin: botones translúcidos con etiqueta y tecla. En *Editar controles* puedes añadir, borrar, mover y mapear botones (todas las teclas, más teclado, turbo y menú), y cambiar su color, forma, tamaño y opacidad. *Mando y teclado*: mapeo propio para mandos, con valores cómodos por defecto. Los controles se ocultan solos al conectar un mando o teclado. |
-| **Internet** | HTTP y HTTPS nativos. Los fangames viejos que se conectan con `wininet.dll` se redirigen solos a la conexión de Android. |
+| **Internet** | HTTP y HTTPS nativos (HTTPLite), y la biblioteca de Ruby incluida (`net/http`, `socket`, `uri`, `json`…) para juegos que se conectan en línea o en red local. Los fangames viejos que usan `wininet.dll` se redirigen solos. |
 | **Actualizaciones seguras** | La versión nueva se prepara aparte y solo reemplaza a la vieja cuando está completa. Las partidas nunca se borran ni se sobrescriben. |
 | **Firma del autor** | Cada juego recibe su propia firma, a nombre de su creador (se lee del Léeme o Readme del juego). |
 
@@ -50,7 +50,9 @@ motor ya compilado desde las versiones (releases) de este repositorio.
 4. Presiona **Crear APK**. La primera vez tarda unos minutos porque Gradle
    descarga lo que necesita; las siguientes, mucho menos.
 
-El APK queda en `C:\Users\<tú>\RMXP-Android-Ports\apks\`.
+El APK queda en `C:\Users\<tú>\RMXP-Android-Ports\apks\`. Las copias de trabajo se borran solas al terminar.
+
+**`Limpiar.bat`** borra los APK viejos (deja el más nuevo de cada juego), restos de compilación y motores anteriores. Úsalo después de actualizar la herramienta. Nunca toca las firmas.
 
 ## Cuando el fangame saca una versión nueva
 

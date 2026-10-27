@@ -306,7 +306,8 @@ void EventThread::process(RGSSThreadData &rtData)
 				break;
 
 			case SDL_KEYDOWN:
-				// Alt+Enter: fullscreen switch
+				// Alt+Enter: fullscreen switch (never on Android: always full screen)
+#ifndef __ANDROID__
 				if (event.key.keysym.scancode == SDL_SCANCODE_RETURN && (event.key.keysym.mod & toggleFSMod)) {
 					setFullscreen(win, !fullscreen);
 
@@ -318,6 +319,7 @@ void EventThread::process(RGSSThreadData &rtData)
 
 					break;
 				}
+#endif
 
 #ifndef MKXPZ_BUILD_ANDROID
 				// F1: settings menu
@@ -453,17 +455,26 @@ void EventThread::process(RGSSThreadData &rtData)
 				// Handle user events
 				switch(event.type - usrIdStart)
 				{
+					/* RMXP-Android-Ports: on Android the "window" is the whole phone screen.
+					 * Games that resize it (Essentials' "Screen size" S/M/L/XL option, or
+					 * Graphics.resize_screen) made the picture shrink into a corner. */
 					case REQUEST_SETFULLSCREEN:
+#ifndef __ANDROID__
 						setFullscreen(win, static_cast<bool>(event.user.code));
+#endif
 						break;
 
 					case REQUEST_WINRESIZE:
+#ifndef __ANDROID__
 						SDL_SetWindowSize(win, event.window.data1, event.window.data2);
+#endif
 						rtData.rqWindowAdjust.clear();
 						break;
 
 					case REQUEST_WINREPOSITION:
+#ifndef __ANDROID__
 						SDL_SetWindowPosition(win, event.window.data1, event.window.data2);
+#endif
 						rtData.rqWindowAdjust.clear();
 						break;
 

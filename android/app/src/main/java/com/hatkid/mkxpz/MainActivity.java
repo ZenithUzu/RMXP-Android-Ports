@@ -59,6 +59,8 @@ public class MainActivity extends SDLActivity
     public static native void nativeSetVideo(int filter, int screen);
     /** 0 = the game's own frame rate, otherwise frames per second (screen Hz). */
     public static native void nativeSetFps(int fps);
+    /** 0 = the game's own shape, 100 = fill the screen. */
+    public static native void nativeSetStretch(int percent);
     /** Frames shown so far, for the FPS counter. */
     public static native int nativeGetDrawnFrames();
 

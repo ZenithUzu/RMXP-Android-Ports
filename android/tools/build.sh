@@ -110,7 +110,13 @@ if (( MOTOR_ONLY )); then
   (cd "$REPO_ROOT" && ./gradlew assembleRelease "-PtargetAbis=$TARGET_ABIS" --console=plain)
   rm -rf "$REPO_ROOT/build/motor" && mkdir -p "$REPO_ROOT/build/motor"
   unzip -q "$REPO_ROOT"/app/build/outputs/apk/release/*-universal-release-unsigned.apk 'lib/*' -d "$REPO_ROOT/build/motor"
-  (cd "$REPO_ROOT/build/motor" && rm -f ../motor-android.zip && zip -qr ../motor-android.zip lib)
+  # Ruby's standard library (net/http, socket, uri, json...) for games that go online.
+  # The C parts are already inside libruby; these are the .rb files that load them.
+  # Skipped: developer tools nobody needs in a game (docs, gems, console) and arch files.
+  (cd "$REPO_ROOT/app/jni/build-arm64-v8a/lib/ruby/3.1.0" && tar cf - \
+     --exclude=rdoc --exclude=bundler --exclude=rubygems --exclude=irb --exclude=reline \
+     --exclude='*-linux-android*' .) | (mkdir -p "$REPO_ROOT/build/motor/ruby" && cd "$REPO_ROOT/build/motor/ruby" && tar xf -)
+  (cd "$REPO_ROOT/build/motor" && rm -f ../motor-android.zip && zip -qr ../motor-android.zip lib ruby)
   ls -la "$REPO_ROOT/build/motor-android.zip"
   exit 0
 fi

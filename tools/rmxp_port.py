@@ -43,7 +43,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = os.path.join(REPO, "android")
 HOME = os.path.join(os.path.expanduser("~"), "RMXP-Android-Ports")
 # Motor ya compilado (librerías .so). Se publica con .github/workflows/motor.yml.
-MOTOR_VERSION = "motor-v3"
+MOTOR_VERSION = "motor-v4"
 MOTOR_URL = "https://github.com/ZenithUzu/RMXP-Android-Ports/releases/download/%s/motor-android.zip" % MOTOR_VERSION
 WINDOWS = os.name == "nt"
 
@@ -280,7 +280,7 @@ def find_soundfont(game):
     return None
 
 
-def stage_game(root, work, info, soundfont, log):
+def stage_game(root, work, info, soundfont, log, ruby_lib=None):
     """Copia el juego a work/assets/game, sin .exe/.dll, con los parches y mkxp.json."""
     assets = os.path.join(work, "assets")
     game = os.path.join(assets, "game")
@@ -310,6 +310,12 @@ def stage_game(root, work, info, soundfont, log):
         "syncToRefreshrate": False,
         "preloadScript": patches + [p for p in conf.get("preloadScript", []) if p not in patches],
     })
+    if ruby_lib and os.path.isdir(ruby_lib):
+        # Biblioteca de Ruby (net/http, socket...) para juegos con funciones en línea
+        shutil.copytree(ruby_lib, os.path.join(game, "rmxp_ruby"))
+        # "." = la carpeta del juego: el motor deja de buscar ahí si hay rutas propias
+        extra = [p for p in conf.get("rubyLoadpath", []) if p != "rmxp_ruby"] or ["."]
+        conf["rubyLoadpath"] = ["rmxp_ruby"] + extra
     if soundfont:
         shutil.copy2(soundfont, os.path.join(game, "soundfont.sf2"))
         conf["midiSoundFont"] = "soundfont.sf2"
@@ -403,6 +409,43 @@ def adb_install(apk, project, sdk, log):
     log("Instalado y abierto en el teléfono.")
 
 
+def limpiar(log=print):
+    """Borra lo que ya no sirve: APKs viejos (deja el más nuevo de cada juego), restos de
+    compilación y motores de versiones anteriores. Nunca toca las firmas (juegos/)."""
+    freed = 0
+
+    def size(path):
+        if os.path.isfile(path):
+            return os.path.getsize(path)
+        return sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(path) for f in fs)
+
+    def remove(path):
+        nonlocal freed
+        if os.path.exists(path):
+            freed += size(path)
+            shutil.rmtree(path, ignore_errors=True) if os.path.isdir(path) else os.remove(path)
+            log("Borrado: " + path)
+
+    apks = os.path.join(HOME, "apks")
+    if os.path.isdir(apks):
+        newest = {}
+        for f in sorted(os.listdir(apks), key=lambda f: os.path.getmtime(os.path.join(apks, f)), reverse=True):
+            game = re.sub(r" v[^ ]*\.apk(\.part)?$", "", f)
+            if game in newest or f.endswith(".part"):
+                remove(os.path.join(apks, f))
+            else:
+                newest[game] = f
+    remove(os.path.join(HOME, "trabajo"))
+    remove(os.path.join(ANDROID, "app", "build"))
+    motores = os.path.join(HOME, "motor")
+    if os.path.isdir(motores):
+        for v in os.listdir(motores):
+            if v != MOTOR_VERSION:
+                remove(os.path.join(motores, v))
+    log("Listo. Espacio liberado: %.0f MB" % (freed / 1048576))
+    return freed
+
+
 def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
          install=False, motor_dir=None, log=print):
     """Proceso completo. Devuelve la ruta del APK."""
@@ -430,7 +473,7 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     motor = get_motor(log, motor_dir)
     work = os.path.join(HOME, "trabajo", slug(info["title"], "juego"))
     try:
-        assets = stage_game(root, work, info, soundfont, log)
+        assets = stage_game(root, work, info, soundfont, log, os.path.join(os.path.dirname(motor), "ruby"))
         res = make_icon_res(icon, work)
         apk = gradle_build(project, info, assets, res, motor, sdk, java_home, log)
     finally:
@@ -621,7 +664,10 @@ def main():
     ap.add_argument("--autor"), ap.add_argument("--version"), ap.add_argument("--nombre")
     ap.add_argument("--icono", help="PNG para el icono"), ap.add_argument("--soundfont", help=".sf2 para MIDI")
     ap.add_argument("--motor", help="carpeta lib/ con el motor compilado (en vez de descargarlo)")
+    ap.add_argument("--limpiar", action="store_true", help="borrar APKs viejos y restos de compilación")
     a = ap.parse_args()
+    if a.limpiar:
+        return limpiar()
     if not a.sin_interfaz:
         return gui(a.carpeta)
     if not a.carpeta:

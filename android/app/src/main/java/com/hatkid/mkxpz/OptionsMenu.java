@@ -3,7 +3,6 @@ package com.hatkid.mkxpz;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Handler;
@@ -45,7 +44,8 @@ public class OptionsMenu implements TouchControls.Actions
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     private View mRoot, mPanel;
-    private TextView mSpeedValue, mScreenHint, mHzHint, mFpsLabel;
+    private TextView mSpeedValue, mStretchValue, mHzHint;
+    private Medidor mMedidor;
     private boolean mTurbo = false;
     private int mHz = 60;
 
@@ -72,22 +72,8 @@ public class OptionsMenu implements TouchControls.Actions
         float dp = mActivity.getResources().getDisplayMetrics().density;
         controls.attachTo(layout);
 
-        // Medidor de FPS arriba a la izquierda
-        mFpsLabel = new TextView(mActivity);
-        mFpsLabel.setTextColor(mActivity.getColor(R.color.rmxp_ambar));
-        mFpsLabel.setTextSize(13);
-        mFpsLabel.setShadowLayer(3, 0, 0, Color.BLACK);
-        mFpsLabel.setPadding(Math.round(12 * dp), Math.round(6 * dp), 0, 0);
-        layout.addView(mFpsLabel, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        mHandler.post(new Runnable() {
-            int last = MainActivity.nativeGetDrawnFrames();
-            public void run() {
-                int now = MainActivity.nativeGetDrawnFrames();
-                mFpsLabel.setText((now - last) + " FPS" + (mTurbo && !isOpen() ? "  x" + pref("velocidad", 5) : ""));
-                last = now;
-                mHandler.postDelayed(this, 1000);
-            }
-        });
+        mMedidor = new Medidor(mActivity, mPrefs, () -> mTurbo ? pref("velocidad", 5) : 1);
+        mMedidor.attachTo(layout);
 
         // Menú (oculto hasta que se abre)
         mRoot = LayoutInflater.from(mActivity).inflate(R.layout.rmxp_menu, layout, false);
@@ -108,14 +94,13 @@ public class OptionsMenu implements TouchControls.Actions
             title.setTypeface(gameFont);
 
         mSpeedValue = mRoot.findViewById(R.id.rmxp_speed_value);
-        mScreenHint = mRoot.findViewById(R.id.rmxp_screen_hint);
+        mStretchValue = mRoot.findViewById(R.id.rmxp_stretch_value);
         mHzHint = mRoot.findViewById(R.id.rmxp_hz_hint);
 
         slider(R.id.rmxp_speed, "velocidad", 5, 2, v -> applySpeed());
-        chips(R.id.rmxp_screen, "pantalla", 0, v -> applyVideo());
+        slider(R.id.rmxp_stretch, "estirar", 0, 0, v -> applyVideo());
         chips(R.id.rmxp_hz, "hz", 0, v -> applyHz());
         chips(R.id.rmxp_fps, "fps", 0, v -> applyHz());
-        toggle(R.id.rmxp_fps_show, "ver_fps", 0, v -> mFpsLabel.setVisibility(v == 1 ? View.VISIBLE : View.GONE));
         toggle(R.id.rmxp_pad_show, "controles", 1, v -> controls.setUserVisible(v == 1));
 
         mRoot.findViewById(R.id.rmxp_resume).setOnClickListener(v -> close());
@@ -132,6 +117,7 @@ public class OptionsMenu implements TouchControls.Actions
             controls.startEditing(this::applySpeed);
         });
         mRoot.findViewById(R.id.rmxp_input).setOnClickListener(v -> showInputMapping());
+        mRoot.findViewById(R.id.rmxp_meter).setOnClickListener(v -> mMedidor.showSettings());
     }
 
     /** "Mando y teclado": a qué tecla manda cada botón del mando físico. */
@@ -235,7 +221,6 @@ public class OptionsMenu implements TouchControls.Actions
         applyVideo();
         applyHz();
         controls.setUserVisible(pref("controles", 1) == 1);
-        mFpsLabel.setVisibility(pref("ver_fps", 0) == 1 ? View.VISIBLE : View.GONE);
         //noinspection ResultOfMethodCallIgnored
         new File(mGamePath, "rmxp_pantalla.txt").delete(); // de la panorámica que se quitó
     }
@@ -251,10 +236,12 @@ public class OptionsMenu implements TouchControls.Actions
 
     private void applyVideo()
     {
-        int screen = Math.min(pref("pantalla", 0), 1);
+        // La opción vieja "Llenar" (pantalla = 1) equivale a estirar al 100 %
+        int stretch = mPrefs.contains("estirar") ? pref("estirar", 0) : pref("pantalla", 0) * 100;
+        mStretchValue.setText(stretch + " %");
         // Filtro fijo "nítido suave": píxeles parejos que llenan la pantalla
-        MainActivity.nativeSetVideo(3, screen);
-        mScreenHint.setText(screen == 0 ? R.string.rmxp_screen_hint_0 : R.string.rmxp_screen_hint_1);
+        MainActivity.nativeSetVideo(3, 0);
+        MainActivity.nativeSetStretch(stretch);
     }
 
     /**

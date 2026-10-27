@@ -70,6 +70,17 @@ class Utilidades(unittest.TestCase):
         self.assertTrue(raw.isascii())
         self.assertEqual(json.loads(raw)["windowTitle"], "Pokémon Ñandú")
 
+    def test_incluye_biblioteca_de_ruby(self):
+        root = make_game({"Game.ini": "[Game]\n"})
+        lib = tempfile.mkdtemp()
+        os.makedirs(os.path.join(lib, "net"))
+        open(os.path.join(lib, "net", "http.rb"), "w").close()
+        assets = rmxp_port.stage_game(root, tempfile.mkdtemp(), {"title": "T"}, None, lambda t: None, lib)
+        game = os.path.join(assets, "game")
+        conf = json.load(open(os.path.join(game, "mkxp.json"), encoding="utf-8"))
+        self.assertEqual(conf["rubyLoadpath"], ["rmxp_ruby", "."])
+        self.assertTrue(os.path.exists(os.path.join(game, "rmxp_ruby", "net", "http.rb")))
+
     def test_usa_soundfont_del_juego(self):
         root = make_game({"Game.ini": "[Game]\n"})
         os.makedirs(os.path.join(root, "Audio"))

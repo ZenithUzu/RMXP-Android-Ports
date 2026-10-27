@@ -11,11 +11,6 @@
     <string name="rmxp_speed_hint">El botón de avance rápido cambia entre velocidad normal y esta.</string>
 
 
-    <string name="rmxp_screen">Pantalla</string>
-    <string name="rmxp_screen_original">Original</string>
-    <string name="rmxp_screen_fill">Llenar</string>
-    <string name="rmxp_screen_hint_0">Proporción original del juego, con bordes a los lados.</string>
-    <string name="rmxp_screen_hint_1">Estira la imagen hasta los bordes.</string>
 
     <string name="rmxp_hz">Fluidez de pantalla</string>
     <string name="rmxp_hz_auto">Auto</string>
@@ -35,7 +30,6 @@
     <string name="rmxp_fps_game">Los del juego</string>
     <string name="rmxp_fps_screen">Igual a la pantalla</string>
     <string name="rmxp_fps_hint">Igual a la pantalla: 60 Hz = 60 fps, 120 Hz = 120 fps. Con Essentials v20 o más nuevo se ve más fluido; en juegos más viejos el juego también corre más rápido.</string>
-    <string name="rmxp_fps_show">Mostrar FPS</string>
     <string name="rmxp_pad_edit">Editar controles</string>
     <string name="rmxp_edit_hint">Arrastra para mover. Toca un control para editarlo.</string>
     <string name="rmxp_edit_reset">Restablecer</string>
@@ -53,4 +47,13 @@
     <string name="rmxp_input">Mando y teclado</string>
     <string name="rmxp_input_hint">Qué tecla del juego manda cada botón de un mando conectado. El teclado físico funciona directo.</string>
     <string name="rmxp_pad_auto_hint">Se ocultan solos al conectar un mando o teclado, y vuelven al tocar la pantalla.</string>
+    <string name="rmxp_stretch">Estirar imagen</string>
+    <string name="rmxp_stretch_hint">0 % respeta la forma del juego; 100 % llena toda la pantalla. Un punto intermedio usa más pantalla sin deformar tanto.</string>
+    <string name="rmxp_meter">Medidor de rendimiento</string>
+    <string name="rmxp_meter_fps">FPS</string>
+    <string name="rmxp_meter_speed">Velocidad</string>
+    <string name="rmxp_meter_ram">RAM de la app</string>
+    <string name="rmxp_meter_cpu">CPU de la app</string>
+    <string name="rmxp_meter_battery">Batería</string>
+    <string name="rmxp_meter_hint">Con hasta 2 datos se muestran en una línea; con más, en lista. Arrastra el medidor para moverlo.</string>
 </resources>

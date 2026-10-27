@@ -10,11 +10,6 @@
     <string name="rmxp_speed_hint">The fast-forward button switches between normal speed and this one.</string>
 
 
-    <string name="rmxp_screen">Screen</string>
-    <string name="rmxp_screen_original">Original</string>
-    <string name="rmxp_screen_fill">Fill</string>
-    <string name="rmxp_screen_hint_0">The game\'s original shape, with borders on the sides.</string>
-    <string name="rmxp_screen_hint_1">Stretches the picture to the edges.</string>
 
     <string name="rmxp_hz">Screen smoothness</string>
     <string name="rmxp_hz_auto">Auto</string>
@@ -34,7 +29,6 @@
     <string name="rmxp_fps_game">The game\'s own</string>
     <string name="rmxp_fps_screen">Match the screen</string>
     <string name="rmxp_fps_hint">Match the screen: 60 Hz = 60 fps, 120 Hz = 120 fps. Essentials v20 and newer look smoother; older games also run faster.</string>
-    <string name="rmxp_fps_show">Show FPS</string>
     <string name="rmxp_pad_edit">Edit controls</string>
     <string name="rmxp_edit_hint">Drag to move. Tap a control to edit it.</string>
     <string name="rmxp_edit_reset">Reset</string>
@@ -52,4 +46,13 @@
     <string name="rmxp_input">Gamepad and keyboard</string>
     <string name="rmxp_input_hint">Which game key each button of a connected gamepad sends. A physical keyboard works as is.</string>
     <string name="rmxp_pad_auto_hint">They hide when a gamepad or keyboard is connected, and come back when you touch the screen.</string>
+    <string name="rmxp_stretch">Stretch picture</string>
+    <string name="rmxp_stretch_hint">0% keeps the game\'s shape; 100% fills the whole screen. A middle value uses more screen without distorting as much.</string>
+    <string name="rmxp_meter">Performance meter</string>
+    <string name="rmxp_meter_fps">FPS</string>
+    <string name="rmxp_meter_speed">Speed</string>
+    <string name="rmxp_meter_ram">App RAM</string>
+    <string name="rmxp_meter_cpu">App CPU</string>
+    <string name="rmxp_meter_battery">Battery</string>
+    <string name="rmxp_meter_hint">Up to 2 items show on one line; more show as a list. Drag the meter to move it.</string>
 </resources>

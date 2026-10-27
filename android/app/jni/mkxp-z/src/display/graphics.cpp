@@ -72,6 +72,13 @@ std::atomic<int> rmxpSpeed(1);         /* 0 = paused, 1 = normal, 2..10 = fast f
 static std::atomic<int> rmxpVideo(-1); /* filter * 10 + screen mode, -1 = nothing new */
 static std::atomic<int> rmxpFps(0);    /* forced frame rate (screen Hz), 0 = the game's own */
 static std::atomic<int> rmxpDrawn(0);  /* frames shown on screen, for the FPS counter */
+static std::atomic<int> rmxpStretch(0); /* 0 = original shape, 100 = fill the screen */
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_hatkid_mkxpz_MainActivity_nativeSetStretch(JNIEnv *, jclass, jint percent) {
+    rmxpStretch = std::max(0, std::min((int)percent, 100));
+    rmxpVideo = 3 * 10 + 0; /* re-apply the video settings so the new size shows right away */
+}
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_hatkid_mkxpz_MainActivity_nativeSetFps(JNIEnv *, jclass, jint fps) {
@@ -930,6 +937,13 @@ struct GraphicsPrivate {
             scSize.y = scSize.x / resRatio;
         else if (resRatio < winRatio)
             scSize.x = scSize.y * resRatio;
+        
+#ifdef __ANDROID__
+        /* RMXP-Android-Ports: stretch partway between the original shape and the full screen */
+        float stretch = rmxpStretch / 100.f;
+        scSize.x += (winSize.x - scSize.x) * stretch;
+        scSize.y += (winSize.y - scSize.y) * stretch;
+#endif
         
         scOffset.x = (winSize.x - scSize.x) / 2.f;
         scOffset.y = (winSize.y - scSize.y) / 2.f;

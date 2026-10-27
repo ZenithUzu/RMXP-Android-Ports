@@ -14,12 +14,12 @@ itself.
 
 | | |
 |---|---|
-| **Full screen** | No Android bars. *Original* keeps the game's shape; *Fill* stretches to the edges. |
-| **Hz and FPS** | Pick the screen's Hz (Auto, 60 or max) and whether the game runs at its own FPS or the screen's (60 Hz = 60 fps, 120 Hz = 120 fps). Optional FPS counter. |
+| **Screen** | No Android bars. *Stretch picture* from 0% (original shape) to 100% (fills everything); a middle value uses more screen without distorting as much. Games' "window size" options are ignored, since they don't apply on a phone. |
+| **Hz, FPS and meter** | Pick the screen's Hz and whether the game runs at its own FPS or the screen's (60 Hz = 60 fps). *Performance meter*: FPS, speed, app RAM and CPU, and battery, in any color; drag it anywhere. |
 | **Fast forward up to x10** | On-screen fast-forward button; pick the speed (x2 to x10) in the menu. |
 | **Options menu** | The phone's Back button or Select on a controller (the ☰ button can be shown in *Edit controls*). The game pauses while it's open. |
 | **Controls** | Kirin style: translucent buttons with a label and key. In *Edit controls* you can add, delete, move and map buttons (every key, plus keyboard, turbo and menu) and change their color, shape, size and opacity. *Gamepad and keyboard*: its own mapping for gamepads, with comfortable defaults. Controls hide when a gamepad or keyboard is connected. |
-| **Internet** | Native HTTP and HTTPS. Older fangames that go online through `wininet.dll` are redirected to Android's connection automatically. |
+| **Internet** | Native HTTP and HTTPS (HTTPLite), plus Ruby's standard library (`net/http`, `socket`, `uri`, `json`…) for games that go online or use the local network. Older fangames that use `wininet.dll` are redirected automatically. |
 | **Safe updates** | The new version is prepared on the side and only replaces the old one once it's complete. Saves are never deleted or overwritten. |
 | **Author signature** | Each game gets its own signature in its creator's name (read from the game's Readme). |
 
@@ -50,7 +50,9 @@ prebuilt engine from this repository's releases.
 4. Press **Crear APK**. The first time takes a few minutes while Gradle
    downloads what it needs; later builds are much faster.
 
-The APK ends up in `C:\Users\<you>\RMXP-Android-Ports\apks\`.
+The APK ends up in `C:\Users\<you>\RMXP-Android-Ports\apks\`. Working copies are deleted automatically when done.
+
+**`Limpiar.bat`** deletes old APKs (keeps the newest one per game), build leftovers and previous engines. Run it after updating the tool. It never touches signatures.
 
 ## When the fangame releases a new version
 
