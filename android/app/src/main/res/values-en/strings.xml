@@ -55,4 +55,13 @@
     <string name="rmxp_meter_cpu">App CPU</string>
     <string name="rmxp_meter_battery">Battery</string>
     <string name="rmxp_meter_hint">Up to 2 items show on one line; more show as a list. Drag the meter to move it.</string>
+    <string name="rmxp_saves">Saves</string>
+    <string name="rmxp_saves_export">Export</string>
+    <string name="rmxp_saves_import">Import</string>
+    <string name="rmxp_saves_hint">Export your saves to a folder on the phone, or import saves from JoiPlay, Kirin or the PC (.rxdata, .rvdata or .rvdata2 files).</string>
+    <string name="rmxp_saves_none">This game has no saves yet.</string>
+    <string name="rmxp_saves_none_picked">You didn\'t pick any save (.rxdata, .rvdata or .rvdata2).</string>
+    <string name="rmxp_saves_exported">Exported %1$d saves.</string>
+    <string name="rmxp_saves_imported">Imported %1$d saves. The previous one was kept as a backup (.respaldo). Restart the game to see them.</string>
+    <string name="rmxp_saves_error">The save couldn\'t be copied:</string>
 </resources>

@@ -51,6 +51,7 @@ public class OptionsMenu implements TouchControls.Actions
 
     public final TouchControls controls;
     public final PadMapper pad;
+    public final Partidas partidas;
 
     public OptionsMenu(Activity activity, String gamePath)
     {
@@ -58,6 +59,7 @@ public class OptionsMenu implements TouchControls.Actions
         mGamePath = gamePath;
         mPrefs = activity.getSharedPreferences("rmxp_opciones", Activity.MODE_PRIVATE);
         pad = new PadMapper(mPrefs, this);
+        partidas = new Partidas(activity, new File(gamePath));
         controls = new TouchControls(activity, mPrefs, this, pad);
     }
 
@@ -118,6 +120,8 @@ public class OptionsMenu implements TouchControls.Actions
         });
         mRoot.findViewById(R.id.rmxp_input).setOnClickListener(v -> showInputMapping());
         mRoot.findViewById(R.id.rmxp_meter).setOnClickListener(v -> mMedidor.showSettings());
+        mRoot.findViewById(R.id.rmxp_saves_export).setOnClickListener(v -> partidas.export());
+        mRoot.findViewById(R.id.rmxp_saves_import).setOnClickListener(v -> partidas.pickImport());
     }
 
     /** "Mando y teclado": a qué tecla manda cada botón del mando físico. */

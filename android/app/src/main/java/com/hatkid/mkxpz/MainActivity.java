@@ -350,6 +350,14 @@ public class MainActivity extends SDLActivity
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        if (mMenu != null && mMenu.partidas.onResult(requestCode, resultCode, data))
+            return;
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
     public void onWindowFocusChanged(boolean hasFocus)
     {
         super.onWindowFocusChanged(hasFocus);

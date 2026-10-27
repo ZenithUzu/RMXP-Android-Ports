@@ -56,4 +56,13 @@
     <string name="rmxp_meter_cpu">CPU de la app</string>
     <string name="rmxp_meter_battery">Batería</string>
     <string name="rmxp_meter_hint">Con hasta 2 datos se muestran en una línea; con más, en lista. Arrastra el medidor para moverlo.</string>
+    <string name="rmxp_saves">Partidas</string>
+    <string name="rmxp_saves_export">Exportar</string>
+    <string name="rmxp_saves_import">Importar</string>
+    <string name="rmxp_saves_hint">Exporta tus partidas a una carpeta del teléfono, o importa las de JoiPlay, Kirin o la PC (archivos .rxdata, .rvdata o .rvdata2).</string>
+    <string name="rmxp_saves_none">Este juego todavía no tiene partidas guardadas.</string>
+    <string name="rmxp_saves_none_picked">No elegiste ninguna partida (.rxdata, .rvdata o .rvdata2).</string>
+    <string name="rmxp_saves_exported">Se exportaron %1$d partidas.</string>
+    <string name="rmxp_saves_imported">Se importaron %1$d partidas. La que había antes quedó como copia (.respaldo). Reinicia el juego para verlas.</string>
+    <string name="rmxp_saves_error">No se pudo copiar la partida:</string>
 </resources>

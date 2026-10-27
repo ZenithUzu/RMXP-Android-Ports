@@ -136,6 +136,29 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/rmxp_input" />
 
+            <!-- Partidas -->
+            <TextView style="@style/RmxpSection" android:text="@string/rmxp_saves" />
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_saves_hint" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/rmxp_saves_export"
+                    style="@style/RmxpButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/rmxp_saves_export" />
+                <Button
+                    android:id="@+id/rmxp_saves_import"
+                    style="@style/RmxpButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/rmxp_saves_import" />
+            </LinearLayout>
+
             <!-- Acciones -->
             <Button
                 android:id="@+id/rmxp_resume"
