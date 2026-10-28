@@ -5,6 +5,7 @@ obj/
 jni/build*
 
 # Native dependecies
+jni/fluidsynth/
 jni/libiconv/
 jni/libogg/
 jni/libtheora/
