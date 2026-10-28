@@ -515,6 +515,32 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     return apk
 
 
+def plantilla(motor_dir=None, log=print):
+    """APK sin juego para la app del teléfono (RPGMK-AndroidPort-Apk): el motor, los parches
+    en assets/rmxp/patches y la biblioteca de Ruby en assets/rmxp/rmxp_ruby. El teléfono le
+    mete el juego, le cambia nombre, icono e id, y lo firma."""
+    sdk, java_home = find_sdk(), find_java()
+    motor = get_motor(log, motor_dir)
+    work = os.path.join(HOME, "trabajo", "plantilla")
+    shutil.rmtree(largo(work), ignore_errors=True)
+    assets = os.path.join(work, "assets")
+    shutil.copytree(os.path.join(ANDROID, "patches"), os.path.join(assets, "rmxp", "patches"))
+    ruby = os.path.join(os.path.dirname(motor), "ruby")
+    if os.path.isdir(ruby):
+        shutil.copytree(ruby, os.path.join(assets, "rmxp", "rmxp_ruby"))
+    # Icono genérico, en los mismos archivos que usa un juego con icono propio (el teléfono los cambia)
+    icon = os.path.join(ANDROID, "app", "src", "main", "res", "mipmap-xxxhdpi", "ic_launcher.png")
+    res = make_icon_res(icon, work)
+    info = {"title": "Plantilla", "version": "1"}
+    project = {"id": "com.rmxp.plantilla", "keystore": os.path.join(work, "plantilla.jks"),
+               "password": "plantilla"}
+    make_keystore(project, {"title": "Plantilla", "author": "RMXP-Android-Ports"}, java_home, log)
+    try:
+        return gradle_build(project, info, assets, res, motor, sdk, java_home, log)
+    finally:
+        shutil.rmtree(largo(work), ignore_errors=True)
+
+
 # --------------------------------------------------------------------------
 # Interfaz (tkinter, viene con Python). Arrastrar y soltar si está tkinterdnd2.
 # --------------------------------------------------------------------------
@@ -698,10 +724,14 @@ def main():
     ap.add_argument("--icono", help="PNG para el icono"), ap.add_argument("--soundfont", help=".sf2 para MIDI")
     ap.add_argument("--motor", help="carpeta lib/ con el motor compilado (en vez de descargarlo)")
     ap.add_argument("--ligero", action="store_true", help="ahorrar espacio: Graphics/Audio se leen del APK")
+    ap.add_argument("--plantilla", action="store_true", help="APK sin juego para la app del teléfono")
     ap.add_argument("--limpiar", action="store_true", help="borrar APKs viejos y restos de compilación")
     a = ap.parse_args()
     if a.limpiar:
         return limpiar()
+    if a.plantilla:
+        print("Plantilla lista: " + plantilla(a.motor))
+        return
     if not a.sin_interfaz:
         return gui(a.carpeta)
     if not a.carpeta:

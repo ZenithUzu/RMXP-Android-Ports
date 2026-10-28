@@ -99,6 +99,21 @@ public class MainActivity extends SDLActivity
         return mVirtual != null && mVirtual.contains(rel);
     }
 
+    /**
+     * Version of the installed APK. Read from the package (not BuildConfig) because APKs made
+     * on the phone from the template keep the template's BuildConfig.
+     */
+    @SuppressWarnings("deprecation")
+    private long versionCode()
+    {
+        try {
+            android.content.pm.PackageInfo p = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return Build.VERSION.SDK_INT >= 28 ? p.getLongVersionCode() : p.versionCode;
+        } catch (Exception e) {
+            return BuildConfig.VERSION_CODE;
+        }
+    }
+
     /** True when the extracted copy matches the current APK version. */
     private boolean markerIsCurrent()
     {
@@ -108,7 +123,7 @@ public class MainActivity extends SDLActivity
                 return false;
             }
             String stored = new String(java.nio.file.Files.readAllBytes(marker.toPath())).trim();
-            return stored.equals(String.valueOf(BuildConfig.VERSION_CODE));
+            return stored.equals(String.valueOf(versionCode()));
         } catch (Exception e) {
             return false;
         }
@@ -135,7 +150,7 @@ public class MainActivity extends SDLActivity
                 moveMissing(game, fresh, "");
             FileOutputStream fos = new FileOutputStream(new File(fresh, EXTRACT_MARKER));
             try {
-                fos.write(String.valueOf(BuildConfig.VERSION_CODE).getBytes());
+                fos.write(String.valueOf(versionCode()).getBytes());
             } finally {
                 fos.close();
             }

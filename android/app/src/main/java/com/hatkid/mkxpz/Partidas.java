@@ -181,7 +181,8 @@ public class Partidas
      */
     public File carpeta()
     {
-        String juego = mActivity.getString(R.string.app_name).replaceAll("[\\\\/:*?\"<>|]", "").trim();
+        // El nombre que muestra Android (en los APK hechos en el teléfono no es R.string.app_name)
+        String juego = mActivity.getApplicationInfo().loadLabel(mActivity.getPackageManager()).toString().replaceAll("[\\\\/:*?\"<>|]", "").trim();
         return new File(android.os.Environment.getExternalStorageDirectory(), "RPG Maker/" + juego);
     }
 
