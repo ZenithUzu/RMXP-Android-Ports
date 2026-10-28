@@ -252,6 +252,21 @@ public class MainActivity extends SDLActivity
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
+        // Recolector de basura de Ruby: montón inicial grande y límites más altos, para que
+        // las pausas de limpieza (tirones al guardar, en batalla o al cambiar de zona) pasen
+        // menos seguido. Ruby los lee al arrancar; gasta algo más de RAM.
+        String[][] gc = {
+            { "RUBY_GC_HEAP_INIT_SLOTS", "800000" },
+            { "RUBY_GC_HEAP_OLDOBJECT_LIMIT_FACTOR", "3.0" },
+            { "RUBY_GC_MALLOC_LIMIT", "67108864" },
+            { "RUBY_GC_MALLOC_LIMIT_MAX", "134217728" },
+            { "RUBY_GC_OLDMALLOC_LIMIT", "67108864" },
+            { "RUBY_GC_OLDMALLOC_LIMIT_MAX", "268435456" },
+        };
+        for (String[] v : gc) {
+            try { android.system.Os.setenv(v[0], v[1], false); } catch (Exception ignored) { }
+        }
+
         super.onCreate(savedInstanceState);
 
         hideSystemBars();
