@@ -39,6 +39,19 @@ class GameInfo(unittest.TestCase):
         self.assertEqual((info["author"], info["version"]), ("", "3.0"))
 
 
+class LeerDatos(unittest.TestCase):
+    def test_ignora_version_de_essentials_y_lee_docs(self):
+        root = make_game({"Game.ini": "[Game]\nTitle=Mi Juego\n",
+                          "Readme.txt": "Hecho con Pokémon Essentials v20.1\nCreado por RPG Maker XP\n"})
+        os.makedirs(os.path.join(root, "Docs"))
+        with open(os.path.join(root, "Docs", "Créditos.txt"), "w", encoding="utf-8") as f:
+            f.write("Autor: Fulano\n")
+        with open(os.path.join(root, "Changelog.txt"), "w", encoding="utf-8") as f:
+            f.write("v1.3.2\n- arreglos\nv1.3.1\n")
+        info = rmxp_port.game_info(root)
+        self.assertEqual((info["author"], info["version"]), ("Fulano", "1.3.2"))
+
+
 class Utilidades(unittest.TestCase):
     def test_slug(self):
         self.assertEqual(rmxp_port.slug("Pokémon Uranium!", "x"), "pokemonuranium")

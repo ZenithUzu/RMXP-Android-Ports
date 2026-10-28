@@ -56,7 +56,12 @@ class PortError(Exception):
 # Datos del juego: título, autor (del Léeme) y versión
 # --------------------------------------------------------------------------
 
-README_RE = re.compile(r"^(read ?me|l[eé]e ?me|l[eé]ame|cr[eé]ditos|credits|info|instrucciones|leia-me)", re.I)
+README_RE = re.compile(r"^(read ?me|l[eé]e ?me|l[eé]ame|cr[eé]ditos|credits|info|instrucciones|leia-me"
+                       r"|change ?log|cambios|novedades|versi[oó]n|notas)", re.I)
+# Líneas que hablan del motor y no del juego ("Hecho con Essentials v20.1"): no dan autor ni versión
+ENGINE_RE = re.compile(r"essentials|rpg ?maker|mkxp|joiplay|kirin|\brgss|\bruby\b", re.I)
+# Carpetas del juego donde no hay textos (no se revisan)
+GAME_DIRS = {"graphics", "audio", "data", "fonts", "plugins", "save", "saves"}
 AUTHOR_RES = [
     re.compile(r"^\W*(?:(?:an?|un)\s+(?:game|juego|fangame)\s+)?(?:hecho|creado|desarrollado|programado|made|created|developed|programmed)\s+(?:por|by)\s*[:\-]?\s*(.+)$", re.I),
     re.compile(r"^\W*(?:autor(?:es|a)?|author(?:s)?|creador(?:es|a)?|creator(?:s)?|desarrollador(?:es|a)?|developer(?:s)?|dev)\s*[:\-]\s*(.+)$", re.I),
@@ -88,13 +93,12 @@ def game_info(root):
         m = re.search(r"^\s*Title\s*=\s*(.+?)\s*$", read_text(ini), re.M | re.I)
         if m:
             info["title"] = m.group(1)
-    for name in sorted(os.listdir(root)):
-        path = os.path.join(root, name)
-        if not (os.path.isfile(path) and README_RE.match(name)):
-            continue
+    for path in readme_files(root):
         text = read_text(path)
         for line in text.splitlines():
             line = line.strip()
+            if ENGINE_RE.search(line):
+                continue
             if not info["author"]:
                 for rx in AUTHOR_RES:
                     m = rx.search(line)
@@ -111,6 +115,21 @@ def game_info(root):
         m = VERSION_RE.search(info["title"])
         info["version"] = m.group(1) if m else "1.0"
     return info
+
+
+def readme_files(root):
+    """Léeme, créditos, cambios... en la carpeta del juego y un nivel más adentro (ej. Docs/)."""
+    found = []
+    for name in sorted(os.listdir(root)):
+        path = os.path.join(root, name)
+        if os.path.isfile(path) and README_RE.match(name):
+            found.append(path)
+    for name in sorted(os.listdir(root)):
+        path = os.path.join(root, name)
+        if os.path.isdir(path) and name.lower() not in GAME_DIRS:
+            found += [os.path.join(path, f) for f in sorted(os.listdir(path))
+                      if README_RE.match(f) and os.path.isfile(os.path.join(path, f))]
+    return found
 
 
 def slug(text, default):
