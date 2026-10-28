@@ -79,5 +79,7 @@
             <meta-data android:name="com.samsung.android.multidisplay.keep_process_alive" android:value="true" />
         </activity>
 
+        <activity android:name="com.hatkid.mkxpz.Reinicio" android:process=":reinicio"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" android:exported="false" />
     </application>
 </manifest>

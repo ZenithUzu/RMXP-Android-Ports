@@ -158,9 +158,7 @@ public class Partidas
         new AlertDialog.Builder(mActivity)
             .setMessage(mActivity.getString(R.string.rmxp_saves_imported, n))
             .setPositiveButton(R.string.rmxp_reset, (d, w) -> {
-                // F12 = reiniciar el juego para que lea la partida nueva
-                SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_F12);
-                SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_F12);
+                Partidas.reiniciar(mActivity);
             })
             .setNegativeButton(android.R.string.cancel, null)
             .show();
@@ -317,6 +315,17 @@ public class Partidas
         return true;
     }
 
+    /**
+     * Reinicia el juego abriendo la app de nuevo (proceso limpio). El F12 de mkxp-z reinicia por
+     * dentro y algunos juegos se rompen ("disposed viewport" en CustomTilemap).
+     */
+    static void reiniciar(Activity a)
+    {
+        // Una pantallita en otro proceso cierra este y vuelve a abrir el juego (como ProcessPhoenix)
+        a.startActivity(new Intent(a, Reinicio.class).putExtra("pid", android.os.Process.myPid())
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
     /** Ofrece reiniciar cuando entraron partidas con el juego ya abierto. */
     public void ofrecerReinicio(int n)
     {
@@ -325,8 +334,7 @@ public class Partidas
         new AlertDialog.Builder(mActivity)
             .setMessage(mActivity.getString(R.string.rmxp_saves_imported, n))
             .setPositiveButton(R.string.rmxp_reset, (d, w) -> {
-                SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_F12);
-                SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_F12);
+                Partidas.reiniciar(mActivity);
             })
             .setNegativeButton(android.R.string.cancel, null)
             .show();

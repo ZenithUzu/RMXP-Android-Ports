@@ -121,9 +121,7 @@ public class OptionsMenu implements TouchControls.Actions
         mRoot.findViewById(R.id.rmxp_resume).setOnClickListener(v -> close());
         mRoot.findViewById(R.id.rmxp_reset).setOnClickListener(v -> {
             close();
-            // F12 = reiniciar en mkxp-z
-            SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_F12);
-            SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_F12);
+            Partidas.reiniciar(mActivity);
         });
         mRoot.findViewById(R.id.rmxp_quit).setOnClickListener(v -> {
             // Cerrar la app de golpe: con el juego en pausa, el cierre normal de SDL se queda
