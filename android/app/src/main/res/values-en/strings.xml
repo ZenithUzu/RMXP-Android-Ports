@@ -64,4 +64,10 @@
     <string name="rmxp_saves_exported">Exported %1$d saves.</string>
     <string name="rmxp_saves_imported">Imported %1$d saves. The previous one was kept as a backup (.respaldo). Restart the game to see them.</string>
     <string name="rmxp_saves_error">The save couldn\'t be copied:</string>
+    <string name="rmxp_edit_same">Same for all</string>
+    <string name="rmxp_edit_same_hint">On: every button uses this setting. Turn it off to pick one per button.</string>
+    <string name="rmxp_edit_locked">Same for all (change it from the top bar)</string>
+    <string name="rmxp_size_s">Small</string>
+    <string name="rmxp_size_m">Medium</string>
+    <string name="rmxp_size_l">Large</string>
 </resources>

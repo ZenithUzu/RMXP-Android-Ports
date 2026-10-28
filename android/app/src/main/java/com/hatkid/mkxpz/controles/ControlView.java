@@ -35,6 +35,8 @@ public class ControlView extends View
     private final Paint mText = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF mRect = new RectF();
     private boolean mPressed;
+    /** Margen alrededor del botón para que la insignia de la tecla quepa entera (lo pone TouchControls). */
+    float pad, badge;
     private int mDir; // cruceta: bits 1 arriba, 2 abajo, 4 izquierda, 8 derecha
 
     public ControlView(Context ctx, Control c, int accent, Listener listener)
@@ -54,7 +56,29 @@ public class ControlView extends View
     @Override
     protected void onDraw(Canvas canvas)
     {
-        float w = getWidth(), h = getHeight(), sw = dp(2);
+        // El botón se dibuja dentro del margen; la insignia ocupa la esquina sin salirse de la vista
+        canvas.save();
+        canvas.translate(pad, pad);
+        float w = getWidth() - 2 * pad, h = getHeight() - 2 * pad, sw = dp(2);
+        drawBody(canvas, w, h, sw);
+        canvas.restore();
+
+        String key = Teclas.nombre(control.tecla);
+        String label = control.etiqueta.isEmpty() ? key : control.etiqueta;
+        if (!control.cruceta && control.tecla > 0 && !label.equalsIgnoreCase(key)) {
+            float bx = getWidth() - badge, by = badge;
+            mFill.setColor(mAccent);
+            canvas.drawCircle(bx, by, badge, mFill);
+            mText.setShadowLayer(0, 0, 0, 0);
+            String k = key.length() > 4 ? key.substring(0, 4) : key;
+            mText.setTextSize(badge * (k.length() > 2 ? 0.62f : k.length() == 2 ? 0.85f : 1.1f));
+            mText.setColor(0xFF101010);
+            canvas.drawText(k, bx, by - (mText.descent() + mText.ascent()) / 2, mText);
+        }
+    }
+
+    private void drawBody(Canvas canvas, float w, float h, float sw)
+    {
         int rgb = control.color & 0xFFFFFF;
         mStroke.setStrokeWidth(sw);
         mStroke.setColor(0xD0000000 | (control.color == 0xFFFFFFFF ? 0xFFFFFF : rgb));
@@ -81,17 +105,6 @@ public class ControlView extends View
             canvas.drawText(label, w / 2, h / 2 - (mText.descent() + mText.ascent()) / 2, mText);
         }
 
-        // Insignia con la tecla real, como en Kirin, solo si la etiqueta no lo dice ya
-        if (control.tecla > 0 && !label.equalsIgnoreCase(key)) {
-            float br = Math.max(dp(9), h * 0.17f);
-            float bx = w - br * 0.9f, by = br * 0.9f;
-            mFill.setColor(mAccent);
-            canvas.drawCircle(bx, by, br, mFill);
-            mText.setShadowLayer(0, 0, 0, 0);
-            mText.setTextSize(br * (key.length() > 2 ? 0.7f : 1.05f));
-            mText.setColor(0xFF101010);
-            canvas.drawText(key.length() > 4 ? key.substring(0, 4) : key, bx, by - (mText.descent() + mText.ascent()) / 2, mText);
-        }
     }
 
     private void drawActionIcon(Canvas canvas, float w, float h)
@@ -181,7 +194,7 @@ public class ControlView extends View
             int dir = 0;
             if (down) {
                 float dx = e.getX() - getWidth() / 2f, dy = e.getY() - getHeight() / 2f;
-                float dead = getWidth() * 0.12f;
+                float dead = (getWidth() - 2 * pad) * 0.12f;
                 // Diagonales permitidas: cada eje cuenta si pasa la zona muerta y no es mucho menor que el otro
                 if (dy < -dead && -dy > Math.abs(dx) * 0.4f) dir |= 1;
                 if (dy > dead && dy > Math.abs(dx) * 0.4f) dir |= 2;

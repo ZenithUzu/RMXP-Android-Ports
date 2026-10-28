@@ -65,4 +65,10 @@
     <string name="rmxp_saves_exported">Se exportaron %1$d partidas.</string>
     <string name="rmxp_saves_imported">Se importaron %1$d partidas. La que había antes quedó como copia (.respaldo). Reinicia el juego para verlas.</string>
     <string name="rmxp_saves_error">No se pudo copiar la partida:</string>
+    <string name="rmxp_edit_same">Igual para todos</string>
+    <string name="rmxp_edit_same_hint">Encendido: todos los botones usan esta medida. Apágalo para elegir una distinta en cada botón.</string>
+    <string name="rmxp_edit_locked">Igual para todos (cámbialo desde la barra de arriba)</string>
+    <string name="rmxp_size_s">Pequeño</string>
+    <string name="rmxp_size_m">Mediano</string>
+    <string name="rmxp_size_l">Grande</string>
 </resources>

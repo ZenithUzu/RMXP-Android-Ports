@@ -21,7 +21,6 @@ import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -79,11 +78,29 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             if (r - l != or - ol || b - t != ob - ot)
                 placeAll();
         });
-        mControls = Control.fromJson(mPrefs.getString("controles_json", Control.toJson(Control.predeterminados())));
+        // "controles_v2": la distribución pareja nueva reemplaza una vez a la anterior
+        String json = mPrefs.getString("controles_v2", null);
+        mControls = json == null ? null : Control.fromJson(json);
+        if (mControls == null)
+            mControls = predeterminados();
         rebuild();
         InputManager im = (InputManager) mActivity.getSystemService(Activity.INPUT_SERVICE);
         im.registerInputDeviceListener(this, new Handler(Looper.getMainLooper()));
         updateForDevices();
+    }
+
+    private List<Control> predeterminados()
+    {
+        android.util.DisplayMetrics m = mActivity.getResources().getDisplayMetrics();
+        float w = Math.max(m.widthPixels, m.heightPixels) / m.density, h = Math.min(m.widthPixels, m.heightPixels) / m.density;
+        return Control.predeterminados(w, h);
+    }
+
+    /** Talla y opacidad de un control: las de todos ("Igual para todos") o las suyas. */
+    private int talla(Control c) { return mPrefs.getBoolean("tam_fijo", true) ? mPrefs.getInt("tam_global", 1) : c.tam; }
+    private float opacidad(Control c)
+    {
+        return mPrefs.getBoolean("opac_fija", true) ? mPrefs.getInt("opac_global", 75) / 100f : c.opacidad;
     }
 
     // ------------------------------------------------------------ dibujar
@@ -105,19 +122,23 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
 
     private void placeAll()
     {
-        float global = mPrefs.getInt("opacidad_global", 80) / 100f;
         int w = mLayer.getWidth(), h = mLayer.getHeight();
         for (int i = 0; i < mLayer.getChildCount(); i++) {
             if (!(mLayer.getChildAt(i) instanceof ControlView))
                 continue;
             ControlView v = (ControlView) mLayer.getChildAt(i);
             Control c = v.control;
-            int size = Math.round(dp(c.tam));
-            int vw = c.pastilla ? Math.round(size * 1.6f) : size;
-            v.setLayoutParams(new FrameLayout.LayoutParams(vw, size));
+            float size = dp(Control.TALLAS[talla(c)]);
+            if (c.cruceta)
+                size *= Control.CRUCETA;
+            float bw = c.pastilla ? size * Control.PASTILLA : size;
+            v.badge = c.cruceta ? 0 : Math.max(dp(9), size * 0.17f);
+            v.pad = v.badge * 0.6f;
+            int vw = Math.round(bw + 2 * v.pad), vh = Math.round(size + 2 * v.pad);
+            v.setLayoutParams(new FrameLayout.LayoutParams(vw, vh));
             v.setX(c.x * w - vw / 2f);
-            v.setY(c.y * h - size / 2f);
-            v.setAlpha(c.opacidad * global);
+            v.setY(c.y * h - vh / 2f);
+            v.setAlpha(opacidad(c));
             v.invalidate();
         }
     }
@@ -135,7 +156,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
 
     private void save()
     {
-        mPrefs.edit().putString("controles_json", Control.toJson(mControls)).apply();
+        mPrefs.edit().putString("controles_v2", Control.toJson(mControls)).apply();
     }
 
     // ------------------------------------------------------------ visibilidad
@@ -227,20 +248,43 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         updateVisibility();
     }
 
+    /** Barra del editor: arriba, translúcida, y se arrastra desde ⠿ para no estorbar. */
+    @SuppressLint("ClickableViewAccessibility")
     private View buildToolbar(Runnable onDone)
     {
         LinearLayout bar = new LinearLayout(mActivity);
         bar.setGravity(Gravity.CENTER);
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(mActivity.getColor(R.color.rmxp_tinta));
-        bg.setCornerRadius(dp(24));
+        bg.setColor(0xB3000000 | (mActivity.getColor(R.color.rmxp_tinta) & 0xFFFFFF));
+        bg.setCornerRadius(dp(22));
         bar.setBackground(bg);
-        int pad = Math.round(dp(8));
+        int pad = Math.round(dp(6));
         bar.setPadding(pad, pad, pad, pad);
+
+        TextView grip = new TextView(mActivity);
+        grip.setText("⠿");
+        grip.setTextSize(22);
+        grip.setTextColor(mActivity.getColor(R.color.rmxp_niebla));
+        grip.setPadding(Math.round(dp(10)), 0, Math.round(dp(8)), 0);
+        grip.setOnTouchListener(new View.OnTouchListener() {
+            float dx, dy;
+            public boolean onTouch(View g, MotionEvent e) {
+                if (e.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    dx = bar.getX() - e.getRawX();
+                    dy = bar.getY() - e.getRawY();
+                } else if (e.getActionMasked() == MotionEvent.ACTION_MOVE) {
+                    bar.setX(Math.max(0, Math.min(e.getRawX() + dx, mLayer.getWidth() - bar.getWidth())));
+                    bar.setY(Math.max(0, Math.min(e.getRawY() + dy, mLayer.getHeight() - bar.getHeight())));
+                }
+                return true;
+            }
+        });
+        bar.addView(grip);
         bar.addView(toolButton(R.string.rmxp_edit_add, v -> addControl()));
-        bar.addView(toolButton(R.string.rmxp_edit_opacity_all, v -> globalOpacity()));
+        bar.addView(toolButton(R.string.rmxp_pad_size, v -> globalChoice(true)));
+        bar.addView(toolButton(R.string.rmxp_edit_opacity_all, v -> globalChoice(false)));
         bar.addView(toolButton(R.string.rmxp_edit_reset, v -> {
-            mControls = Control.predeterminados();
+            mControls = predeterminados();
             save();
             rebuild();
         }));
@@ -255,7 +299,8 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         done.setTextColor(mActivity.getColor(R.color.rmxp_tinta));
         bar.addView(done);
         FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        p.topMargin = Math.round(dp(8));
         bar.setLayoutParams(p);
         return bar;
     }
@@ -269,10 +314,10 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         b.setBackground(bg);
         b.setTextColor(mActivity.getColor(R.color.rmxp_niebla));
         b.setAllCaps(false);
-        b.setPadding(Math.round(dp(16)), 0, Math.round(dp(16)), 0);
+        b.setPadding(Math.round(dp(14)), 0, Math.round(dp(14)), 0);
         b.setText(text);
         b.setOnClickListener(click);
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Math.round(dp(44)));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Math.round(dp(40)));
         p.leftMargin = p.rightMargin = Math.round(dp(4));
         b.setLayoutParams(p);
         return b;
@@ -310,8 +355,13 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
                 if (mDragging != v)
                     break;
                 if (mMoved) {
-                    v.control.x = (v.getX() + v.getWidth() / 2f) / mLayer.getWidth();
-                    v.control.y = (v.getY() + v.getHeight() / 2f) / mLayer.getHeight();
+                    // Se acomoda a una cuadrícula de 8 dp: así se alinean fácil, como en Winlator
+                    float g = dp(8);
+                    float cx = Math.round((v.getX() + v.getWidth() / 2f) / g) * g;
+                    float cy = Math.round((v.getY() + v.getHeight() / 2f) / g) * g;
+                    v.control.x = cx / mLayer.getWidth();
+                    v.control.y = cy / mLayer.getHeight();
+                    placeAll();
                     save();
                 } else {
                     editControl(v.control);
@@ -324,25 +374,89 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
 
     private void addControl()
     {
-        Control c = Control.boton("b" + System.currentTimeMillis(), "", android.view.KeyEvent.KEYCODE_ENTER, 0.5f, 0.5f, 64, false);
+        Control c = Control.boton("b" + System.currentTimeMillis(), "", android.view.KeyEvent.KEYCODE_ENTER, 0.5f, 0.5f, 1, false);
         mControls.add(c);
         save();
         rebuild();
         editControl(c);
     }
 
-    private void globalOpacity()
+    /** Tamaño u opacidad de todos: medidas fijas y el interruptor "Igual para todos". */
+    private void globalChoice(boolean size)
     {
-        SeekBar bar = new SeekBar(mActivity);
-        bar.setMax(90);
-        bar.setProgress(mPrefs.getInt("opacidad_global", 80) - 10);
-        bar.setPadding(Math.round(dp(24)), Math.round(dp(24)), Math.round(dp(24)), Math.round(dp(8)));
-        bar.setOnSeekBarChangeListener(new SimpleSeek(p -> {
-            mPrefs.edit().putInt("opacidad_global", p + 10).apply();
-            placeAll();
-        }));
-        new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_edit_opacity_all).setView(bar)
-            .setPositiveButton(R.string.rmxp_edit_done, null).show();
+        String fijo = size ? "tam_fijo" : "opac_fija";
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = Math.round(dp(20));
+        box.setPadding(pad, Math.round(dp(8)), pad, 0);
+        if (size)
+            box.addView(chips(tallaNames(), mPrefs.getInt("tam_global", 1), i -> {
+                mPrefs.edit().putInt("tam_global", i).apply();
+                placeAll();
+            }));
+        else
+            box.addView(chips(opacNames(), indexOf(Control.OPACIDADES, mPrefs.getInt("opac_global", 75)), i -> {
+                mPrefs.edit().putInt("opac_global", Control.OPACIDADES[i]).apply();
+                placeAll();
+            }));
+        Switch same = new Switch(mActivity);
+        same.setText(R.string.rmxp_edit_same);
+        same.setChecked(mPrefs.getBoolean(fijo, true));
+        same.setPadding(0, Math.round(dp(14)), 0, 0);
+        same.setOnCheckedChangeListener((b, on) -> { mPrefs.edit().putBoolean(fijo, on).apply(); placeAll(); });
+        box.addView(same);
+        box.addView(hint(R.string.rmxp_edit_same_hint));
+        new AlertDialog.Builder(mActivity).setTitle(size ? R.string.rmxp_pad_size : R.string.rmxp_edit_opacity_all)
+            .setView(box).setPositiveButton(R.string.rmxp_edit_done, null).show();
+    }
+
+    private String[] tallaNames()
+    {
+        return new String[] { mActivity.getString(R.string.rmxp_size_s), mActivity.getString(R.string.rmxp_size_m),
+            mActivity.getString(R.string.rmxp_size_l) };
+    }
+
+    private static String[] opacNames()
+    {
+        String[] n = new String[Control.OPACIDADES.length];
+        for (int i = 0; i < n.length; i++)
+            n[i] = Control.OPACIDADES[i] + " %";
+        return n;
+    }
+
+    private static int indexOf(int[] a, int v)
+    {
+        int best = 0;
+        for (int i = 0; i < a.length; i++)
+            if (Math.abs(a[i] - v) < Math.abs(a[best] - v))
+                best = i;
+        return best;
+    }
+
+    /** Fila de opciones fijas (solo una elegida). */
+    private View chips(String[] names, int selected, IntSink sink)
+    {
+        android.widget.RadioGroup g = new android.widget.RadioGroup(mActivity);
+        g.setOrientation(LinearLayout.HORIZONTAL);
+        for (int i = 0; i < names.length; i++) {
+            android.widget.RadioButton r = new android.widget.RadioButton(mActivity);
+            r.setText(names[i]);
+            r.setId(View.generateViewId());
+            r.setChecked(i == selected);
+            final int index = i;
+            r.setOnCheckedChangeListener((b, on) -> { if (on) sink.put(index); });
+            g.addView(r);
+        }
+        return g;
+    }
+
+    private TextView hint(int text)
+    {
+        TextView t = new TextView(mActivity);
+        t.setText(text);
+        t.setTextSize(12);
+        t.setAlpha(0.7f);
+        return t;
     }
 
     /** Ventana para editar un control: etiqueta, tecla, forma, tamaño, color, opacidad, borrar. */
@@ -386,10 +500,18 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             box.addView(pill);
         }
 
+        // Tamaño y opacidad propios: solo si "Igual para todos" está apagado en la barra
         box.addView(label(R.string.rmxp_pad_size));
-        box.addView(seek(32, 220, c.tam, v -> { c.tam = v; placeAndSave(); }));
+        if (mPrefs.getBoolean("tam_fijo", true))
+            box.addView(hint(R.string.rmxp_edit_locked));
+        else
+            box.addView(chips(tallaNames(), c.tam, i -> { c.tam = i; placeAndSave(); }));
         box.addView(label(R.string.rmxp_edit_opacity));
-        box.addView(seek(10, 100, Math.round(c.opacidad * 100), v -> { c.opacidad = v / 100f; placeAndSave(); }));
+        if (mPrefs.getBoolean("opac_fija", true))
+            box.addView(hint(R.string.rmxp_edit_locked));
+        else
+            box.addView(chips(opacNames(), indexOf(Control.OPACIDADES, Math.round(c.opacidad * 100)),
+                i -> { c.opacidad = Control.OPACIDADES[i] / 100f; placeAndSave(); }));
 
         box.addView(label(R.string.rmxp_edit_color));
         LinearLayout colors = new LinearLayout(mActivity);
@@ -435,24 +557,6 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     }
 
     private interface IntSink { void put(int v); }
-
-    private static class SimpleSeek implements SeekBar.OnSeekBarChangeListener
-    {
-        final IntSink sink;
-        SimpleSeek(IntSink sink) { this.sink = sink; }
-        public void onProgressChanged(SeekBar s, int p, boolean user) { if (user) sink.put(p); }
-        public void onStartTrackingTouch(SeekBar s) {}
-        public void onStopTrackingTouch(SeekBar s) {}
-    }
-
-    private SeekBar seek(int min, int max, int value, IntSink sink)
-    {
-        SeekBar bar = new SeekBar(mActivity);
-        bar.setMax(max - min);
-        bar.setProgress(value - min);
-        bar.setOnSeekBarChangeListener(new SimpleSeek(p -> sink.put(p + min)));
-        return bar;
-    }
 
     // ------------------------------------------------------------ elegir tecla
 

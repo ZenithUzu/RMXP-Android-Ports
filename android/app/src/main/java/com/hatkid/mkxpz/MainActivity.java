@@ -451,7 +451,9 @@ public class MainActivity extends SDLActivity
 
         // The phone's Back opens/closes the menu (a gamepad's Back is mapped like B)
         if (evt.getKeyCode() == KeyEvent.KEYCODE_BACK && !isFromGamepad(evt)) {
-            if (evt.getAction() == KeyEvent.ACTION_UP && !mMenu.controls.isEditing())
+            if (evt.getAction() == KeyEvent.ACTION_UP && mMenu.teclado.shown())
+                mMenu.teclado.hide();
+            else if (evt.getAction() == KeyEvent.ACTION_UP && !mMenu.controls.isEditing())
                 mMenu.toggle();
             return true;
         }

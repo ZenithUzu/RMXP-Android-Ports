@@ -799,7 +799,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 }
                 break;
             case COMMAND_TEXTEDIT_HIDE:
-                if (mTextEdit != null) {
+                if (sKeyboardHook != null) {
+                    sKeyboardHook.hide();
+                } else if (mTextEdit != null) {
                     // Note: On some devices setting view to GONE creates a flicker in landscape.
                     // Setting the View's sizes to 0 is similar to GONE but without the flicker.
                     // The sizes will be set to useful values when the keyboard is shown again.
@@ -1067,8 +1069,17 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     /**
      * This method is called by SDL using JNI.
      */
+    /** RMXP-Android-Ports: our on-screen PC keyboard replaces Android's when set. */
+    public interface KeyboardHook { void show(); void hide(); boolean shown(); }
+    public static KeyboardHook sKeyboardHook;
+
+    /** Sends text to the game like a keyboard would (SDL_TEXTINPUT). */
+    public static void commitText(String text) { SDLInputConnection.nativeCommitText(text, 1); }
+
     public static boolean isScreenKeyboardShown()
     {
+        if (sKeyboardHook != null)
+            return sKeyboardHook.shown();
         if (mTextEdit == null) {
             return false;
         }
@@ -1293,6 +1304,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
      * This method is called by SDL using JNI.
      */
     public static boolean showTextInput(int x, int y, int w, int h) {
+        if (sKeyboardHook != null)
+            return mSingleton.commandHandler.post(sKeyboardHook::show);
         // Transfer the task to the main thread as a Runnable
         return mSingleton.commandHandler.post(new ShowTextInputTask(x, y, w, h));
     }

@@ -13,7 +13,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
@@ -46,6 +45,7 @@ public class OptionsMenu implements TouchControls.Actions
     private View mRoot, mPanel;
     private TextView mSpeedValue, mStretchValue, mHzHint;
     private Medidor mMedidor;
+    public final Teclado teclado;
     private boolean mTurbo = false;
     private int mHz = 60;
 
@@ -61,6 +61,7 @@ public class OptionsMenu implements TouchControls.Actions
         pad = new PadMapper(mPrefs, this);
         partidas = new Partidas(activity, new File(gamePath));
         controls = new TouchControls(activity, mPrefs, this, pad);
+        teclado = new Teclado(activity, mPrefs);
     }
 
     private int pref(String key, int def) { return mPrefs.getInt(key, def); }
@@ -76,6 +77,7 @@ public class OptionsMenu implements TouchControls.Actions
 
         mMedidor = new Medidor(mActivity, mPrefs, () -> mTurbo ? pref("velocidad", 5) : 1);
         mMedidor.attachTo(layout);
+        teclado.attachTo(layout); // encima de los controles
 
         // Menú (oculto hasta que se abre)
         mRoot = LayoutInflater.from(mActivity).inflate(R.layout.rmxp_menu, layout, false);
@@ -295,32 +297,10 @@ public class OptionsMenu implements TouchControls.Actions
     public void action(int action)
     {
         switch (action) {
-            case Control.TECLADO: toggleKeyboard(); break;
+            case Control.TECLADO: teclado.toggle(); break;
             case Control.TURBO: mTurbo = !mTurbo; applySpeed(); break;
             case Control.MENU: open(); break;
             case Control.OCULTAR: mHandler.post(controls::onPhysicalInput); break; // vuelven al tocar
-        }
-    }
-
-    /** Muestra u oculta el teclado de Android (para escribir nombres; Enter confirma). */
-    private void toggleKeyboard()
-    {
-        // SDL cree que el teclado sigue abierto si el jugador lo cerró con Atrás o el gesto;
-        // en Android 11+ se pregunta al sistema si de verdad se ve.
-        boolean shown;
-        if (Build.VERSION.SDK_INT >= 30) {
-            android.view.WindowInsets in = mActivity.getWindow().getDecorView().getRootWindowInsets();
-            shown = in != null && in.isVisible(android.view.WindowInsets.Type.ime());
-        } else {
-            shown = SDLActivity.isScreenKeyboardShown();
-        }
-        if (shown) {
-            SDLActivity.sendMessage(3, 0); // COMMAND_TEXTEDIT_HIDE: oculta y devuelve el foco al juego
-        } else {
-            SDLActivity.showTextInput(0, 0, 1, 1);
-            // showSoftInput a veces llega antes de que el campo tenga foco; esto lo abre al instante
-            if (Build.VERSION.SDK_INT >= 30)
-                mHandler.post(() -> mActivity.getWindow().getInsetsController().show(android.view.WindowInsets.Type.ime()));
         }
     }
 
