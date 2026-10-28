@@ -54,7 +54,7 @@ public class Teclado implements SDLActivity.KeyboardHook
     private final Activity mActivity;
     private final SharedPreferences mPrefs;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private final int mAccent, mKey, mText;
+    private final int mAccent;
     private LinearLayout mPanel;
     private boolean mShift;
 
@@ -63,8 +63,6 @@ public class Teclado implements SDLActivity.KeyboardHook
         mActivity = activity;
         mPrefs = prefs;
         mAccent = activity.getColor(R.color.rmxp_ambar);
-        mKey = activity.getColor(R.color.rmxp_pizarra);
-        mText = activity.getColor(R.color.rmxp_niebla);
     }
 
     private float dp(float v) { return v * mActivity.getResources().getDisplayMetrics().density; }
@@ -73,7 +71,6 @@ public class Teclado implements SDLActivity.KeyboardHook
     {
         mPanel = new LinearLayout(mActivity);
         mPanel.setOrientation(LinearLayout.VERTICAL);
-        mPanel.setBackgroundColor(0xE6000000 | (mActivity.getColor(R.color.rmxp_tinta) & 0xFFFFFF));
         int p = Math.round(dp(4));
         mPanel.setPadding(p, p, p, p);
         mPanel.setClickable(true); // los toques no pasan al juego
@@ -88,6 +85,9 @@ public class Teclado implements SDLActivity.KeyboardHook
 
     private void build()
     {
+        // Mismo estilo que los botones (Editar controles → Estilo): Moderno o Contorno
+        int skin = mPrefs.getInt("skin", 0);
+        mPanel.setBackgroundColor(skin == 0 ? 0x80000000 : 0);
         mPanel.removeAllViews();
         for (Object[][] fila : FILAS) {
             LinearLayout row = new LinearLayout(mActivity);
@@ -117,12 +117,20 @@ public class Teclado implements SDLActivity.KeyboardHook
         TextView v = new TextView(mActivity);
         v.setText(letter && mShift ? label.toUpperCase() : label);
         v.setGravity(Gravity.CENTER);
-        v.setTextColor(code == SHIFT && mShift ? mActivity.getColor(R.color.rmxp_tinta) : mText);
+        boolean on = code == SHIFT && mShift;
+        boolean contorno = mPrefs.getInt("skin", 0) == 1;
+        v.setTextColor(on && !contorno ? mActivity.getColor(R.color.rmxp_tinta) : 0xFFFFFFFF);
+        v.setShadowLayer(dp(contorno ? 2.5f : 1.5f), 0, 0, contorno ? 0xAA000000 : 0x66000000);
         v.setTextSize(letter || text != null ? 18 : 15);
         v.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(dp(8));
-        bg.setColor(code == SHIFT && mShift ? mAccent : mKey);
+        // Moderno: gris translúcido como los botones. Contorno: transparente con borde blanco.
+        int normal = on ? (contorno ? 0x59000000 : 0xFF000000) | (mAccent & 0xFFFFFF) : contorno ? 0 : 0x807D7D7D;
+        int pressed = contorno ? 0x59FFFFFF : 0xE67D7D7D;
+        bg.setColor(normal);
+        if (contorno)
+            bg.setStroke(Math.round(dp(1.5f)), on ? mAccent : 0xF0FFFFFF);
         v.setBackground(bg);
 
         Runnable[] repeat = new Runnable[1];
@@ -130,7 +138,7 @@ public class Teclado implements SDLActivity.KeyboardHook
             switch (e.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
-                    bg.setAlpha(150);
+                    bg.setColor(pressed);
                     if (code < 0) {
                         special(code);
                         return true;
@@ -156,7 +164,7 @@ public class Teclado implements SDLActivity.KeyboardHook
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    bg.setAlpha(255);
+                    bg.setColor(normal);
                     if (repeat[0] != null)
                         mHandler.removeCallbacks(repeat[0]);
                     if (code > 0)
@@ -194,8 +202,10 @@ public class Teclado implements SDLActivity.KeyboardHook
     @Override
     public void show()
     {
-        if (mPanel != null)
+        if (mPanel != null) {
+            build(); // por si cambió el estilo
             mPanel.setVisibility(View.VISIBLE);
+        }
     }
 
     @Override
