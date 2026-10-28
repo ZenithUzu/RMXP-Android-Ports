@@ -70,4 +70,7 @@
     <string name="rmxp_size_s">Small</string>
     <string name="rmxp_size_m">Medium</string>
     <string name="rmxp_size_l">Large</string>
+    <string name="rmxp_edit_style">Style</string>
+    <string name="rmxp_skin_modern">Modern</string>
+    <string name="rmxp_skin_outline">Outline</string>
 </resources>

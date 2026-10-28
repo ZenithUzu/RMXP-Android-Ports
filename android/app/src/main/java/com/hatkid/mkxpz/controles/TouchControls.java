@@ -139,6 +139,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             v.setX(c.x * w - vw / 2f);
             v.setY(c.y * h - vh / 2f);
             v.setAlpha(opacidad(c));
+            v.skin = mPrefs.getInt("skin", 0);
             v.invalidate();
         }
     }
@@ -283,6 +284,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         bar.addView(toolButton(R.string.rmxp_edit_add, v -> addControl()));
         bar.addView(toolButton(R.string.rmxp_pad_size, v -> globalChoice(true)));
         bar.addView(toolButton(R.string.rmxp_edit_opacity_all, v -> globalChoice(false)));
+        bar.addView(toolButton(R.string.rmxp_edit_style, v -> chooseSkin()));
         bar.addView(toolButton(R.string.rmxp_edit_reset, v -> {
             mControls = predeterminados();
             save();
@@ -408,6 +410,21 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         box.addView(hint(R.string.rmxp_edit_same_hint));
         new AlertDialog.Builder(mActivity).setTitle(size ? R.string.rmxp_pad_size : R.string.rmxp_edit_opacity_all)
             .setView(box).setPositiveButton(R.string.rmxp_edit_done, null).show();
+    }
+
+    /** Estilo de todos los botones: Moderno (relleno gris) o Contorno (solo borde blanco). */
+    private void chooseSkin()
+    {
+        LinearLayout box = new LinearLayout(mActivity);
+        int pad = Math.round(dp(20));
+        box.setPadding(pad, Math.round(dp(8)), pad, 0);
+        box.addView(chips(new String[] { mActivity.getString(R.string.rmxp_skin_modern),
+            mActivity.getString(R.string.rmxp_skin_outline) }, mPrefs.getInt("skin", 0), i -> {
+            mPrefs.edit().putInt("skin", i).apply();
+            placeAll();
+        }));
+        new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_edit_style).setView(box)
+            .setPositiveButton(R.string.rmxp_edit_done, null).show();
     }
 
     private String[] tallaNames()

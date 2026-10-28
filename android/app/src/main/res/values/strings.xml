@@ -71,4 +71,7 @@
     <string name="rmxp_size_s">Pequeño</string>
     <string name="rmxp_size_m">Mediano</string>
     <string name="rmxp_size_l">Grande</string>
+    <string name="rmxp_edit_style">Estilo</string>
+    <string name="rmxp_skin_modern">Moderno</string>
+    <string name="rmxp_skin_outline">Contorno</string>
 </resources>

@@ -66,10 +66,10 @@ public class Control
         l.add(boton("esc", "Esc", KeyEvent.KEYCODE_ESCAPE, (w / 2 - gap) / w, by, 1, true));
         l.add(boton("shift", "Shift", KeyEvent.KEYCODE_SHIFT_LEFT, 0.5f, by, 1, true));
         l.add(boton("enter", "Enter", KeyEvent.KEYCODE_ENTER, (w / 2 + gap) / w, by, 1, true));
-        // Debajo de L y R, para no tapar el juego
-        float ay = (m + s + 16 + s / 2) / h;
-        l.add(boton("teclado", "", TECLADO, (m + pw / 2) / w, ay, 1, false));
-        l.add(boton("turbo", "", TURBO, (w - m - pw / 2) / w, ay, 1, false));
+        // Junto a L y R, hacia dentro: así no chocan con la cruceta ni con X en pantallas bajas
+        float ay = (m + s / 2) / h, ax = m + pw + 16 + s / 2;
+        l.add(boton("teclado", "", TECLADO, ax / w, ay, 1, false));
+        l.add(boton("turbo", "", TURBO, (w - ax) / w, ay, 1, false));
         return l;
     }
 

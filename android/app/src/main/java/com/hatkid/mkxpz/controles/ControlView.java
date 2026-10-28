@@ -37,6 +37,7 @@ public class ControlView extends View
     private boolean mPressed;
     /** Margen alrededor del botón para que la insignia de la tecla quepa entera (lo pone TouchControls). */
     float pad, badge;
+    int skin; // 0 Moderno, 1 Contorno
     private int mDir; // cruceta: bits 1 arriba, 2 abajo, 4 izquierda, 8 derecha
 
     public ControlView(Context ctx, Control c, int accent, Listener listener)
@@ -67,51 +68,79 @@ public class ControlView extends View
         String label = control.etiqueta.isEmpty() ? key : control.etiqueta;
         if (!control.cruceta && control.tecla > 0 && !label.equalsIgnoreCase(key)) {
             float bx = getWidth() - badge, by = badge;
-            mFill.setColor(mAccent);
-            canvas.drawCircle(bx, by, badge, mFill);
             mText.setShadowLayer(0, 0, 0, 0);
+            if (skin == 0) {
+                mFill.setColor(mAccent);
+                canvas.drawCircle(bx, by, badge, mFill);
+                mText.setColor(0xFF101010);
+            } else { // Contorno: insignia también solo con borde blanco
+                mStroke.setColor(0xF0FFFFFF);
+                mStroke.setStrokeWidth(dp(1.5f));
+                canvas.drawCircle(bx, by, badge - dp(1), mStroke);
+                mText.setColor(Color.WHITE);
+            }
             String k = key.length() > 4 ? key.substring(0, 4) : key;
             mText.setTextSize(badge * (k.length() > 2 ? 0.62f : k.length() == 2 ? 0.85f : 1.1f));
-            mText.setColor(0xFF101010);
             canvas.drawText(k, bx, by - (mText.descent() + mText.ascent()) / 2, mText);
         }
     }
 
+    /** Color base: el elegido, o gris (Moderno) / blanco (Contorno) si no se eligió ninguno. */
+    private int base()
+    {
+        if (control.color == 0xFFFFFFFF)
+            return skin == 0 ? 0x7D7D7D : 0xFFFFFF;
+        return control.color & 0xFFFFFF;
+    }
+
+    /**
+     * Estilos (pref "skin"). 0 Moderno: relleno gris translúcido y plano, sin borde, como los
+     * controles de Lemuroid. 1 Contorno: fondo transparente, solo el borde y el texto en blanco.
+     */
+    private void paints(boolean pressed, float sw)
+    {
+        int c = base();
+        mStroke.setStrokeWidth(sw);
+        if (skin == 0) {
+            mFill.setColor((pressed ? 0xE6000000 : 0x80000000) | c);
+            mStroke.setColor(0);
+        } else {
+            mFill.setColor(pressed ? 0x59000000 | c : 0);
+            mStroke.setColor(0xF0000000 | c);
+        }
+        mText.setColor(Color.WHITE);
+        mText.setShadowLayer(dp(skin == 0 ? 1.5f : 2.5f), 0, 0, skin == 0 ? 0x66000000 : 0xAA000000);
+    }
+
     private void drawBody(Canvas canvas, float w, float h, float sw)
     {
-        int rgb = control.color & 0xFFFFFF;
-        mStroke.setStrokeWidth(sw);
-        mStroke.setColor(0xD0000000 | (control.color == 0xFFFFFFFF ? 0xFFFFFF : rgb));
-        mRect.set(sw, sw, w - sw, h - sw);
-
         if (control.cruceta) {
-            drawDpad(canvas, w, h, rgb);
+            drawDpad(canvas, w, h, sw);
             return;
         }
-
-        mFill.setColor((mPressed ? 0x90000000 : 0x40000000) | rgb);
-        float r = control.pastilla ? (h - 2 * sw) / 2 : Math.min(w, h) / 2 - sw;
+        paints(mPressed, sw);
+        mRect.set(sw / 2, sw / 2, w - sw / 2, h - sw / 2);
+        // Redondos; los anchos, rectángulos con esquinas suaves (no óvalos)
+        float r = control.pastilla ? mRect.height() * 0.3f : mRect.height() / 2;
         canvas.drawRoundRect(mRect, r, r, mFill);
         canvas.drawRoundRect(mRect, r, r, mStroke);
 
-        String key = Teclas.nombre(control.tecla);
-        String label = control.etiqueta.isEmpty() ? key : control.etiqueta;
-        mText.setColor(Color.WHITE);
-        mText.setShadowLayer(dp(2), 0, 0, 0x99000000);
         if (control.tecla < 0) {
             drawActionIcon(canvas, w, h);
         } else {
-            mText.setTextSize(Math.min(h * 0.42f, w * 0.8f / Math.max(1, label.length() * 0.6f)));
+            String key = Teclas.nombre(control.tecla);
+            String label = control.etiqueta.isEmpty() ? key : control.etiqueta;
+            mText.setTextSize(Math.min(h * 0.4f, w * 0.75f / Math.max(1, label.length() * 0.6f)));
             canvas.drawText(label, w / 2, h / 2 - (mText.descent() + mText.ascent()) / 2, mText);
         }
-
     }
 
     private void drawActionIcon(Canvas canvas, float w, float h)
     {
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         p.setColor(control.tecla == Control.TURBO && isActivated() ? mAccent : Color.WHITE);
-        float s = Math.min(w, h) * 0.22f, cx = w / 2, cy = h / 2;
+        p.setShadowLayer(dp(1.5f), 0, 0, 0x66000000);
+        float s = Math.min(w, h) * 0.2f, cx = w / 2, cy = h / 2;
         Path path = new Path();
         switch (control.tecla) {
             case Control.TURBO:
@@ -134,36 +163,53 @@ public class ControlView extends View
                 canvas.drawRect(cx - s, cy + 0.65f * s, cx + s, cy + 0.65f * s + k, p);
                 break;
             }
-            default: // menú u ocultar: tres líneas
+            case Control.OCULTAR: {
+                // Ojo tachado
+                p.setStyle(Paint.Style.STROKE);
+                p.setStrokeWidth(s * 0.3f);
+                p.setStrokeCap(Paint.Cap.ROUND);
+                canvas.drawOval(cx - 1.7f * s, cy - 1f * s, cx + 1.7f * s, cy + 1f * s, p);
+                canvas.drawCircle(cx, cy, 0.45f * s, p);
+                canvas.drawLine(cx - 1.5f * s, cy + 1.3f * s, cx + 1.5f * s, cy - 1.3f * s, p);
+                break;
+            }
+            default: // menú: tres líneas iguales, centradas y con puntas redondas
+                p.setStyle(Paint.Style.STROKE);
+                p.setStrokeWidth(s * 0.32f);
+                p.setStrokeCap(Paint.Cap.ROUND);
                 for (int i = -1; i <= 1; i++)
-                    canvas.drawRect(cx - 1.6f * s, cy + i * 0.8f * s - dp(1.2f), cx + 1.6f * s, cy + i * 0.8f * s + dp(1.2f), p);
+                    canvas.drawLine(cx - 1.3f * s, cy + i * 0.85f * s, cx + 1.3f * s, cy + i * 0.85f * s, p);
         }
     }
 
-    private void drawDpad(Canvas canvas, float w, float h, int rgb)
+    private void drawDpad(Canvas canvas, float w, float h, float sw)
     {
-        float t = w / 3; // grosor de cada brazo
+        float t = w / 3, r = t * 0.28f, in = sw / 2; // grosor de cada brazo, esquinas
         Path cross = new Path();
-        cross.addRoundRect(new RectF(t, 0, 2 * t, h), dp(10), dp(10), Path.Direction.CW);
-        cross.addRoundRect(new RectF(0, t, w, 2 * t), dp(10), dp(10), Path.Direction.CW);
-        cross.setFillType(Path.FillType.WINDING);
-        mFill.setColor(0x40000000 | rgb);
+        cross.addRoundRect(new RectF(t, in, 2 * t, h - in), r, r, Path.Direction.CW);
+        Path horiz = new Path();
+        horiz.addRoundRect(new RectF(in, t, w - in, 2 * t), r, r, Path.Direction.CW);
+        cross.op(horiz, Path.Op.UNION);
+        paints(false, sw);
         canvas.drawPath(cross, mFill);
-        // Resalta la dirección pulsada
-        mFill.setColor(0x90000000 | rgb);
-        if ((mDir & 1) != 0) canvas.drawRect(t, 0, 2 * t, t, mFill);
-        if ((mDir & 2) != 0) canvas.drawRect(t, 2 * t, 2 * t, h, mFill);
-        if ((mDir & 4) != 0) canvas.drawRect(0, t, t, 2 * t, mFill);
-        if ((mDir & 8) != 0) canvas.drawRect(2 * t, t, w, 2 * t, mFill);
-        Path outline = new Path();
-        outline.op(new Path() {{ addRoundRect(new RectF(t, dp(1), 2 * t, h - dp(1)), dp(10), dp(10), Direction.CW); }},
-                   new Path() {{ addRoundRect(new RectF(dp(1), t, w - dp(1), 2 * t), dp(10), dp(10), Direction.CW); }},
-                   Path.Op.UNION);
-        canvas.drawPath(outline, mStroke);
+        // La dirección presionada se ilumina, sin salirse de la cruz
+        if (mDir != 0) {
+            canvas.save();
+            canvas.clipPath(cross);
+            paints(true, sw);
+            if ((mDir & 1) != 0) canvas.drawRect(t, 0, 2 * t, t, mFill);
+            if ((mDir & 2) != 0) canvas.drawRect(t, 2 * t, 2 * t, h, mFill);
+            if ((mDir & 4) != 0) canvas.drawRect(0, t, t, 2 * t, mFill);
+            if ((mDir & 8) != 0) canvas.drawRect(2 * t, t, w, 2 * t, mFill);
+            canvas.restore();
+            paints(false, sw);
+        }
+        canvas.drawPath(cross, mStroke);
         // Flechas
         Paint a = new Paint(Paint.ANTI_ALIAS_FLAG);
         a.setColor(Color.WHITE);
-        float s = t * 0.18f, c = w / 2;
+        a.setShadowLayer(dp(1.5f), 0, 0, 0x66000000);
+        float s = t * 0.15f, c = w / 2;
         drawArrow(canvas, a, c, t * 0.5f, 0, -s);
         drawArrow(canvas, a, c, h - t * 0.5f, 0, s);
         drawArrow(canvas, a, t * 0.5f, h / 2, -s, 0);
