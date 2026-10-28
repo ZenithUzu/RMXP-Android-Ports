@@ -27,6 +27,9 @@ public class ControlView extends View
         boolean editTouch(ControlView v, MotionEvent e);
     }
 
+    /** "Vibración" del menú (botones en pantalla y teclado). */
+    public static boolean vibrar = true;
+
     public final Control control;
     private final Listener mListener;
     private final int mAccent;
@@ -280,7 +283,8 @@ public class ControlView extends View
         if (action == MotionEvent.ACTION_DOWN && !mPressed) {
             mPressed = true;
             mListener.press(control.tecla);
-            performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+            if (vibrar)
+                performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
             invalidate();
         } else if (up && mPressed) {
             mPressed = false;

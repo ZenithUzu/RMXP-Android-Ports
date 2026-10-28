@@ -87,4 +87,14 @@
     <string name="rmxp_folder_allow">Allow</string>
     <string name="rmxp_folder_later">Not now</string>
     <string name="rmxp_folder_button">RPG Maker folder</string>
+    <string name="rmxp_vibrar">Vibrate on touch</string>
+    <string name="rmxp_ctrl_export">Export controls</string>
+    <string name="rmxp_ctrl_import">Import controls</string>
+    <string name="rmxp_ctrl_ok">Controls ready</string>
+    <string name="rmxp_saves_list">View saves</string>
+    <string name="rmxp_save_export">Export</string>
+    <string name="rmxp_save_backup">Back up</string>
+    <string name="rmxp_save_delete">Delete</string>
+    <string name="rmxp_save_delete_q">Delete %1$s? Its copy in the RPG Maker folder is deleted too.</string>
+    <string name="rmxp_save_backed">Backup: %1$s</string>
 </resources>

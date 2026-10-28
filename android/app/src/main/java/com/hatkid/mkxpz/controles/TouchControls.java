@@ -103,6 +103,16 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         return mPrefs.getBoolean("opac_fija", true) ? mPrefs.getInt("opac_global", 75) / 100f : c.opacidad;
     }
 
+    /** Después de importar un perfil de controles. */
+    public void recargar()
+    {
+        String json = mPrefs.getString("controles_v2", null);
+        mControls = json == null ? null : Control.fromJson(json);
+        if (mControls == null)
+            mControls = predeterminados();
+        rebuild();
+    }
+
     // ------------------------------------------------------------ dibujar
 
     /** Vuelve a dibujar todo (también después de cambiar el mapeo del mando). */

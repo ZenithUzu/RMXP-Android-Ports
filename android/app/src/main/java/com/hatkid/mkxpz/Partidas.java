@@ -29,7 +29,8 @@ import org.libsdl.app.SDLActivity;
  */
 public class Partidas
 {
-    public static final int EXPORTAR = 4201, IMPORTAR = 4202;
+    public static final int EXPORTAR = 4201, IMPORTAR = 4202, EXPORTAR_UNA = 4207;
+    private File mUna; // la partida que se exporta sola
 
     private final Activity mActivity;
     private final File mDataDir, mGameDir;
@@ -81,6 +82,16 @@ public class Partidas
     /** Llamar desde onActivityResult. Devuelve true si era nuestro. */
     public boolean onResult(int request, int result, Intent data)
     {
+        if (request == EXPORTAR_UNA) {
+            if (result == Activity.RESULT_OK && data != null && mUna != null)
+                try (InputStream in = new FileInputStream(mUna); OutputStream out = mActivity.getContentResolver().openOutputStream(data.getData())) {
+                    copy(in, out);
+                    toast(R.string.rmxp_ctrl_ok);
+                } catch (Exception e) {
+                    toast(R.string.rmxp_saves_error);
+                }
+            return true;
+        }
         if (request != EXPORTAR && request != IMPORTAR)
             return false;
         if (result != Activity.RESULT_OK || data == null)
@@ -170,6 +181,55 @@ public class Partidas
         int r;
         while ((r = in.read(buf)) > 0)
             out.write(buf, 0, r);
+    }
+
+    // ---------------------------------------------------------------- gestor de partidas
+
+    /** Lista de partidas con fecha y tamaño; al tocar una: exportar, respaldar o borrar. */
+    public void lista()
+    {
+        List<File> l = saves();
+        if (l.isEmpty()) {
+            toast(R.string.rmxp_saves_none);
+            return;
+        }
+        java.text.DateFormat f = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT);
+        String[] items = new String[l.size()];
+        for (int i = 0; i < items.length; i++)
+            items[i] = l.get(i).getName() + "\n" + f.format(new java.util.Date(l.get(i).lastModified()))
+                + " · " + Math.max(1, l.get(i).length() / 1024) + " KB";
+        new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_saves_list)
+            .setItems(items, (d, i) -> unaPartida(l.get(i))).show();
+    }
+
+    private void unaPartida(File s)
+    {
+        String[] op = { mActivity.getString(R.string.rmxp_save_export), mActivity.getString(R.string.rmxp_save_backup),
+            mActivity.getString(R.string.rmxp_save_delete) };
+        new AlertDialog.Builder(mActivity).setTitle(s.getName()).setItems(op, (d, i) -> {
+            if (i == 0) {
+                mUna = s;
+                mActivity.startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/octet-stream").putExtra(Intent.EXTRA_TITLE, s.getName()), EXPORTAR_UNA);
+            } else if (i == 1) {
+                File r = new File(s.getPath() + ".respaldo-" + new java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(new java.util.Date()));
+                try (InputStream in = new FileInputStream(s); OutputStream out = new FileOutputStream(r)) {
+                    copy(in, out);
+                    Toast.makeText(mActivity, mActivity.getString(R.string.rmxp_save_backed, r.getName()), Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    toast(R.string.rmxp_saves_error);
+                }
+            } else {
+                new AlertDialog.Builder(mActivity).setMessage(mActivity.getString(R.string.rmxp_save_delete_q, s.getName()))
+                    .setPositiveButton(R.string.rmxp_save_delete, (d2, w) -> {
+                        //noinspection ResultOfMethodCallIgnored
+                        s.delete();
+                        //noinspection ResultOfMethodCallIgnored
+                        new File(carpeta(), s.getName()).delete(); // si no, la sincronización la traería de vuelta
+                    })
+                    .setNegativeButton(android.R.string.cancel, null).show();
+            }
+        }).show();
     }
 
     // ---------------------------------------------------------------- carpeta "RPG Maker"

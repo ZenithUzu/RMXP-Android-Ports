@@ -784,18 +784,60 @@ def gui(initial=None):
                 write(text, tag)
         win.after(100, pump)
 
+    def lote(paths):
+        """Varios juegos a la vez: uno tras otro, con los datos que encuentre en cada uno."""
+        if state["busy"]:
+            return
+        state["busy"] = True
+        go.config(text="Trabajando…", state="disabled")
+        write("%d juegos en cola." % len(paths), "ok")
+        opts = dict(install=install.get(), ligero=ligero.get(), fondo=fondo.get())
+
+        def worker():
+            for i, p in enumerate(paths, 1):
+                events.put(("\n[%d/%d] %s" % (i, len(paths), os.path.basename(p)), "ok"))
+                try:
+                    events.put(("Listo: " + port(p, log=lambda t: events.put((t, None)), **opts), "ok"))
+                except Exception as e:  # noqa: BLE001 - seguir con los demás
+                    events.put((str(e), "error"))
+            events.put((None, "fin"))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def soltar(paths):
+        paths = [p for p in paths if p]
+        lote(paths) if len(paths) > 1 else choose(paths[0] if paths else None)
+
+    def novedades():
+        """Avisa si en GitHub hay cambios o un motor más nuevo que el de esta copia."""
+        try:
+            import urllib.request as u
+            api = "https://api.github.com/repos/ZenithUzu/RMXP-Android-Ports/"
+            rel = json.load(u.urlopen(api + "releases?per_page=30", timeout=8))
+            nums = [int(r["tag_name"][7:]) for r in rel if re.fullmatch(r"motor-v\d+", r["tag_name"])]
+            if nums and max(nums) > int(MOTOR_VERSION[7:]):
+                events.put(("Hay un motor nuevo (motor-v%d). Haz Pull en GitHub Desktop." % max(nums), "ok"))
+            head = os.path.join(REPO, ".git", "HEAD")
+            ref = open(head).read().split()[-1]
+            local = open(os.path.join(os.path.dirname(head), *ref.split("/"))).read().strip() if "/" in ref else ref
+            remote = json.load(u.urlopen(api + "commits/main", timeout=8))["sha"]
+            if local != remote:
+                events.put(("Hay una versión nueva de la herramienta en GitHub: haz Pull en GitHub Desktop.", "ok"))
+        except Exception:  # noqa: BLE001 - sin internet o sin .git: no se avisa nada
+            pass
+
     if DND_FILES:
         win.drop_target_register(DND_FILES)
-        win.dnd_bind("<<Drop>>", lambda e: choose(win.tk.splitlist(e.data)[0]))
+        win.dnd_bind("<<Drop>>", lambda e: soltar(list(win.tk.splitlist(e.data))))
     if initial:
-        win.after(200, lambda: choose(initial))
+        win.after(200, lambda: soltar(initial if isinstance(initial, list) else [initial]))
+    threading.Thread(target=novedades, daemon=True).start()
     pump()
     win.mainloop()
 
 
 def main():
     ap = argparse.ArgumentParser(description="Convierte un juego de RPG Maker en APK de Android.")
-    ap.add_argument("carpeta", nargs="?", help="carpeta del juego (la que tiene Game.ini) o su .zip")
+    ap.add_argument("carpeta", nargs="*", help="carpeta del juego (la que tiene Game.ini) o su .zip; varias = en cola")
     ap.add_argument("--sin-interfaz", action="store_true", help="no abrir ventana")
     ap.add_argument("--instalar", action="store_true", help="instalar con adb al terminar")
     ap.add_argument("--autor"), ap.add_argument("--version"), ap.add_argument("--nombre")
@@ -812,14 +854,17 @@ def main():
         print("Plantilla lista: " + plantilla(a.motor))
         return
     if not a.sin_interfaz:
-        return gui(a.carpeta)
+        return gui(a.carpeta or None)
     if not a.carpeta:
         ap.error("falta la carpeta del juego")
-    try:
-        port(a.carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor, ligero=a.ligero, fondo=a.fondo_icono)
-    except PortError as e:
-        print("ERROR: " + str(e))
-        sys.exit(1)
+    fallos = 0
+    for carpeta in a.carpeta:
+        try:
+            port(carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor, ligero=a.ligero, fondo=a.fondo_icono)
+        except PortError as e:
+            print("ERROR: " + str(e))
+            fallos += 1
+    sys.exit(1 if fallos else 0)
 
 
 if __name__ == "__main__":

@@ -22,6 +22,8 @@ itself.
 | **Internet** | Native HTTP and HTTPS (HTTPLite), plus Ruby's standard library (`net/http`, `socket`, `uri`, `json`…) for games that go online or use the local network. Older fangames that use `wininet.dll` are redirected automatically. |
 | **Safe updates** | The new version is prepared on the side and only replaces the old one once it's complete. Saves are never deleted or overwritten. |
 | **Saves** | *Export* copies your saves to a folder on the phone; *Import* brings saves from JoiPlay, Kirin or the PC (`.rxdata`, `.rvdata`, `.rvdata2`) and keeps the previous one as a backup. With permission, it also keeps a copy in the phone's **RPG Maker/<game>/** folder (next to Download), which survives uninstalling. |
+| **Older games** | `Win32API` patch for Essentials v16–v18: keyboard, reading `Game.ini`, window size and Windows dialogs answer without errors. |
+| **More** | Export/import the controls profile, save manager (export, back up or delete one save), vibration on touch (can be turned off), several games at once on the PC and new-version notice. |
 | **Author signature** | Each game gets its own signature in its creator's name (read from the game's Readme). |
 
 ## What you need (once)

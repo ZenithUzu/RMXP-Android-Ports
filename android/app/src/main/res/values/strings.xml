@@ -88,4 +88,14 @@
     <string name="rmxp_folder_allow">Permitir</string>
     <string name="rmxp_folder_later">Ahora no</string>
     <string name="rmxp_folder_button">Carpeta RPG Maker</string>
+    <string name="rmxp_vibrar">Vibración al tocar</string>
+    <string name="rmxp_ctrl_export">Exportar controles</string>
+    <string name="rmxp_ctrl_import">Importar controles</string>
+    <string name="rmxp_ctrl_ok">Controles listos</string>
+    <string name="rmxp_saves_list">Ver partidas</string>
+    <string name="rmxp_save_export">Exportar</string>
+    <string name="rmxp_save_backup">Respaldar</string>
+    <string name="rmxp_save_delete">Borrar</string>
+    <string name="rmxp_save_delete_q">¿Borrar %1$s? También se borra su copia de la carpeta RPG Maker.</string>
+    <string name="rmxp_save_backed">Respaldo: %1$s</string>
 </resources>

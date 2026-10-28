@@ -137,7 +137,8 @@ public class Teclado implements SDLActivity.KeyboardHook
         v.setOnTouchListener((view, e) -> {
             switch (e.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                    if (com.hatkid.mkxpz.controles.ControlView.vibrar)
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                     bg.setColor(pressed);
                     if (code < 0) {
                         special(code);

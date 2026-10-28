@@ -53,6 +53,7 @@ public class OptionsMenu implements TouchControls.Actions
     public final PadMapper pad;
     public final Partidas partidas;
     public final Registro registro;
+    public final Perfil perfil;
 
     public OptionsMenu(Activity activity, String gamePath)
     {
@@ -62,6 +63,7 @@ public class OptionsMenu implements TouchControls.Actions
         pad = new PadMapper(mPrefs, this);
         partidas = new Partidas(activity, new File(gamePath));
         registro = new Registro(activity, new File(gamePath));
+        perfil = new Perfil(activity, mPrefs, this::recargarControles);
         controls = new TouchControls(activity, mPrefs, this, pad);
         teclado = new Teclado(activity, mPrefs);
     }
@@ -72,6 +74,8 @@ public class OptionsMenu implements TouchControls.Actions
     public boolean isOpen() { return mRoot != null && mRoot.getVisibility() == View.VISIBLE; }
 
     /** Crea las vistas encima del juego. Llamar una vez, con el layout de SDL. */
+    private void recargarControles() { controls.recargar(); }
+
     public void attachTo(ViewGroup layout)
     {
         float dp = mActivity.getResources().getDisplayMetrics().density;
@@ -108,6 +112,11 @@ public class OptionsMenu implements TouchControls.Actions
         chips(R.id.rmxp_hz, "hz", 0, v -> applyHz());
         chips(R.id.rmxp_fps, "fps", 0, v -> applyHz());
         toggle(R.id.rmxp_pad_show, "controles", 1, v -> controls.setUserVisible(v == 1));
+        toggle(R.id.rmxp_vibrar, "vibrar", 1, v -> com.hatkid.mkxpz.controles.ControlView.vibrar = v == 1);
+        com.hatkid.mkxpz.controles.ControlView.vibrar = pref("vibrar", 1) == 1;
+        mRoot.findViewById(R.id.rmxp_ctrl_export).setOnClickListener(v -> perfil.exportar());
+        mRoot.findViewById(R.id.rmxp_ctrl_import).setOnClickListener(v -> perfil.importar());
+        mRoot.findViewById(R.id.rmxp_saves_list).setOnClickListener(v -> partidas.lista());
 
         mRoot.findViewById(R.id.rmxp_resume).setOnClickListener(v -> close());
         mRoot.findViewById(R.id.rmxp_reset).setOnClickListener(v -> {
