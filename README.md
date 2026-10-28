@@ -40,14 +40,14 @@ motor ya compilado desde las versiones (releases) de este repositorio.
 ## Cómo portar un juego
 
 1. Descarga este repositorio (botón **Code → Download ZIP**, o con GitHub Desktop).
-2. Arrastra la carpeta del juego (la que tiene `Game.ini`) sobre **`Portar.bat`**.
-   También puedes abrir `Portar.bat` y usar **Elegir carpeta**.
+2. Arrastra la carpeta del juego (la que tiene `Game.ini`) **o su `.zip`** sobre **`Portar.bat`**.
+   También puedes abrir `Portar.bat` y usar **Elegir carpeta** o **Elegir .zip**.
 3. Revisa lo que encontró la herramienta:
    - **Revisión**: avisa si el juego usa cosas de Windows que no existen en
      Android (por ejemplo, llamadas `Win32API` o videos `.wmv`).
    - **Nombre, Autor y Versión**: los saca de `Game.ini` y del Léeme. Si el
      autor no aparece, escríbelo tú.
-   - **Icono** (PNG) y **SoundFont** (`.sf2`, solo para juegos con música MIDI): opcionales. Si el juego ya trae un `.sf2`, se usa solo.
+   - **Icono** (PNG) y **SoundFont** (`.sf2`, solo para juegos con música MIDI): opcionales. Si el juego ya trae un `.sf2`, se usa solo. **Fondo del icono**: gris, negro o blanco.
 4. Presiona **Crear APK**. La primera vez tarda unos minutos porque Gradle
    descarga lo que necesita; las siguientes, mucho menos.
 

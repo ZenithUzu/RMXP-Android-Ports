@@ -40,14 +40,14 @@ prebuilt engine from this repository's releases.
 ## How to port a game
 
 1. Download this repository (**Code → Download ZIP**, or with GitHub Desktop).
-2. Drag the game folder (the one with `Game.ini`) onto **`Portar.bat`**.
-   You can also open `Portar.bat` and use **Elegir carpeta** (Choose folder).
+2. Drag the game folder (the one with `Game.ini`) **or its `.zip`** onto **`Portar.bat`**.
+   You can also open `Portar.bat` and use **Elegir carpeta** (Choose folder) or **Elegir .zip**.
 3. Check what the tool found:
    - **Revisión** (check): warns you if the game uses Windows-only things that
      don't exist on Android (such as `Win32API` calls or `.wmv` videos).
    - **Name, Author and Version**: taken from `Game.ini` and the Readme. If the
      author isn't found, type it in.
-   - **Icon** (PNG) and **SoundFont** (`.sf2`, only for games with MIDI music): optional. If the game already ships a `.sf2`, it is used automatically.
+   - **Icon** (PNG) and **SoundFont** (`.sf2`, only for games with MIDI music): optional. If the game already ships a `.sf2`, it is used automatically. **Icon background**: gray, black or white.
 4. Press **Crear APK**. The first time takes a few minutes while Gradle
    downloads what it needs; later builds are much faster.
 

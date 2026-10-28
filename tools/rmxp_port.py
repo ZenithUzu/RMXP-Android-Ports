@@ -358,8 +358,26 @@ def write_ligero(game, log):
     log("Ahorrar espacio: %d archivos de Graphics y Audio se leerán directo del APK." % len(names))
 
 
-def make_icon_res(icon, work):
-    """Recursos con el icono elegido (PNG) para la variante release."""
+# Fondo del icono (lo que se ve alrededor del dibujo en la pantalla de inicio)
+FONDOS_ICONO = {"gris": (0x5F, 0x63, 0x68), "negro": (0, 0, 0), "blanco": (0xFF, 0xFF, 0xFF)}
+
+
+def png_color(path, rgb, size=108):
+    """PNG de un solo color, sin librerías extra."""
+    import struct
+    import zlib
+
+    def chunk(tag, data):
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+    row = b"\x00" + bytes(rgb) * size
+    data = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(row * size)) + chunk(b"IEND", b""))
+    with open(path, "wb") as f:
+        f.write(data)
+
+
+def make_icon_res(icon, work, fondo="gris"):
+    """Recursos con el icono elegido (PNG) y su fondo para la variante release."""
     res = os.path.join(work, "res")
     if os.path.exists(res):
         shutil.rmtree(res)
@@ -367,6 +385,8 @@ def make_icon_res(icon, work):
         return None
     os.makedirs(os.path.join(res, "drawable-nodpi"))
     shutil.copy2(icon, os.path.join(res, "drawable-nodpi", "rmxp_game_icon.png"))
+    # El fondo es un PNG (no un color): así la app del teléfono lo puede cambiar igual
+    png_color(os.path.join(res, "drawable-nodpi", "rmxp_icon_fondo.png"), FONDOS_ICONO.get(fondo, FONDOS_ICONO["gris"]))
     for d in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"):
         os.makedirs(os.path.join(res, "mipmap-" + d))
         shutil.copy2(icon, os.path.join(res, "mipmap-" + d, "ic_launcher.png"))
@@ -374,7 +394,7 @@ def make_icon_res(icon, work):
     with open(os.path.join(res, "mipmap-anydpi-v26", "ic_launcher.xml"), "w", encoding="utf-8") as f:
         f.write('<?xml version="1.0" encoding="utf-8"?>\n'
                 '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
-                '    <background android:drawable="@color/rmxp_pizarra" />\n'
+                '    <background android:drawable="@drawable/rmxp_icon_fondo" />\n'
                 '    <foreground><inset android:drawable="@drawable/rmxp_game_icon" android:inset="20%" /></foreground>\n'
                 '</adaptive-icon>\n')
     return res
@@ -464,6 +484,7 @@ def limpiar(log=print):
             else:
                 newest[game] = f
     remove(os.path.join(HOME, "trabajo"))
+    remove(os.path.join(HOME, "zips"))
     remove(os.path.join(ANDROID, "app", "build"))
     motores = os.path.join(HOME, "motor")
     if os.path.isdir(motores):
@@ -475,8 +496,10 @@ def limpiar(log=print):
 
 
 def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
-         install=False, motor_dir=None, log=print, ligero=False):
+         install=False, motor_dir=None, log=print, ligero=False, fondo="gris"):
     """Proceso completo. Devuelve la ruta del APK."""
+    if root.lower().endswith(".zip") and os.path.isfile(root):
+        root = abrir_zip(root, log)
     if not rmxp_analyze.find(root, "Game.ini"):
         raise PortError("Esa carpeta no tiene Game.ini. Elige la carpeta principal del juego.")
     report = rmxp_analyze.analyze(root)
@@ -502,7 +525,7 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     work = os.path.join(HOME, "trabajo", slug(info["title"], "juego"))
     try:
         assets = stage_game(root, work, info, soundfont, log, os.path.join(os.path.dirname(motor), "ruby"), ligero)
-        res = make_icon_res(icon, work)
+        res = make_icon_res(icon, work, fondo)
         apk = gradle_build(project, info, assets, res, motor, sdk, java_home, log)
     finally:
         # La copia del juego y los archivos intermedios de Gradle ocupan casi lo mismo que el
@@ -513,6 +536,24 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     if install:
         adb_install(apk, project, sdk, log)
     return apk
+
+
+def abrir_zip(path, log=print):
+    """Descomprime el .zip del juego en una carpeta de trabajo y devuelve la que tiene Game.ini."""
+    import zipfile
+    dest = os.path.join(HOME, "zips", slug(os.path.splitext(os.path.basename(path))[0], "juego"))
+    shutil.rmtree(largo(dest), ignore_errors=True)
+    log("Descomprimiendo %s..." % os.path.basename(path))
+    with zipfile.ZipFile(path) as z:
+        z.extractall(largo(dest))
+    # El juego suele venir dentro de una carpeta del zip: se busca Game.ini hasta 3 niveles abajo
+    for d, dirs, files in os.walk(dest):
+        if d[len(dest):].count(os.sep) > 3:
+            dirs[:] = []
+            continue
+        if any(f.lower() == "game.ini" for f in files):
+            return d
+    raise PortError("Ese .zip no tiene Game.ini. Elige el .zip del juego (o su carpeta).")
 
 
 def plantilla(motor_dir=None, log=print):
@@ -530,7 +571,7 @@ def plantilla(motor_dir=None, log=print):
         shutil.copytree(ruby, os.path.join(assets, "rmxp", "rmxp_ruby"))
     # Icono genérico, en los mismos archivos que usa un juego con icono propio (el teléfono los cambia)
     icon = os.path.join(ANDROID, "app", "src", "main", "res", "mipmap-xxxhdpi", "ic_launcher.png")
-    res = make_icon_res(icon, work)
+    res = make_icon_res(icon, work, "gris")
     info = {"title": "Plantilla", "version": "1"}
     project = {"id": "com.rmxp.plantilla", "keystore": os.path.join(work, "plantilla.jks"),
                "password": "plantilla"}
@@ -591,6 +632,8 @@ def gui(initial=None):
     drop_text.pack(side="left", padx=16, pady=18)
     button(drop, "Elegir carpeta", lambda: choose(filedialog.askdirectory(title="Carpeta del juego"))
            ).pack(side="right", padx=12)
+    button(drop, "Elegir .zip", lambda: choose(filedialog.askopenfilename(title="Juego en .zip", filetypes=[("Zip", "*.zip")]))
+           ).pack(side="right")
 
     form = tk.Frame(win, bg=C["tinta"])
     form.pack(fill="x", **pad)
@@ -619,6 +662,14 @@ def gui(initial=None):
     icon_lbl.grid(row=0, column=1, sticky="w", padx=12)
     button(extras, "SoundFont (.sf2)…", lambda: pick("sf2", sf2_lbl, "Música MIDI: ", [("SoundFont", "*.sf2")])).grid(row=1, column=0, sticky="w", pady=6)
     sf2_lbl.grid(row=1, column=1, sticky="w", padx=12)
+    fondo = tk.StringVar(value="gris")
+    label(extras, "Fondo del icono", fg=C["liquen"], font=f_small).grid(row=2, column=0, sticky="w")
+    fondos = tk.Frame(extras, bg=C["tinta"])
+    fondos.grid(row=2, column=1, sticky="w", padx=12)
+    for nombre in ("gris", "negro", "blanco"):
+        tk.Radiobutton(fondos, text=nombre.capitalize(), value=nombre, variable=fondo, bg=C["tinta"], fg=C["niebla"],
+                       selectcolor=C["pizarra"], activebackground=C["tinta"], font=f_small,
+                       highlightthickness=0, bd=0).pack(side="left", padx=(0, 10))
 
     install = tk.BooleanVar(value=True)
     tk.Checkbutton(win, text="Instalar en el teléfono con adb al terminar", variable=install,
@@ -645,7 +696,15 @@ def gui(initial=None):
         if not path or state["busy"]:
             return
         path = path.strip("{}")
-        if not os.path.isdir(path):
+        if path.lower().endswith(".zip") and os.path.isfile(path):
+            write("Descomprimiendo %s..." % os.path.basename(path))
+            win.update()
+            try:
+                path = abrir_zip(path, lambda t: None)
+            except (PortError, OSError) as e:
+                write(str(e), "error")
+                return
+        elif not os.path.isdir(path):
             path = os.path.dirname(path)
         state["root"] = path
         info = game_info(path)
@@ -679,7 +738,7 @@ def gui(initial=None):
             return
         state["busy"] = True
         go.config(text="Trabajando…", state="disabled")
-        args = dict(root=state["root"], icon=state["icon"], soundfont=state["sf2"], install=install.get(), ligero=ligero.get(),
+        args = dict(root=state["root"], icon=state["icon"], soundfont=state["sf2"], install=install.get(), ligero=ligero.get(), fondo=fondo.get(),
                     **{k: e.get().strip() for k, e in fields.items()})
 
         def worker():
@@ -717,13 +776,14 @@ def gui(initial=None):
 
 def main():
     ap = argparse.ArgumentParser(description="Convierte un juego de RPG Maker en APK de Android.")
-    ap.add_argument("carpeta", nargs="?", help="carpeta del juego (la que tiene Game.ini)")
+    ap.add_argument("carpeta", nargs="?", help="carpeta del juego (la que tiene Game.ini) o su .zip")
     ap.add_argument("--sin-interfaz", action="store_true", help="no abrir ventana")
     ap.add_argument("--instalar", action="store_true", help="instalar con adb al terminar")
     ap.add_argument("--autor"), ap.add_argument("--version"), ap.add_argument("--nombre")
     ap.add_argument("--icono", help="PNG para el icono"), ap.add_argument("--soundfont", help=".sf2 para MIDI")
     ap.add_argument("--motor", help="carpeta lib/ con el motor compilado (en vez de descargarlo)")
     ap.add_argument("--ligero", action="store_true", help="ahorrar espacio: Graphics/Audio se leen del APK")
+    ap.add_argument("--fondo-icono", choices=sorted(FONDOS_ICONO), default="gris", help="color detrás del icono")
     ap.add_argument("--plantilla", action="store_true", help="APK sin juego para la app del teléfono")
     ap.add_argument("--limpiar", action="store_true", help="borrar APKs viejos y restos de compilación")
     a = ap.parse_args()
@@ -737,7 +797,7 @@ def main():
     if not a.carpeta:
         ap.error("falta la carpeta del juego")
     try:
-        port(a.carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor, ligero=a.ligero)
+        port(a.carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor, ligero=a.ligero, fondo=a.fondo_icono)
     except PortError as e:
         print("ERROR: " + str(e))
         sys.exit(1)

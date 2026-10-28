@@ -49,6 +49,8 @@ public class MainActivity extends SDLActivity
     private java.util.Set<String> mVirtual;
 
     protected boolean mStarted = false;
+    /** Only one extraction at a time: two at once deleted each other's files (missing patches). */
+    private static volatile boolean sExtracting;
 
     private StorageManager mStorageManager;
 
@@ -370,13 +372,20 @@ public class MainActivity extends SDLActivity
                     Log.i(TAG, "Using bundled game at " + GAME_PATH);
                     syncPartidas();
                     runSDLThread();
+                } else if (sExtracting) {
+                    // Already extracting (the app went to the background and came back, for
+                    // example to give a permission): that thread starts the game when it's done.
+                    Log.i(TAG, "Extraction already running");
                 } else if (hasBundledAssets()) {
                     GAME_PATH = dest.getAbsolutePath();
                     Log.i(TAG, "Extracting bundled game to " + GAME_PATH);
                     Toast.makeText(this, R.string.rmxp_preparing, Toast.LENGTH_LONG).show();
                     final Activity activity = this;
+                    sExtracting = true;
                     new Thread(() -> {
-                        if (!extractBundledGame()) {
+                        boolean ok = extractBundledGame();
+                        sExtracting = false;
+                        if (!ok) {
                             Log.e(TAG, "Bundled game extraction failed");
                             activity.runOnUiThread(() -> {
                                 Toast.makeText(activity, R.string.rmxp_update_failed, Toast.LENGTH_LONG).show();
