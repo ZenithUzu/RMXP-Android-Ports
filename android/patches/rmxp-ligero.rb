@@ -32,6 +32,17 @@ if File.file?("rmxp_ligero.txt")
       !r.nil? && ARCHIVOS.key?(r)
     end
 
+    # Ruta real dentro del APK si el archivo está ahí y no en la carpeta (nil si no)
+    def self.real(path)
+      r = rel(path)
+      r && !File.rmxp_ligero_exist?(path) ? ARCHIVOS[r] : nil
+    end
+
+    # Contenido del archivo, leído del APK por el motor (load_data en bruto)
+    def self.datos(real)
+      load_data(real, true).force_encoding(Encoding::BINARY)
+    end
+
     def self.hijos(dir)
       r = rel(dir)
       r.nil? ? [] : (CARPETAS[r.chomp("/")] || [])
@@ -57,6 +68,43 @@ if File.file?("rmxp_ligero.txt")
         viejo = :"rmxp_ligero_#{m}"
         alias_method viejo, m
         define_method(m) { |f, *a| send(viejo, f, *a) || RmxpLigero.archivo?(f) }
+      end
+    end
+  end
+
+  # Algunos scripts abren la imagen para ver si existe (pbGetFileChar de Essentials lee
+  # 1 byte). Para los archivos del APK, File.open de lectura devuelve su contenido.
+  require "stringio"
+  class << File
+    alias_method :rmxp_ligero_open, :open
+    def open(path, *args, **kw, &blk)
+      mode = args[0].is_a?(String) ? args[0] : (kw[:mode] || "r")
+      real = mode.is_a?(String) && mode !~ /[wa+]/ ? RmxpLigero.real(path) : nil
+      return rmxp_ligero_open(path, *args, **kw, &blk) unless real
+      io = StringIO.new(RmxpLigero.datos(real))
+      return io unless blk
+      begin
+        blk.call(io)
+      ensure
+        io.close
+      end
+    end
+
+    %i[read binread].each do |m|
+      viejo = :"rmxp_ligero_#{m}"
+      alias_method viejo, m
+      define_method(m) do |path, *a, **kw|
+        real = RmxpLigero.real(path)
+        real ? RmxpLigero.datos(real) : send(viejo, path, *a, **kw)
+      end
+    end
+
+    %i[size size?].each do |m|
+      viejo = :"rmxp_ligero_#{m}"
+      alias_method viejo, m
+      define_method(m) do |path|
+        real = RmxpLigero.real(path)
+        real ? RmxpLigero.datos(real).bytesize : send(viejo, path)
       end
     end
   end
