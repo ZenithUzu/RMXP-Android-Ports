@@ -122,11 +122,17 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         for (Control c : mControls) {
             if (c.mando != 0)
                 c.tecla = mPad.keyFor(c.mando); // misma tecla que el botón del mando
-            mLayer.addView(new ControlView(mActivity, c, mAccent, this));
+            ControlView v = new ControlView(mActivity, c, mAccent, this);
+            v.editando = mEditing;
+            v.elegido = mEditing && c == mElegido;
+            mLayer.addView(v);
         }
         placeAll();
-        if (mEditing)
+        if (mEditing) {
             mLayer.addView(mToolbar);
+            if (mElegido != null && mControls.contains(mElegido))
+                mostrarAjuste();
+        }
         refreshTurbo();
     }
 
@@ -260,6 +266,8 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     public void startEditing(Runnable onDone)
     {
         mEditing = true;
+        mElegido = null;
+        android.widget.Toast.makeText(mActivity, R.string.rmxp_edit_hint, android.widget.Toast.LENGTH_LONG).show();
         mToolbar = buildToolbar(onDone);
         rebuild();
         updateVisibility();
@@ -301,29 +309,29 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         bar.setOnTouchListener(drag);
         bar.addView(grip);
 
-        // Las opciones se pliegan para dejar libre la pantalla (por ejemplo, para poner un botón arriba)
-        View[] opciones = {
-            toolButton(R.string.rmxp_edit_add, v -> addControl()),
-            toolButton(R.string.rmxp_pad_size, v -> globalChoice(true)),
-            toolButton(R.string.rmxp_edit_opacity_all, v -> globalChoice(false)),
-            toolButton(R.string.rmxp_edit_style, v -> chooseSkin()),
-            toolButton(R.string.rmxp_edit_color, v -> chooseColors()),
-            toolButton(R.string.rmxp_edit_reset, v -> {
-                mControls = predeterminados();
-                save();
-                rebuild();
-            }),
-        };
-        Button fold = toolButton(R.string.rmxp_edit_fold, null);
-        fold.setOnClickListener(v -> {
-            boolean hide = opciones[0].getVisibility() == View.VISIBLE;
-            for (View o : opciones)
-                o.setVisibility(hide ? View.GONE : View.VISIBLE);
-            fold.setText(hide ? R.string.rmxp_edit_unfold : R.string.rmxp_edit_fold);
+        // Pocas opciones a la vista: Añadir, Opciones ▾ (lo demás) y Listo
+        bar.addView(toolButton(R.string.rmxp_edit_add, v -> addControl()));
+        Button mas = toolButton(R.string.rmxp_edit_more, null);
+        mas.setOnClickListener(v -> {
+            android.widget.PopupMenu m = new android.widget.PopupMenu(mActivity, mas);
+            m.getMenu().add(0, 1, 0, R.string.rmxp_pad_size);
+            m.getMenu().add(0, 2, 0, R.string.rmxp_edit_opacity_all);
+            m.getMenu().add(0, 3, 0, R.string.rmxp_edit_style);
+            m.getMenu().add(0, 4, 0, R.string.rmxp_edit_color);
+            m.getMenu().add(0, 5, 0, R.string.rmxp_edit_reset);
+            m.setOnMenuItemClickListener(it -> {
+                switch (it.getItemId()) {
+                    case 1: globalChoice(true); break;
+                    case 2: globalChoice(false); break;
+                    case 3: chooseSkin(); break;
+                    case 4: chooseColors(); break;
+                    default: mControls = predeterminados(); save(); rebuild();
+                }
+                return true;
+            });
+            m.show();
         });
-        bar.addView(fold);
-        for (View o : opciones)
-            bar.addView(o);
+        bar.addView(mas);
         Button done = toolButton(R.string.rmxp_edit_done, v -> {
             mEditing = false;
             save();
@@ -371,6 +379,19 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             return false;
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                boolean nuevo = mElegido != v.control;
+                if (nuevo) {
+                    mElegido = v.control;
+                    for (int i = 0; i < mLayer.getChildCount(); i++)
+                        if (mLayer.getChildAt(i) instanceof ControlView) {
+                            ControlView o = (ControlView) mLayer.getChildAt(i);
+                            o.elegido = o == v;
+                            o.invalidate();
+                        }
+                }
+                if (mPanel != null)
+                    mLayer.removeView(mPanel); // se esconde mientras se arrastra
+                mRecienElegido = nuevo;
                 mDragging = v;
                 mStartX = e.getRawX();
                 mStartY = e.getRawY();
@@ -399,13 +420,81 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
                     v.control.y = cy / mLayer.getHeight();
                     placeAll();
                     save();
+                    rebuild();
+                } else if (mRecienElegido) {
+                    mostrarAjuste(); // primer toque: solo elegirlo
                 } else {
+                    mostrarAjuste();
                     editControl(v.control);
                 }
                 mDragging = null;
                 break;
         }
         return true;
+    }
+
+    private Control mElegido;
+    private View mPanel;
+    private boolean mRecienElegido;
+
+    /** Panel pequeño junto al botón elegido: tamaño − / +, editar y borrar. */
+    private void mostrarAjuste()
+    {
+        ControlView cv = null;
+        for (int i = 0; i < mLayer.getChildCount(); i++)
+            if (mLayer.getChildAt(i) instanceof ControlView && ((ControlView) mLayer.getChildAt(i)).control == mElegido)
+                cv = (ControlView) mLayer.getChildAt(i);
+        if (cv == null)
+            return;
+        Control c = mElegido;
+        LinearLayout p = new LinearLayout(mActivity);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xE6000000 | (mActivity.getColor(R.color.rmxp_tinta) & 0xFFFFFF));
+        bg.setCornerRadius(dp(18));
+        p.setBackground(bg);
+        int pad = Math.round(dp(4));
+        p.setPadding(pad, pad, pad, pad);
+        p.addView(chico("−", v -> cambiarTalla(c, -1)));
+        p.addView(chico("+", v -> cambiarTalla(c, +1)));
+        p.addView(chico("✎", v -> editControl(c)));
+        if (!c.cruceta || mControls.size() > 1)
+            p.addView(chico("🗑", v -> { mControls.remove(c); mElegido = null; save(); rebuild(); }));
+        mPanel = p;
+        mLayer.addView(p, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        ControlView ref = cv;
+        p.post(() -> {
+            // Arriba del botón; si no cabe, abajo
+            float x = ref.getX() + ref.getWidth() / 2f - p.getWidth() / 2f;
+            float y = ref.getY() - p.getHeight() - dp(4);
+            if (y < 0)
+                y = ref.getY() + ref.getHeight() + dp(4);
+            p.setX(Math.max(0, Math.min(x, mLayer.getWidth() - p.getWidth())));
+            p.setY(Math.max(0, Math.min(y, mLayer.getHeight() - p.getHeight())));
+        });
+    }
+
+    private Button chico(String t, View.OnClickListener click)
+    {
+        Button b = toolButton(R.string.rmxp_edit_add, click);
+        b.setText(t);
+        b.setMinWidth(0);
+        b.setMinimumWidth(Math.round(dp(44)));
+        b.setPadding(0, 0, 0, 0);
+        return b;
+    }
+
+    /** − / + del panel: si "igual para todos" estaba puesto, se apaga dejando a cada uno su talla actual. */
+    private void cambiarTalla(Control c, int paso)
+    {
+        if (mPrefs.getBoolean("tam_fijo", true)) {
+            int g = mPrefs.getInt("tam_global", 1);
+            for (Control o : mControls)
+                o.tam = g;
+            mPrefs.edit().putBoolean("tam_fijo", false).apply();
+        }
+        c.tam = Math.max(0, Math.min(Control.TALLAS.length - 1, c.tam + paso));
+        save();
+        rebuild();
     }
 
     private void addControl()

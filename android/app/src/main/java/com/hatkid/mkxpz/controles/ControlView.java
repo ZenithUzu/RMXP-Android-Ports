@@ -45,6 +45,8 @@ public class ControlView extends View
     float bodyAlpha = 1, badgeAlpha = 1;
     int badgeColor;
     boolean badgeLeft; // insignia en la esquina izquierda (botones del lado izquierdo, como L)
+    /** Editor: borde punteado en todos y borde lleno en el elegido, para saber cuál se edita. */
+    boolean editando, elegido;
     private int mDir; // cruceta: bits 1 arriba, 2 abajo, 4 izquierda, 8 derecha
 
     public ControlView(Context ctx, Control c, int accent, Listener listener)
@@ -93,6 +95,14 @@ public class ControlView extends View
             mText.setTextSize(badge * (k.length() > 2 ? 0.62f : k.length() == 2 ? 0.85f : 1.1f));
             canvas.drawText(k, bx, by - (mText.descent() + mText.ascent()) / 2, mText);
             canvas.restore();
+        }
+        if (editando) {
+            mStroke.setColor(0xFF000000 | mAccent);
+            mStroke.setStrokeWidth(dp(elegido ? 3 : 1.5f));
+            mStroke.setPathEffect(elegido ? null : new android.graphics.DashPathEffect(new float[] { dp(5), dp(4) }, 0));
+            float m = dp(2);
+            canvas.drawRoundRect(m, m, getWidth() - m, getHeight() - m, dp(10), dp(10), mStroke);
+            mStroke.setPathEffect(null);
         }
     }
 

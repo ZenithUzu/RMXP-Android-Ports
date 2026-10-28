@@ -31,7 +31,6 @@
     <string name="rmxp_fps_screen">Igual a la pantalla</string>
     <string name="rmxp_fps_hint">Igual a la pantalla: 60 Hz = 60 fps, 120 Hz = 120 fps. Con Essentials v20 o más nuevo se ve más fluido; en juegos más viejos el juego también corre más rápido.</string>
     <string name="rmxp_pad_edit">Editar controles</string>
-    <string name="rmxp_edit_hint">Arrastra para mover. Toca un control para editarlo.</string>
     <string name="rmxp_edit_reset">Restablecer</string>
     <string name="rmxp_edit_done">Listo</string>
     <string name="rmxp_edit_choose">Elegir tecla o acción</string>
@@ -39,6 +38,8 @@
     <string name="rmxp_edit_key">Tecla</string>
     <string name="rmxp_edit_opacity">Transparencia</string>
     <string name="rmxp_edit_add">Añadir</string>
+    <string name="rmxp_edit_more">Opciones ▾</string>
+    <string name="rmxp_edit_hint">Toca un botón para elegirlo (− + cambia su tamaño, ✎ su tecla y color). Arrástralo para moverlo.</string>
     <string name="rmxp_edit_opacity_all">Opacidad</string>
     <string name="rmxp_edit_label">Etiqueta (ej. A, Correr)</string>
     <string name="rmxp_edit_pill">Forma alargada</string>

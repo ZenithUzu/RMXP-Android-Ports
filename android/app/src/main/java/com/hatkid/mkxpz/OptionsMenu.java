@@ -130,7 +130,6 @@ public class OptionsMenu implements TouchControls.Actions
             android.os.Process.killProcess(android.os.Process.myPid());
         });
         mRoot.findViewById(R.id.rmxp_pad_edit).setOnClickListener(v -> {
-            // El juego sigue en pausa mientras se editan los controles
             mRoot.setVisibility(View.GONE);
             controls.startEditing(this::applySpeed);
         });
@@ -326,7 +325,7 @@ public class OptionsMenu implements TouchControls.Actions
     {
         if (isOpen() || controls.isEditing())
             return;
-        MainActivity.nativeSetSpeed(0); // pausa el juego
+        // El juego sigue corriendo detrás del menú (antes se pausaba y la imagen quedaba quieta)
         mRoot.setVisibility(View.VISIBLE);
         mPanel.setTranslationX(mPanel.getWidth() > 0 ? mPanel.getWidth() : 1000);
         mPanel.animate().translationX(0).setDuration(180).start();
