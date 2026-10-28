@@ -59,6 +59,12 @@ if [[ ! -d "openal" ]]; then
   git clone $GIT_ARGS -b 1.23.0 https://github.com/kcat/openal-soft openal
 fi
 
+# FluidSynth 2.5 (MIDI): osal=cpp11 means no glib
+if [[ ! -d "fluidsynth" ]]; then
+  echo "Downloading FluidSynth..."
+  git clone $GIT_ARGS --recurse-submodules --shallow-submodules -b v2.5.7 https://github.com/FluidSynth/fluidsynth fluidsynth
+fi
+
 # SDL2
 if [[ ! -d "SDL2" ]]; then
   echo "Downloading SDL2..."

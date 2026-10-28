@@ -93,7 +93,7 @@ each other.
   in `android/patches/`; they load before the game).
 - **The game closes on the phone**: connect the phone and run
   `adb logcat -s mkxp-z SDL` in a terminal. That log says why.
-- **No sound from MIDI music**: choose a `.sf2` SoundFont before building.
+- **No sound from MIDI music**: the engine includes FluidSynth (since `motor-v10`), but it needs a `.sf2` SoundFont: if the game has none, choose one before building.
 
 You can also check a game without building anything:
 

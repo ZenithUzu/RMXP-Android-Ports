@@ -182,6 +182,25 @@ openal/cmakebuild/Makefile: openal/CMakeLists.txt
 	cd openal; mkdir cmakebuild; cd cmakebuild; \
 	$(CMAKE) -DLIBTYPE=SHARED $(OPENAL_CONFIGURE_ARGS)
 
+# -------------------- FluidSynth (MIDI music) --------------------
+# Only the synthesizer: mkxp-z feeds it the MIDI and plays the sound itself.
+FLUID_CONFIGURE_ARGS := \
+	-DBUILD_SHARED_LIBS=ON -Dosal=cpp11 -DLIB_SUFFIX= -DGCEM_INCLUDE_DIR=$(CURDIR)/fluidsynth/gcem/include \
+	-Denable-alsa=OFF -Denable-aufile=OFF -Denable-dbus=OFF -Denable-ipv6=OFF -Denable-jack=OFF \
+	-Denable-ladspa=OFF -Denable-libinstpatch=OFF -Denable-libsndfile=OFF -Denable-midishare=OFF \
+	-Denable-network=OFF -Denable-oss=OFF -Denable-pulseaudio=OFF -Denable-pipewire=OFF \
+	-Denable-readline=OFF -Denable-sdl2=OFF -Denable-sdl3=OFF -Denable-openmp=OFF -Denable-systemd=OFF \
+	-Denable-opensles=OFF -Denable-oboe=OFF -Denable-portaudio=OFF
+
+fluidsynth: init $(LIBDIR)/libfluidsynth.so
+
+$(LIBDIR)/libfluidsynth.so: fluidsynth/cmakebuild/Makefile
+	cd fluidsynth/cmakebuild && $(MAKE) -j$(NPROC) libfluidsynth && $(MAKE) install
+
+fluidsynth/cmakebuild/Makefile: fluidsynth/CMakeLists.txt
+	cd fluidsynth; mkdir -p cmakebuild; cd cmakebuild; \
+	$(CMAKE) $(FLUID_CONFIGURE_ARGS)
+
 # -------------------- OpenSSL --------------------
 openssl: init $(LIBDIR)/libssl.a
 
@@ -227,5 +246,6 @@ clean-ruby:
 	-cd ruby; make clean; rm Makefile; rm configure
 
 clean: clean-pixman clean-iconv clean-openal clean-openssl clean-ruby
+	-cd fluidsynth; rm -rf cmakebuild
 
-all: pixman iconv openal openssl ruby
+all: pixman iconv openal fluidsynth openssl ruby

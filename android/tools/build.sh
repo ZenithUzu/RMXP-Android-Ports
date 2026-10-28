@@ -38,7 +38,7 @@ if [[ ! -x "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/$ARCH/bin/aarch64-linux-a
   echo "Android NDK is missing or incomplete. Run ./tools/setup.sh and wait for 'Setup complete'." >&2
   exit 1
 fi
-for dep in libogg libvorbis libtheora libiconv uchardet pixman physfs openal SDL2 SDL2_image SDL2_ttf SDL2_sound openssl ruby; do
+for dep in libogg libvorbis libtheora libiconv uchardet pixman physfs openal fluidsynth SDL2 SDL2_image SDL2_ttf SDL2_sound openssl ruby; do
   if [[ ! -d "$REPO_ROOT/app/jni/$dep" ]]; then
     echo "Native dependency '$dep' is missing. Run ./tools/setup.sh and wait for 'Setup complete'." >&2
     exit 1
@@ -49,7 +49,7 @@ done
 build_native() {
   local abi="$1" host="$2" target="$3" library complete=1
   local libdir="$REPO_ROOT/app/jni/build-$abi/lib"
-  for library in libcpufeatures.a libpixman-1.a libiconv.a libopenal.so libssl.a libcrypto.a libruby.so.3.1.0; do
+  for library in libcpufeatures.a libpixman-1.a libiconv.a libopenal.so libfluidsynth.so libssl.a libcrypto.a libruby.so.3.1.0; do
     [[ -f "$libdir/$library" ]] || complete=0
   done
   if (( complete )); then
@@ -64,7 +64,7 @@ build_native() {
     workspace="$native_root/.native-work/$abi"
     mkdir -p "$workspace"
     cp "$native_root/Makefile" "$workspace/Makefile"
-    for dependency in pixman libiconv openal openssl ruby; do
+    for dependency in pixman libiconv openal fluidsynth openssl ruby; do
       mkdir -p "$workspace/$dependency"
       rsync -a --delete --exclude=.git --exclude=cmakebuild \
         "$native_root/$dependency/" "$workspace/$dependency/"
@@ -89,7 +89,7 @@ build_native() {
     trap 'kill "$progress_pid" 2>/dev/null || true; wait "$progress_pid" 2>/dev/null || true' EXIT
     LDFLAGS="-Wl,-z,max-page-size=16384" make HOST="$host" TARGET="$target" ABI="$abi" \
       BUILD_PREFIX="$native_root/build-$abi" -j"$(nproc)"
-    for library in libcpufeatures.a libpixman-1.a libiconv.a libopenal.so libssl.a libcrypto.a libruby.so.3.1.0; do
+    for library in libcpufeatures.a libpixman-1.a libiconv.a libopenal.so libfluidsynth.so libssl.a libcrypto.a libruby.so.3.1.0; do
       if [[ ! -f "$libdir/$library" ]]; then
         echo "Native build for $abi did not produce $libdir/$library. Stopping before APK packaging." >&2
         exit 1

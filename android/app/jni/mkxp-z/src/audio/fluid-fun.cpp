@@ -6,7 +6,10 @@
 
 #include "debugwriter.h"
 
-#if __LINUX__ || __ANDROID__
+#if __ANDROID__
+/* RMXP-Android-Ports: Android packs it as lib/<abi>/libfluidsynth.so (no version suffix) */
+#define FLUID_LIB "libfluidsynth.so"
+#elif __LINUX__
 #define FLUID_LIB "libfluidsynth.so.3"
 #elif MKXPZ_BUILD_XCODE
 #define FLUID_LIB "@rpath/libfluidsynth.dylib"

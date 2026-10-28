@@ -93,7 +93,7 @@ del otro.
   en `android/patches/`, se cargan antes del juego).
 - **El juego se cierra en el teléfono**: conecta el teléfono y en una terminal
   ejecuta `adb logcat -s mkxp-z SDL`. Ese registro dice la causa.
-- **Música MIDI sin sonido**: elige un SoundFont `.sf2` antes de crear el APK.
+- **Música MIDI sin sonido**: el motor ya trae FluidSynth (desde `motor-v10`), pero necesita un SoundFont `.sf2`: si el juego no trae uno, elígelo antes de crear el APK.
 
 También puedes revisar un juego sin crear nada:
 
