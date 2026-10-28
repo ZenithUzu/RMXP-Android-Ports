@@ -172,6 +172,23 @@ public class MainActivity extends SDLActivity
         return true;
     }
 
+    /**
+     * Puts back the APK's mkxp.json before each start. Some games rewrite it from their options
+     * menu, and a broken one makes the engine skip our patches (e.g. "uninitialized constant Zlib").
+     */
+    private void restoreConfig(File gameDir)
+    {
+        try (InputStream in = getAssets().open(ASSETS_GAME_DIR + "/mkxp.json");
+             FileOutputStream out = new FileOutputStream(new File(gameDir, "mkxp.json"))) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0)
+                out.write(buf, 0, n);
+        } catch (IOException e) {
+            Log.w(TAG, "Could not restore mkxp.json: " + e);
+        }
+    }
+
     /** Moves into dst every file of src that dst does not have (player saves). */
     private void moveMissing(File src, File dst, String rel)
     {
@@ -370,6 +387,7 @@ public class MainActivity extends SDLActivity
                 if (new File(dest, EXTRACT_MARKER).exists() && markerIsCurrent()) {
                     GAME_PATH = dest.getAbsolutePath();
                     Log.i(TAG, "Using bundled game at " + GAME_PATH);
+                    restoreConfig(dest);
                     syncPartidas();
                     runSDLThread();
                 } else if (sExtracting) {
