@@ -83,16 +83,26 @@ if File.file?("rmxp_ligero.txt")
     end
   end
 
-  # Algunos scripts abren la imagen para ver si existe (pbGetFileChar de Essentials lee
-  # 1 byte). Para los archivos del APK, File.open de lectura devuelve su contenido.
+  # Algunos scripts abren o leen la imagen para ver si existe (pbGetFileChar de Essentials
+  # lee 1 byte). Para los archivos del APK, abrir o leer devuelve su contenido. Se cubren
+  # File.open/new, Kernel#open, IO/File.read, binread, readlines, foreach y File.size.
   require "stringio"
-  class << File
-    alias_method :rmxp_ligero_open, :open
-    def open(path, *args, **kw, &blk)
-      mode = args[0].is_a?(String) ? args[0] : (kw[:mode] || "r")
-      real = mode.is_a?(String) && mode !~ /[wa+]/ ? RmxpLigero.real(path) : nil
-      return rmxp_ligero_open(path, *args, **kw, &blk) unless real
-      io = StringIO.new(RmxpLigero.datos(real))
+  module RmxpLigero
+    def self.lectura?(args, kw)
+      mode = args[0].is_a?(String) || args[0].is_a?(Integer) ? args[0] : (kw[:mode] || "r")
+      mode.is_a?(Integer) ? (mode & (File::WRONLY | File::RDWR)) == 0 : mode.to_s !~ /[wa+]/
+    end
+
+    # Un StringIO con el archivo del APK, o nil si hay que usar el disco normal
+    def self.abrir(path, args, kw)
+      return nil unless path.is_a?(String) || path.respond_to?(:to_path)
+      return nil if path.is_a?(String) && path.start_with?("|") # Kernel#open de un comando
+      return nil unless lectura?(args, kw)
+      r = real(path)
+      r && StringIO.new(datos(r))
+    end
+
+    def self.con_bloque(io, blk)
       return io unless blk
       begin
         blk.call(io)
@@ -100,13 +110,15 @@ if File.file?("rmxp_ligero.txt")
         io.close
       end
     end
+  end
 
-    %i[read binread].each do |m|
+  class << File
+    %i[open new].each do |m|
       viejo = :"rmxp_ligero_#{m}"
       alias_method viejo, m
-      define_method(m) do |path, *a, **kw|
-        real = RmxpLigero.real(path)
-        real ? RmxpLigero.datos(real) : send(viejo, path, *a, **kw)
+      define_method(m) do |path, *args, **kw, &blk|
+        io = RmxpLigero.abrir(path, args, kw)
+        io ? RmxpLigero.con_bloque(io, blk) : send(viejo, path, *args, **kw, &blk)
       end
     end
 
@@ -117,6 +129,45 @@ if File.file?("rmxp_ligero.txt")
         real = RmxpLigero.real(path)
         real ? RmxpLigero.datos(real).bytesize : send(viejo, path)
       end
+    end
+  end
+
+  # File hereda de IO: esto cubre IO.read y File.read (y los demás)
+  class << IO
+    %i[read binread].each do |m|
+      viejo = :"rmxp_ligero_#{m}"
+      alias_method viejo, m
+      define_method(m) do |path, *a, **kw|
+        real = path.is_a?(String) || path.respond_to?(:to_path) ? RmxpLigero.real(path) : nil
+        next send(viejo, path, *a, **kw) unless real
+        data = RmxpLigero.datos(real)
+        len, off = a[0], a[1] || 0
+        len ? data[off, len] : data[off..-1]
+      end
+    end
+
+    alias_method :rmxp_ligero_readlines, :readlines
+    def readlines(path, *a, **kw)
+      real = RmxpLigero.real(path)
+      real ? RmxpLigero.datos(real).each_line(*a, **kw).to_a : rmxp_ligero_readlines(path, *a, **kw)
+    end
+
+    alias_method :rmxp_ligero_foreach, :foreach
+    def foreach(path, *a, **kw, &blk)
+      real = RmxpLigero.real(path)
+      return rmxp_ligero_foreach(path, *a, **kw, &blk) unless real
+      lineas = RmxpLigero.datos(real).each_line(*a, **kw)
+      return lineas unless blk
+      lineas.each(&blk)
+      nil
+    end
+  end
+
+  module Kernel
+    alias_method :rmxp_ligero_kopen, :open
+    private def open(path, *args, **kw, &blk)
+      io = RmxpLigero.abrir(path, args, kw)
+      io ? RmxpLigero.con_bloque(io, blk) : rmxp_ligero_kopen(path, *args, **kw, &blk)
     end
   end
 
