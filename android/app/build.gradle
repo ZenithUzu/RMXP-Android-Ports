@@ -110,6 +110,9 @@ android {
     androidResources {
         if (project.hasProperty('stripAudio')) {
             ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!Audio"
+        } else {
+            // El patrón de Android omite carpetas "_algo" y archivos ".algo"; los juegos los usan
+            ignoreAssetsPattern = "!.svn:!.git:!.ds_store"
         }
     }
 }

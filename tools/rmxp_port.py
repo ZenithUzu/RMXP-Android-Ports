@@ -43,7 +43,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = os.path.join(REPO, "android")
 HOME = os.path.join(os.path.expanduser("~"), "RMXP-Android-Ports")
 # Motor ya compilado (librerías .so). Se publica con .github/workflows/motor.yml.
-MOTOR_VERSION = "motor-v8"
+MOTOR_VERSION = "motor-v9"
 MOTOR_URL = "https://github.com/ZenithUzu/RMXP-Android-Ports/releases/download/%s/motor-android.zip" % MOTOR_VERSION
 WINDOWS = os.name == "nt"
 
@@ -280,7 +280,7 @@ def find_soundfont(game):
     return None
 
 
-def stage_game(root, work, info, soundfont, log, ruby_lib=None):
+def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False):
     """Copia el juego a work/assets/game, sin .exe/.dll, con los parches y mkxp.json."""
     assets = os.path.join(work, "assets")
     game = os.path.join(assets, "game")
@@ -327,7 +327,27 @@ def stage_game(root, work, info, soundfont, log, ruby_lib=None):
     with open(os.path.join(game, "mkxp.json"), "w", encoding="utf-8") as f:
         # Solo ASCII: así el motor no intenta adivinar la codificación del archivo (se caía con algunas)
         json.dump(conf, f, ensure_ascii=True, indent=2)
+    if ligero:
+        write_ligero(game, log)
     return assets
+
+
+def write_ligero(game, log):
+    """Ahorrar espacio: lista de Graphics/ y Audio/ que se quedan dentro del APK (el motor
+    los lee de ahí). Solo nombres ASCII: algunos scripts abren los de otros nombres con File.open."""
+    names = []
+    for top in os.listdir(game):
+        if top.lower() not in ("graphics", "audio") or not os.path.isdir(os.path.join(game, top)):
+            continue
+        for d, _, files in os.walk(os.path.join(game, top)):
+            for f in files:
+                rel = os.path.relpath(os.path.join(d, f), game).replace(os.sep, "/")
+                # El SoundFont lo abre el motor por su ruta real: se queda fuera del APK
+                if rel.isascii() and "\n" not in rel and not rel.lower().endswith(".sf2"):
+                    names.append(rel)
+    with open(os.path.join(game, "rmxp_ligero.txt"), "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(sorted(names)) + "\n")
+    log("Ahorrar espacio: %d archivos de Graphics y Audio se leerán directo del APK." % len(names))
 
 
 def make_icon_res(icon, work):
@@ -447,7 +467,7 @@ def limpiar(log=print):
 
 
 def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
-         install=False, motor_dir=None, log=print):
+         install=False, motor_dir=None, log=print, ligero=False):
     """Proceso completo. Devuelve la ruta del APK."""
     if not rmxp_analyze.find(root, "Game.ini"):
         raise PortError("Esa carpeta no tiene Game.ini. Elige la carpeta principal del juego.")
@@ -473,7 +493,7 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     motor = get_motor(log, motor_dir)
     work = os.path.join(HOME, "trabajo", slug(info["title"], "juego"))
     try:
-        assets = stage_game(root, work, info, soundfont, log, os.path.join(os.path.dirname(motor), "ruby"))
+        assets = stage_game(root, work, info, soundfont, log, os.path.join(os.path.dirname(motor), "ruby"), ligero)
         res = make_icon_res(icon, work)
         apk = gradle_build(project, info, assets, res, motor, sdk, java_home, log)
     finally:
@@ -571,6 +591,11 @@ def gui(initial=None):
                    bg=C["tinta"], fg=C["niebla"], selectcolor=C["pizarra"], activebackground=C["tinta"],
                    activeforeground=C["niebla"], font=f_body, highlightthickness=0, bd=0
                    ).pack(anchor="w", pady=(12, 0), **pad)
+    ligero = tk.BooleanVar(value=False)
+    tk.Checkbutton(win, text="Ahorrar espacio en el teléfono (experimental)", variable=ligero,
+                   bg=C["tinta"], fg=C["niebla"], selectcolor=C["pizarra"], activebackground=C["tinta"],
+                   activeforeground=C["niebla"], font=f_body, highlightthickness=0, bd=0
+                   ).pack(anchor="w", **pad)
 
     go = button(win, "Crear APK", lambda: start(), bg=C["ambar"], fg=C["tinta"])
     go.config(font=(base, 13, "bold"), pady=10)
@@ -620,7 +645,7 @@ def gui(initial=None):
             return
         state["busy"] = True
         go.config(text="Trabajando…", state="disabled")
-        args = dict(root=state["root"], icon=state["icon"], soundfont=state["sf2"], install=install.get(),
+        args = dict(root=state["root"], icon=state["icon"], soundfont=state["sf2"], install=install.get(), ligero=ligero.get(),
                     **{k: e.get().strip() for k, e in fields.items()})
 
         def worker():
@@ -664,6 +689,7 @@ def main():
     ap.add_argument("--autor"), ap.add_argument("--version"), ap.add_argument("--nombre")
     ap.add_argument("--icono", help="PNG para el icono"), ap.add_argument("--soundfont", help=".sf2 para MIDI")
     ap.add_argument("--motor", help="carpeta lib/ con el motor compilado (en vez de descargarlo)")
+    ap.add_argument("--ligero", action="store_true", help="ahorrar espacio: Graphics/Audio se leen del APK")
     ap.add_argument("--limpiar", action="store_true", help="borrar APKs viejos y restos de compilación")
     a = ap.parse_args()
     if a.limpiar:
@@ -673,7 +699,7 @@ def main():
     if not a.carpeta:
         ap.error("falta la carpeta del juego")
     try:
-        port(a.carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor)
+        port(a.carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor, ligero=a.ligero)
     except PortError as e:
         print("ERROR: " + str(e))
         sys.exit(1)

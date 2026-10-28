@@ -44,6 +44,9 @@ public class MainActivity extends SDLActivity
     private static final String ASSETS_GAME_DIR = "game";
     private static final String EXTRACTED_DIR = "game";
     private static final String EXTRACT_MARKER = ".extract_ok";
+    // "Ahorrar espacio": files listed here stay inside the APK (the engine reads them from it)
+    private static final String LIGERO = "rmxp_ligero.txt";
+    private java.util.Set<String> mVirtual;
 
     protected boolean mStarted = false;
 
@@ -73,6 +76,27 @@ public class MainActivity extends SDLActivity
         } catch (IOException e) {
             return false;
         }
+    }
+
+    /** Files that stay inside the APK ("Ahorrar espacio"), or null when everything is extracted. */
+    private java.util.Set<String> readVirtual()
+    {
+        java.util.Set<String> set = new java.util.HashSet<>();
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(
+                getAssets().open(ASSETS_GAME_DIR + "/" + LIGERO), java.nio.charset.StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = r.readLine()) != null)
+                if (!line.isEmpty())
+                    set.add(line);
+        } catch (IOException e) {
+            return null;
+        }
+        return set;
+    }
+
+    private boolean isVirtual(String rel)
+    {
+        return mVirtual != null && mVirtual.contains(rel);
     }
 
     /** True when the extracted copy matches the current APK version. */
@@ -108,7 +132,7 @@ public class MainActivity extends SDLActivity
         try {
             extractAssetDir(am, ASSETS_GAME_DIR, fresh);
             if (game.exists())
-                moveMissing(game, fresh);
+                moveMissing(game, fresh, "");
             FileOutputStream fos = new FileOutputStream(new File(fresh, EXTRACT_MARKER));
             try {
                 fos.write(String.valueOf(BuildConfig.VERSION_CODE).getBytes());
@@ -132,20 +156,22 @@ public class MainActivity extends SDLActivity
     }
 
     /** Moves into dst every file of src that dst does not have (player saves). */
-    private void moveMissing(File src, File dst)
+    private void moveMissing(File src, File dst, String rel)
     {
         File[] children = src.listFiles();
         if (children == null)
             return;
         for (File c : children) {
             File target = new File(dst, c.getName());
-            if (c.getName().equals(EXTRACT_MARKER))
+            String childRel = rel + c.getName();
+            // Game files now read from the APK, and the old list, are not player data
+            if (c.getName().equals(EXTRACT_MARKER) || childRel.equals(LIGERO) || isVirtual(childRel))
                 continue;
             if (!target.exists()) {
                 //noinspection ResultOfMethodCallIgnored
                 c.renameTo(target);
             } else if (c.isDirectory() && target.isDirectory()) {
-                moveMissing(c, target);
+                moveMissing(c, target, childRel + "/");
             }
         }
     }
@@ -166,6 +192,8 @@ public class MainActivity extends SDLActivity
             String[] subEntries = am.list(childAsset);
             if (subEntries != null && subEntries.length > 0) {
                 extractAssetDir(am, childAsset, childOut);
+            } else if (isVirtual(childAsset.substring(ASSETS_GAME_DIR.length() + 1))) {
+                continue; // stays in the APK; the folder exists so the game can still list it
             } else {
                 copyAssetFile(am, childAsset, childOut);
             }
@@ -265,6 +293,11 @@ public class MainActivity extends SDLActivity
         };
         for (String[] v : gc) {
             try { android.system.Os.setenv(v[0], v[1], false); } catch (Exception ignored) { }
+        }
+
+        mVirtual = readVirtual();
+        if (mVirtual != null) {
+            try { android.system.Os.setenv("RMXP_APK", getApplicationInfo().sourceDir, true); } catch (Exception ignored) { }
         }
 
         super.onCreate(savedInstanceState);

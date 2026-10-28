@@ -89,6 +89,17 @@ class Utilidades(unittest.TestCase):
         conf = json.load(open(os.path.join(assets, "game", "mkxp.json"), encoding="utf-8"))
         self.assertEqual(conf["midiSoundFont"], "Audio/musica.sf2")
 
+    def test_ahorrar_espacio(self):
+        root = make_game({"Game.ini": "[Game]\n"})
+        for d in ("Graphics/Pictures", "Audio/BGM", "Data"):
+            os.makedirs(os.path.join(root, d))
+        for f in ("Graphics/Pictures/a.png", "Graphics/Pictures/Pokédex.png", "Audio/BGM/m.ogg",
+                  "Audio/fuente.sf2", "Data/Map001.rxdata"):
+            open(os.path.join(root, f), "w").close()
+        assets = rmxp_port.stage_game(root, tempfile.mkdtemp(), {"title": "T"}, None, lambda t: None, ligero=True)
+        lista = open(os.path.join(assets, "game", "rmxp_ligero.txt"), encoding="utf-8").read().split()
+        self.assertEqual(lista, ["Audio/BGM/m.ogg", "Graphics/Pictures/a.png"])
+
 
 if __name__ == "__main__":
     unittest.main()

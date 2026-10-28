@@ -39,6 +39,8 @@
 #include "sharedmidistate.h"
 
 #include <unistd.h>
+#include <stdlib.h>
+#include <physfs.h>
 #include <stdio.h>
 #include <string>
 #include <chrono>
@@ -137,6 +139,16 @@ struct SharedStatePrivate
 
 		for (size_t i = 0; i < config.rtps.size(); ++i)
 			fileSystem.addPath(config.rtps[i].c_str());
+
+#ifdef __ANDROID__
+		/* RMXP-Android-Ports "ahorrar espacio": Graphics/Audio are read straight from
+		 * the APK (assets/game) instead of an extracted copy. Searched after the
+		 * extracted folder, so anything extracted wins. */
+		if (const char *apk = getenv("RMXP_APK")) {
+			fileSystem.addPath(apk);
+			PHYSFS_setRoot(apk, "/assets/game");
+		}
+#endif
 
 		if (config.pathCache)
 			fileSystem.createPathCache();
