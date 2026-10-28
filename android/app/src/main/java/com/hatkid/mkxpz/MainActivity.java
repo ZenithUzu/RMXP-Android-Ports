@@ -400,7 +400,8 @@ public class MainActivity extends SDLActivity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
     {
-        if (mMenu != null && mMenu.partidas.onResult(requestCode, resultCode, data))
+        if (mMenu != null && (mMenu.partidas.onResult(requestCode, resultCode, data)
+                || mMenu.registro.onResult(requestCode, resultCode, data)))
             return;
         super.onActivityResult(requestCode, resultCode, data);
     }

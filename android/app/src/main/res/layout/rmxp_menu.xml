@@ -158,6 +158,12 @@
                     android:layout_weight="1"
                     android:text="@string/rmxp_saves_import" />
             </LinearLayout>
+            <Button
+                android:id="@+id/rmxp_log"
+                style="@style/RmxpButton"
+                android:layout_marginTop="8dp"
+                android:text="@string/rmxp_log" />
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_log_hint" />
 
             <!-- Acciones -->
             <Button

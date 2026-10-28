@@ -80,4 +80,7 @@
     <string name="rmxp_color_badges">Letras pequeñas (la tecla de cada botón)</string>
     <string name="rmxp_badge_own">Color y transparencia propios</string>
     <string name="rmxp_badge_hint">Apagado: las letras pequeñas siguen el estilo y la transparencia de su botón.</string>
+    <string name="rmxp_log">Guardar registro (log)</string>
+    <string name="rmxp_log_hint">Crea un .txt con lo que pasó en la app, para mandarlo si algo falla. No hace falta cable.</string>
+    <string name="rmxp_log_saved">Registro guardado</string>
 </resources>

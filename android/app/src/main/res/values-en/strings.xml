@@ -79,4 +79,7 @@
     <string name="rmxp_color_badges">Small letters (each button\'s key)</string>
     <string name="rmxp_badge_own">Own color and transparency</string>
     <string name="rmxp_badge_hint">Off: the small letters follow their button\'s style and transparency.</string>
+    <string name="rmxp_log">Save log</string>
+    <string name="rmxp_log_hint">Creates a .txt with what happened in the app, to send if something fails. No cable needed.</string>
+    <string name="rmxp_log_saved">Log saved</string>
 </resources>
