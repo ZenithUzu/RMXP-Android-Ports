@@ -329,6 +329,7 @@ public class MainActivity extends SDLActivity
         if (mLayout != null) {
             mMenu = new OptionsMenu(this, new File(getFilesDir(), EXTRACTED_DIR).getAbsolutePath());
             mMenu.attachTo(mLayout);
+            mMenu.partidas.pedirCarpeta(true); // solo la primera vez
         }
     }
 
@@ -352,6 +353,7 @@ public class MainActivity extends SDLActivity
                 if (new File(dest, EXTRACT_MARKER).exists() && markerIsCurrent()) {
                     GAME_PATH = dest.getAbsolutePath();
                     Log.i(TAG, "Using bundled game at " + GAME_PATH);
+                    syncPartidas();
                     runSDLThread();
                 } else if (hasBundledAssets()) {
                     GAME_PATH = dest.getAbsolutePath();
@@ -367,6 +369,7 @@ public class MainActivity extends SDLActivity
                             });
                             return;
                         }
+                        syncPartidas();
                         activity.runOnUiThread(() -> runSDLThread());
                     }).start();
                 } else {
@@ -423,6 +426,7 @@ public class MainActivity extends SDLActivity
     {
         if (mMenu != null)
             mMenu.onBackground(true);
+        syncPartidas();
         super.onPause();
     }
 
@@ -431,6 +435,20 @@ public class MainActivity extends SDLActivity
     {
         super.onResume();
         hideSystemBars();
+        // Al volver (por ejemplo, de dar el permiso de la carpeta): trae partidas nuevas de ahí
+        if (mStarted && mMenu != null)
+            mMenu.partidas.ofrecerReinicio(syncPartidas());
+    }
+
+    /** Copia de las partidas en "RPG Maker/<juego>/" (si hay permiso). */
+    private int syncPartidas()
+    {
+        if (mMenu == null)
+            return 0;
+        int n = mMenu.partidas.sincronizar();
+        if (mMenu.partidas.carpetaPermitida())
+            mMenu.partidas.vigilar();
+        return n;
     }
 
     @Override

@@ -132,6 +132,12 @@ public class OptionsMenu implements TouchControls.Actions
         mRoot.findViewById(R.id.rmxp_saves_export).setOnClickListener(v -> partidas.export());
         mRoot.findViewById(R.id.rmxp_saves_import).setOnClickListener(v -> partidas.pickImport());
         mRoot.findViewById(R.id.rmxp_log).setOnClickListener(v -> registro.save());
+        mRoot.findViewById(R.id.rmxp_folder).setOnClickListener(v -> {
+            if (partidas.carpetaPermitida())
+                android.widget.Toast.makeText(mActivity, partidas.carpeta().getPath(), android.widget.Toast.LENGTH_LONG).show();
+            else
+                partidas.pedirCarpeta(false);
+        });
     }
 
     /** "Mando y teclado": a qué tecla manda cada botón del mando físico. */

@@ -41,7 +41,7 @@ public class Partidas
         mGameDir = gameDir;
     }
 
-    private static boolean isSave(File f)
+    static boolean isSave(File f)
     {
         String n = f.getName().toLowerCase();
         return f.isFile() && (n.endsWith(".rxdata") || n.endsWith(".rvdata") || n.endsWith(".rvdata2"));
@@ -170,6 +170,128 @@ public class Partidas
         int r;
         while ((r = in.read(buf)) > 0)
             out.write(buf, 0, r);
+    }
+
+    // ---------------------------------------------------------------- carpeta "RPG Maker"
+
+    /**
+     * Copia visible de las partidas en el almacenamiento del teléfono: "RPG Maker/<juego>/",
+     * junto a Download, Android, etc. Sobrevive a desinstalar la app y se puede copiar a la PC.
+     * El juego sigue guardando donde siempre; esto solo sincroniza (gana la más nueva).
+     */
+    public File carpeta()
+    {
+        String juego = mActivity.getString(R.string.app_name).replaceAll("[\\\\/:*?\"<>|]", "").trim();
+        return new File(android.os.Environment.getExternalStorageDirectory(), "RPG Maker/" + juego);
+    }
+
+    public boolean carpetaPermitida()
+    {
+        if (android.os.Build.VERSION.SDK_INT >= 30)
+            return android.os.Environment.isExternalStorageManager();
+        return mActivity.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** Pide el permiso (una sola vez sola; desde el menú, cuando se quiera). */
+    public void pedirCarpeta(boolean soloPrimeraVez)
+    {
+        android.content.SharedPreferences prefs = mActivity.getSharedPreferences("rmxp", Activity.MODE_PRIVATE);
+        if (carpetaPermitida() || (soloPrimeraVez && prefs.getBoolean("carpeta_preguntada", false)))
+            return;
+        prefs.edit().putBoolean("carpeta_preguntada", true).apply();
+        new AlertDialog.Builder(mActivity)
+            .setTitle(R.string.rmxp_folder_title)
+            .setMessage(mActivity.getString(R.string.rmxp_folder_msg, "RPG Maker/" + carpeta().getName()))
+            .setPositiveButton(R.string.rmxp_folder_allow, (d, w) -> {
+                if (android.os.Build.VERSION.SDK_INT >= 30)
+                    mActivity.startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.parse("package:" + mActivity.getPackageName())));
+                else
+                    mActivity.requestPermissions(new String[] { android.Manifest.permission.WRITE_EXTERNAL_STORAGE }, 4204);
+            })
+            .setNegativeButton(R.string.rmxp_folder_later, null)
+            .show();
+    }
+
+    /** Sincroniza en los dos sentidos: la copia más nueva de cada partida gana. */
+    /** Devuelve cuántas partidas entraron desde la carpeta (para ofrecer reiniciar). */
+    public synchronized int sincronizar()
+    {
+        if (!carpetaPermitida())
+            return 0;
+        File dir = carpeta();
+        if (!dir.isDirectory() && !dir.mkdirs())
+            return 0;
+        int entraron = 0;
+        boolean gameDirSaves = false;
+        for (File f : saves())
+            gameDirSaves |= f.getParentFile().equals(mGameDir);
+        for (File f : saves())
+            copiarSiMasNueva(f, new File(dir, f.getName()));
+        File[] fuera = dir.listFiles();
+        if (fuera != null)
+            for (File f : fuera) {
+                if (!isSave(f))
+                    continue;
+                File enJuego = new File(mGameDir, f.getName());
+                File dentro = enJuego.exists() || gameDirSaves ? enJuego : new File(mDataDir, f.getName());
+                if (copiarSiMasNueva(f, dentro))
+                    entraron++;
+            }
+        return entraron;
+    }
+
+    private static boolean copiarSiMasNueva(File src, File dst)
+    {
+        if (dst.exists() && dst.lastModified() >= src.lastModified() - 2000)
+            return false;
+        try (InputStream in = new FileInputStream(src); OutputStream out = new FileOutputStream(dst)) {
+            copy(in, out);
+        } catch (Exception e) {
+            return false;
+        }
+        //noinspection ResultOfMethodCallIgnored
+        dst.setLastModified(src.lastModified()); // misma hora: así no se copian de ida y vuelta
+        return true;
+    }
+
+    /** Ofrece reiniciar cuando entraron partidas con el juego ya abierto. */
+    public void ofrecerReinicio(int n)
+    {
+        if (n <= 0)
+            return;
+        new AlertDialog.Builder(mActivity)
+            .setMessage(mActivity.getString(R.string.rmxp_saves_imported, n))
+            .setPositiveButton(R.string.rmxp_reset, (d, w) -> {
+                SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_F12);
+                SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_F12);
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    private final List<android.os.FileObserver> mObservers = new ArrayList<>();
+
+    /** Cada vez que el juego guarda, la partida se copia a la carpeta al momento. */
+    @SuppressWarnings("deprecation")
+    public void vigilar()
+    {
+        if (!mObservers.isEmpty())
+            return;
+        for (File dir : new File[] { mDataDir, mGameDir }) {
+            android.os.FileObserver o = new android.os.FileObserver(dir.getPath(),
+                    android.os.FileObserver.CLOSE_WRITE | android.os.FileObserver.MOVED_TO) {
+                @Override
+                public void onEvent(int event, String path)
+                {
+                    if (path != null && path.toLowerCase().matches(".*\\.(rxdata|rvdata2?)$"))
+                        sincronizar();
+                }
+            };
+            o.startWatching();
+            mObservers.add(o);
+        }
     }
 
     private void toast(int text)

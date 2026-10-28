@@ -21,7 +21,7 @@ solo.
 | **Controles** | Estilo Kirin: botones translúcidos con etiqueta y tecla. En *Editar controles* puedes añadir, borrar, mover y mapear botones (todas las teclas, más teclado, turbo y menú), y cambiar su color y forma. Tamaño (pequeño, mediano, grande) y opacidad (25–100 %) con medidas fijas, iguales para todos o por botón; al moverlos se alinean solos. **Teclado de PC en pantalla** (con Borrar, Enter y flechas) que aparece con su botón o cuando el juego pide escribir; tres tamaños. *Mando y teclado*: mapeo propio para mandos, con valores cómodos por defecto. Los controles se ocultan solos al conectar un mando o teclado. |
 | **Internet** | HTTP y HTTPS nativos (HTTPLite), y la biblioteca de Ruby incluida (`net/http`, `socket`, `uri`, `json`…) para juegos que se conectan en línea o en red local. Los fangames viejos que usan `wininet.dll` se redirigen solos. |
 | **Actualizaciones seguras** | La versión nueva se prepara aparte y solo reemplaza a la vieja cuando está completa. Las partidas nunca se borran ni se sobrescriben. |
-| **Partidas** | *Exportar* copia tus partidas a una carpeta del teléfono; *Importar* trae las de JoiPlay, Kirin o la PC (`.rxdata`, `.rvdata`, `.rvdata2`) y guarda la anterior como respaldo. |
+| **Partidas** | *Exportar* copia tus partidas a una carpeta del teléfono; *Importar* trae las de JoiPlay, Kirin o la PC (`.rxdata`, `.rvdata`, `.rvdata2`) y guarda la anterior como respaldo. Con permiso, guarda además una copia en la carpeta **RPG Maker/<juego>/** del teléfono (junto a Download), que sobrevive a desinstalar. |
 | **Firma del autor** | Cada juego recibe su propia firma, a nombre de su creador (se lee del Léeme o Readme del juego). |
 
 ## Lo que necesitas (una sola vez)

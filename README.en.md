@@ -21,7 +21,7 @@ itself.
 | **Controls** | Kirin style: translucent buttons with a label and key. In *Edit controls* you can add, delete, move and map buttons (every key, plus keyboard, turbo and menu) and change their color and shape. Size (small, medium, large) and opacity (25–100%) use fixed steps, the same for all or per button; buttons snap into line when moved. **On-screen PC keyboard** (with Backspace, Enter and arrows) that opens with its button or when the game asks you to type; three sizes. *Gamepad and keyboard*: its own mapping for gamepads, with comfortable defaults. Controls hide when a gamepad or keyboard is connected. |
 | **Internet** | Native HTTP and HTTPS (HTTPLite), plus Ruby's standard library (`net/http`, `socket`, `uri`, `json`…) for games that go online or use the local network. Older fangames that use `wininet.dll` are redirected automatically. |
 | **Safe updates** | The new version is prepared on the side and only replaces the old one once it's complete. Saves are never deleted or overwritten. |
-| **Saves** | *Export* copies your saves to a folder on the phone; *Import* brings saves from JoiPlay, Kirin or the PC (`.rxdata`, `.rvdata`, `.rvdata2`) and keeps the previous one as a backup. |
+| **Saves** | *Export* copies your saves to a folder on the phone; *Import* brings saves from JoiPlay, Kirin or the PC (`.rxdata`, `.rvdata`, `.rvdata2`) and keeps the previous one as a backup. With permission, it also keeps a copy in the phone's **RPG Maker/<game>/** folder (next to Download), which survives uninstalling. |
 | **Author signature** | Each game gets its own signature in its creator's name (read from the game's Readme). |
 
 ## What you need (once)

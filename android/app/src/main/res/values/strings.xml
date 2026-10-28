@@ -83,4 +83,9 @@
     <string name="rmxp_log">Guardar registro (log)</string>
     <string name="rmxp_log_hint">Crea un .txt con lo que pasó en la app, para mandarlo si algo falla. No hace falta cable.</string>
     <string name="rmxp_log_saved">Registro guardado</string>
+    <string name="rmxp_folder_title">Carpeta de partidas</string>
+    <string name="rmxp_folder_msg">¿Guardar también una copia de tus partidas en la carpeta %1$s del teléfono (junto a Download)? Así no se pierden si desinstalas la app y puedes pasarlas a la PC, Kirin o JoiPlay. Android pedirá "Acceso a todos los archivos".</string>
+    <string name="rmxp_folder_allow">Permitir</string>
+    <string name="rmxp_folder_later">Ahora no</string>
+    <string name="rmxp_folder_button">Carpeta RPG Maker</string>
 </resources>

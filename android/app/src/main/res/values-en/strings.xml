@@ -82,4 +82,9 @@
     <string name="rmxp_log">Save log</string>
     <string name="rmxp_log_hint">Creates a .txt with what happened in the app, to send if something fails. No cable needed.</string>
     <string name="rmxp_log_saved">Log saved</string>
+    <string name="rmxp_folder_title">Saves folder</string>
+    <string name="rmxp_folder_msg">Also keep a copy of your saves in the phone\'s %1$s folder (next to Download)? They survive uninstalling the app and you can move them to a PC, Kirin or JoiPlay. Android will ask for "All files access".</string>
+    <string name="rmxp_folder_allow">Allow</string>
+    <string name="rmxp_folder_later">Not now</string>
+    <string name="rmxp_folder_button">RPG Maker folder</string>
 </resources>
