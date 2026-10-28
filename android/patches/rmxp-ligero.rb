@@ -6,6 +6,8 @@
 if File.file?("rmxp_ligero.txt")
   module RmxpLigero
     RAIZ = File.expand_path(".").tr("\\", "/").downcase + "/"
+    # El load_data original del motor: algunos plugins lo redefinen con un solo argumento
+    LOAD_DATA = Kernel.method(:load_data)
     ARCHIVOS = {} # ruta en minúsculas => ruta real, relativas a la carpeta del juego
     File.foreach("rmxp_ligero.txt", encoding: "UTF-8") do |l|
       l = l.chomp
@@ -22,6 +24,7 @@ if File.file?("rmxp_ligero.txt")
       path = path.to_path if path.respond_to?(:to_path)
       return nil unless path.is_a?(String)
       p = File.expand_path(path).tr("\\", "/").downcase
+      return "" if p + "/" == RAIZ
       p.start_with?(RAIZ) ? p[RAIZ.size..-1] : nil
     rescue StandardError
       nil
@@ -40,7 +43,7 @@ if File.file?("rmxp_ligero.txt")
 
     # Contenido del archivo, leído del APK por el motor (load_data en bruto)
     def self.datos(real)
-      load_data(real, true).force_encoding(Encoding::BINARY)
+      LOAD_DATA.call(real, true).force_encoding(Encoding::BINARY)
     end
 
     def self.hijos(dir)
@@ -48,15 +51,23 @@ if File.file?("rmxp_ligero.txt")
       r.nil? ? [] : (CARPETAS[r.chomp("/")] || [])
     end
 
-    # Archivos del APK que coinciden con un patrón de Dir.glob (solo patrones relativos)
+    # Archivos del APK que coinciden con un patrón de Dir.glob (solo patrones relativos,
+    # también dentro de Dir.chdir, como hace Dir.get de Essentials)
     def self.glob(patrones, flags)
+      base = rel(".")
+      return [] if base.nil?
+      base = base.empty? ? "" : base.chomp("/") + "/"
       Array(patrones).flat_map do |pat|
         pat = pat.to_s.tr("\\", "/")
         next [] if pat.start_with?("/") || pat =~ /\A[A-Za-z]:/
         pre = pat[/\A(\.\/)*/]
         cuerpo = pat[pre.size..-1]
         f = flags | File::FNM_PATHNAME | File::FNM_EXTGLOB | File::FNM_CASEFOLD
-        ARCHIVOS.each_value.select { |r| File.fnmatch(cuerpo, r, f) }.map { |r| pre + r }
+        ARCHIVOS.each_value.filter_map do |r|
+          next unless r.downcase.start_with?(base)
+          resto = r[base.size..-1]
+          pre + resto if File.fnmatch(cuerpo, resto, f)
+        end
       end
     end
   end
