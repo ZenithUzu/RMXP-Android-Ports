@@ -6,6 +6,8 @@ Convierte un fangame de RPG Maker XP, VX o VX Ace (por ejemplo, uno hecho con
 Pokémon Essentials) en una **app de Android propia**: con su nombre, su icono
 y su firma. No hace falta JoiPlay ni otra app intermedia.
 
+¿Sin PC? Usa la app compañera [**RPGMK-AndroidPort**](https://github.com/ZenithUzu/RPGMK-AndroidPort-Apk): arma el APK desde el mismo teléfono, con el mismo motor y la misma firma.
+
 En Windows, arrastras la carpeta del juego sobre `Portar.bat`, revisas los
 datos y presionas **Crear APK**. Si el teléfono está conectado, se instala
 solo.
@@ -24,6 +26,8 @@ solo.
 | **Partidas** | *Exportar* copia tus partidas a una carpeta del teléfono; *Importar* trae las de JoiPlay, Kirin o la PC (`.rxdata`, `.rvdata`, `.rvdata2`) y guarda la anterior como respaldo. Con permiso, guarda además una copia en la carpeta **RPG Maker/<juego>/** del teléfono (junto a Download), que sobrevive a desinstalar. |
 | **Juegos viejos** | Parche `Win32API` para Essentials v16–v18: teclado, leer `Game.ini`, tamaño de ventana y avisos de Windows responden sin error. |
 | **Más** | Exportar/importar el perfil de controles, gestor de partidas (exportar, respaldar o borrar una), vibración al tocar (se puede apagar), varios juegos a la vez en la PC y aviso de versión nueva. |
+| **Ahorrar espacio** | Opcional (experimental): las imágenes y el audio se leen directo del APK en vez de copiarse, así el juego no ocupa el doble en el teléfono. |
+| **Música MIDI** | FluidSynth incluido (desde `motor-v10`): los juegos con `.mid` suenan si hay un SoundFont `.sf2`. |
 | **Firma del autor** | Cada juego recibe su propia firma, a nombre de su creador (se lee del Léeme o Readme del juego). |
 
 ## Lo que necesitas (una sola vez)
@@ -132,6 +136,9 @@ Este proyecto se apoya en el trabajo de:
 - [**BookerRues9/mkxp-z-android-reworked**](https://github.com/BookerRues9/mkxp-z-android-reworked): arreglos y guía de compilación.
 - [**vrcxz/mkxp-z-android-packager**](https://github.com/vrcxz/mkxp-z-android-packager): meter el juego dentro del APK, scripts de compilación y parches para Essentials. La carpeta `android/` parte de este proyecto.
 - [**SDL**](https://www.libsdl.org/), [**Ruby**](https://www.ruby-lang.org/), [OpenAL Soft](https://github.com/kcat/openal-soft), [PhysicsFS](https://github.com/icculus/physfs), [OpenSSL](https://www.openssl.org/), [Pixman](https://pixman.org/), [libogg, libvorbis y libtheora](https://xiph.org/), [uchardet](https://www.freedesktop.org/wiki/Software/uchardet/) y [libiconv](https://www.gnu.org/software/libiconv/): las librerías que usa el motor.
+- [**FluidSynth**](https://www.fluidsynth.org/) (LGPL-2.1-or-later): música MIDI. Se carga como librería aparte (`libfluidsynth.so`).
+- [json5pp](https://github.com/kimushu/json5pp) (MIT): lee `mkxp.json`. HTTPLite (incluido en mkxp-z): internet.
+- Idea de los controles en pantalla: Kirin y JoiPlay (solo la idea; no se usa su código).
 - [**Pokémon Essentials**](https://github.com/Maruno17/pokemon-essentials): los parches están pensados para los juegos hechos con él.
 
 Los tres proyectos de Android no indican una licencia propia; como son
