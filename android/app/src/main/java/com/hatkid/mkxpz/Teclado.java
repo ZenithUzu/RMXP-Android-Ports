@@ -13,7 +13,6 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -79,7 +78,10 @@ public class Teclado implements SDLActivity.KeyboardHook
         mPanel.setPadding(p, p, p, p);
         mPanel.setClickable(true); // los toques no pasan al juego
         mPanel.setVisibility(View.GONE);
-        parent.addView(mPanel, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, Gravity.BOTTOM));
+        // La capa de SDL es un RelativeLayout: hay que pegarlo abajo así (Gravity no aplica)
+        android.widget.RelativeLayout.LayoutParams lp = new android.widget.RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0);
+        lp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_BOTTOM);
+        parent.addView(mPanel, lp);
         build();
         SDLActivity.sKeyboardHook = this;
     }
