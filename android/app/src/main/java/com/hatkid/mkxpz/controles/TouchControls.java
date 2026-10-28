@@ -138,7 +138,13 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             v.setLayoutParams(new FrameLayout.LayoutParams(vw, vh));
             v.setX(c.x * w - vw / 2f);
             v.setY(c.y * h - vh / 2f);
-            v.setAlpha(opacidad(c));
+            // La transparencia se aplica dentro del botón: así la insignia puede tener la suya
+            v.setAlpha(1);
+            v.bodyAlpha = opacidad(c);
+            boolean propia = mPrefs.getBoolean("insig_propia", false);
+            v.badgeAlpha = propia ? mPrefs.getInt("insig_opac", 100) / 100f : v.bodyAlpha;
+            v.badgeColor = propia ? mPrefs.getInt("insig_color", 0) : 0;
+            v.badgeLeft = c.x < 0.5f; // L con su letra a la izquierda, R a la derecha
             v.skin = mPrefs.getInt("skin", 0);
             v.invalidate();
         }
@@ -267,7 +273,8 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         grip.setTextSize(22);
         grip.setTextColor(mActivity.getColor(R.color.rmxp_niebla));
         grip.setPadding(Math.round(dp(10)), 0, Math.round(dp(8)), 0);
-        grip.setOnTouchListener(new View.OnTouchListener() {
+        // Se arrastra desde ⠿ o desde cualquier parte libre de la barra
+        View.OnTouchListener drag = new View.OnTouchListener() {
             float dx, dy;
             public boolean onTouch(View g, MotionEvent e) {
                 if (e.getActionMasked() == MotionEvent.ACTION_DOWN) {
@@ -279,17 +286,34 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
                 }
                 return true;
             }
-        });
+        };
+        grip.setOnTouchListener(drag);
+        bar.setOnTouchListener(drag);
         bar.addView(grip);
-        bar.addView(toolButton(R.string.rmxp_edit_add, v -> addControl()));
-        bar.addView(toolButton(R.string.rmxp_pad_size, v -> globalChoice(true)));
-        bar.addView(toolButton(R.string.rmxp_edit_opacity_all, v -> globalChoice(false)));
-        bar.addView(toolButton(R.string.rmxp_edit_style, v -> chooseSkin()));
-        bar.addView(toolButton(R.string.rmxp_edit_reset, v -> {
-            mControls = predeterminados();
-            save();
-            rebuild();
-        }));
+
+        // Las opciones se pliegan para dejar libre la pantalla (por ejemplo, para poner un botón arriba)
+        View[] opciones = {
+            toolButton(R.string.rmxp_edit_add, v -> addControl()),
+            toolButton(R.string.rmxp_pad_size, v -> globalChoice(true)),
+            toolButton(R.string.rmxp_edit_opacity_all, v -> globalChoice(false)),
+            toolButton(R.string.rmxp_edit_style, v -> chooseSkin()),
+            toolButton(R.string.rmxp_edit_color, v -> chooseColors()),
+            toolButton(R.string.rmxp_edit_reset, v -> {
+                mControls = predeterminados();
+                save();
+                rebuild();
+            }),
+        };
+        Button fold = toolButton(R.string.rmxp_edit_fold, null);
+        fold.setOnClickListener(v -> {
+            boolean hide = opciones[0].getVisibility() == View.VISIBLE;
+            for (View o : opciones)
+                o.setVisibility(hide ? View.GONE : View.VISIBLE);
+            fold.setText(hide ? R.string.rmxp_edit_unfold : R.string.rmxp_edit_fold);
+        });
+        bar.addView(fold);
+        for (View o : opciones)
+            bar.addView(o);
         Button done = toolButton(R.string.rmxp_edit_done, v -> {
             mEditing = false;
             save();
@@ -425,6 +449,77 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         }));
         new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_edit_style).setView(box)
             .setPositiveButton(R.string.rmxp_edit_done, null).show();
+    }
+
+    /**
+     * Colores: uno para todos los botones a la vez y, aparte, el de las letras pequeñas
+     * (insignias) con su propia transparencia, si se activa "Color y transparencia propios".
+     */
+    private void chooseColors()
+    {
+        LinearLayout box = new LinearLayout(mActivity);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = Math.round(dp(20));
+        box.setPadding(pad, Math.round(dp(8)), pad, 0);
+
+        box.addView(label(R.string.rmxp_color_buttons));
+        box.addView(swatches(COLORES, color -> {
+            for (Control c : mControls)
+                c.color = color;
+            placeAndSave();
+        }));
+
+        box.addView(label(R.string.rmxp_color_badges));
+        Switch own = new Switch(mActivity);
+        own.setText(R.string.rmxp_badge_own);
+        own.setChecked(mPrefs.getBoolean("insig_propia", false));
+        box.addView(own);
+        LinearLayout extra = new LinearLayout(mActivity);
+        extra.setOrientation(LinearLayout.VERTICAL);
+        int[] badgeColors = new int[COLORES.length + 1];
+        badgeColors[0] = mAccent; // el ámbar de siempre
+        System.arraycopy(COLORES, 0, badgeColors, 1, COLORES.length);
+        extra.addView(swatches(badgeColors, color -> {
+            mPrefs.edit().putInt("insig_color", color & 0xFFFFFF).apply();
+            placeAll();
+        }));
+        extra.addView(chips(opacNames(), indexOf(Control.OPACIDADES, mPrefs.getInt("insig_opac", 100)), i -> {
+            mPrefs.edit().putInt("insig_opac", Control.OPACIDADES[i]).apply();
+            placeAll();
+        }));
+        extra.setVisibility(own.isChecked() ? View.VISIBLE : View.GONE);
+        own.setOnCheckedChangeListener((b, on) -> {
+            mPrefs.edit().putBoolean("insig_propia", on).apply();
+            extra.setVisibility(on ? View.VISIBLE : View.GONE);
+            placeAll();
+        });
+        box.addView(extra);
+        box.addView(hint(R.string.rmxp_badge_hint));
+
+        ScrollView scroll = new ScrollView(mActivity);
+        scroll.addView(box);
+        new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_edit_color).setView(scroll)
+            .setPositiveButton(R.string.rmxp_edit_done, null).show();
+    }
+
+    /** Fila de círculos de color. */
+    private View swatches(int[] colors, IntSink sink)
+    {
+        LinearLayout row = new LinearLayout(mActivity);
+        row.setPadding(0, Math.round(dp(6)), 0, Math.round(dp(6)));
+        for (int color : colors) {
+            View swatch = new View(mActivity);
+            GradientDrawable d = new GradientDrawable();
+            d.setShape(GradientDrawable.OVAL);
+            d.setColor(color);
+            d.setStroke(Math.round(dp(2)), 0x66888888);
+            swatch.setBackground(d);
+            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(Math.round(dp(28)), Math.round(dp(28)));
+            p.rightMargin = Math.round(dp(6));
+            swatch.setOnClickListener(v -> sink.put(color));
+            row.addView(swatch, p);
+        }
+        return row;
     }
 
     private String[] tallaNames()

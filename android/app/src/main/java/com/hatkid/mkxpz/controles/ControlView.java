@@ -38,6 +38,10 @@ public class ControlView extends View
     /** Margen alrededor del botón para que la insignia de la tecla quepa entera (lo pone TouchControls). */
     float pad, badge;
     int skin; // 0 Moderno, 1 Contorno
+    /** Transparencia del botón y de su insignia (por separado); color propio de la insignia (0 = el normal). */
+    float bodyAlpha = 1, badgeAlpha = 1;
+    int badgeColor;
+    boolean badgeLeft; // insignia en la esquina izquierda (botones del lado izquierdo, como L)
     private int mDir; // cruceta: bits 1 arriba, 2 abajo, 4 izquierda, 8 derecha
 
     public ControlView(Context ctx, Control c, int accent, Listener listener)
@@ -58,7 +62,7 @@ public class ControlView extends View
     protected void onDraw(Canvas canvas)
     {
         // El botón se dibuja dentro del margen; la insignia ocupa la esquina sin salirse de la vista
-        canvas.save();
+        canvas.saveLayerAlpha(0, 0, getWidth(), getHeight(), Math.round(bodyAlpha * 255));
         canvas.translate(pad, pad);
         float w = getWidth() - 2 * pad, h = getHeight() - 2 * pad, sw = dp(2);
         drawBody(canvas, w, h, sw);
@@ -67,21 +71,25 @@ public class ControlView extends View
         String key = Teclas.nombre(control.tecla);
         String label = control.etiqueta.isEmpty() ? key : control.etiqueta;
         if (!control.cruceta && control.tecla > 0 && !label.equalsIgnoreCase(key)) {
-            float bx = getWidth() - badge, by = badge;
+            float bx = badgeLeft ? badge : getWidth() - badge, by = badge;
+            canvas.saveLayerAlpha(0, 0, getWidth(), getHeight(), Math.round(badgeAlpha * 255));
             mText.setShadowLayer(0, 0, 0, 0);
             if (skin == 0) {
-                mFill.setColor(mAccent);
+                int c = badgeColor != 0 ? badgeColor : mAccent;
+                mFill.setColor(0xFF000000 | c);
                 canvas.drawCircle(bx, by, badge, mFill);
-                mText.setColor(0xFF101010);
-            } else { // Contorno: insignia también solo con borde blanco
-                mStroke.setColor(0xF0FFFFFF);
+                mText.setColor(Color.luminance(c | 0xFF000000) > 0.5f ? 0xFF101010 : Color.WHITE);
+            } else { // Contorno: insignia también solo con borde (blanco o el color elegido)
+                int c = 0xFF000000 | (badgeColor != 0 ? badgeColor : 0xFFFFFF);
+                mStroke.setColor(c);
                 mStroke.setStrokeWidth(dp(1.5f));
                 canvas.drawCircle(bx, by, badge - dp(1), mStroke);
-                mText.setColor(Color.WHITE);
+                mText.setColor(c);
             }
             String k = key.length() > 4 ? key.substring(0, 4) : key;
             mText.setTextSize(badge * (k.length() > 2 ? 0.62f : k.length() == 2 ? 0.85f : 1.1f));
             canvas.drawText(k, bx, by - (mText.descent() + mText.ascent()) / 2, mText);
+            canvas.restore();
         }
     }
 
@@ -119,6 +127,10 @@ public class ControlView extends View
             return;
         }
         paints(mPressed, sw);
+        if (control.tecla == Control.TECLADO) {
+            drawKeyboard(canvas, w, h, sw);
+            return;
+        }
         mRect.set(sw / 2, sw / 2, w - sw / 2, h - sw / 2);
         // Redondos; los anchos, rectángulos con esquinas suaves (no óvalos)
         float r = control.pastilla ? mRect.height() * 0.3f : mRect.height() / 2;
@@ -135,6 +147,26 @@ public class ControlView extends View
         }
     }
 
+    /** El botón de teclado es el propio teclado (sin círculo alrededor): marco, teclas y espacio. */
+    private void drawKeyboard(Canvas canvas, float w, float h, float sw)
+    {
+        float kw = w * 0.92f, kh = h * 0.62f, x0 = (w - kw) / 2, y0 = (h - kh) / 2, r = kh * 0.18f;
+        mRect.set(x0, y0, x0 + kw, y0 + kh);
+        canvas.drawRoundRect(mRect, r, r, mFill);
+        canvas.drawRoundRect(mRect, r, r, mStroke);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setColor(Color.WHITE);
+        p.setShadowLayer(dp(1.5f), 0, 0, 0x66000000);
+        float gap = kw * 0.045f, key = (kw - 7 * gap) / 6, rowH = (kh - 4 * gap) / 3, kr = key * 0.18f;
+        for (int row = 0; row < 2; row++)
+            for (int col = 0; col < 6; col++) {
+                float kx = x0 + gap + col * (key + gap), ky = y0 + gap + row * (rowH + gap);
+                canvas.drawRoundRect(kx, ky, kx + key, ky + rowH, kr, kr, p);
+            }
+        float sy = y0 + gap + 2 * (rowH + gap);
+        canvas.drawRoundRect(x0 + gap + key + gap, sy, x0 + kw - gap - key - gap, sy + rowH, kr, kr, p);
+    }
+
     private void drawActionIcon(Canvas canvas, float w, float h)
     {
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -148,21 +180,6 @@ public class ControlView extends View
                 path.moveTo(cx, cy - s); path.lineTo(cx + 2 * s, cy); path.lineTo(cx, cy + s); path.close();
                 canvas.drawPath(path, p);
                 break;
-            case Control.TECLADO: {
-                // Marco del teclado, dos filas de teclas y la barra espaciadora
-                p.setStyle(Paint.Style.STROKE);
-                p.setStrokeWidth(dp(1.6f));
-                canvas.drawRoundRect(cx - 2.2f * s, cy - 1.4f * s, cx + 2.2f * s, cy + 1.4f * s, dp(3), dp(3), p);
-                p.setStyle(Paint.Style.FILL);
-                float k = s * 0.5f;
-                for (int row = 0; row < 2; row++)
-                    for (int col = 0; col < 5; col++) {
-                        float kx = cx - 1.6f * s + col * 0.8f * s, ky = cy - 0.8f * s + row * 0.7f * s;
-                        canvas.drawRect(kx - k / 2, ky - k / 2, kx + k / 2, ky + k / 2, p);
-                    }
-                canvas.drawRect(cx - s, cy + 0.65f * s, cx + s, cy + 0.65f * s + k, p);
-                break;
-            }
             case Control.OCULTAR: {
                 // Ojo tachado
                 p.setStyle(Paint.Style.STROKE);

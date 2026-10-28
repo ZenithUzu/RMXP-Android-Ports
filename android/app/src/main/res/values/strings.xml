@@ -74,4 +74,10 @@
     <string name="rmxp_edit_style">Estilo</string>
     <string name="rmxp_skin_modern">Moderno</string>
     <string name="rmxp_skin_outline">Contorno</string>
+    <string name="rmxp_edit_fold">Plegar</string>
+    <string name="rmxp_edit_unfold">Opciones</string>
+    <string name="rmxp_color_buttons">Todos los botones</string>
+    <string name="rmxp_color_badges">Letras pequeñas (la tecla de cada botón)</string>
+    <string name="rmxp_badge_own">Color y transparencia propios</string>
+    <string name="rmxp_badge_hint">Apagado: las letras pequeñas siguen el estilo y la transparencia de su botón.</string>
 </resources>

@@ -73,4 +73,10 @@
     <string name="rmxp_edit_style">Style</string>
     <string name="rmxp_skin_modern">Modern</string>
     <string name="rmxp_skin_outline">Outline</string>
+    <string name="rmxp_edit_fold">Collapse</string>
+    <string name="rmxp_edit_unfold">Options</string>
+    <string name="rmxp_color_buttons">All buttons</string>
+    <string name="rmxp_color_badges">Small letters (each button\'s key)</string>
+    <string name="rmxp_badge_own">Own color and transparency</string>
+    <string name="rmxp_badge_hint">Off: the small letters follow their button\'s style and transparency.</string>
 </resources>
