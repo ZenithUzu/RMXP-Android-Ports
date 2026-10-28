@@ -280,14 +280,22 @@ def find_soundfont(game):
     return None
 
 
+def largo(path):
+    """Windows no deja pasar de 260 caracteres en una ruta, salvo con un prefijo especial.
+    Los juegos con carpetas de scripts profundas (Data/Scripts/...) llegan a ese límite."""
+    if os.name == "nt" and not path.startswith("\\\\?\\"):
+        return "\\\\?\\" + os.path.abspath(path)
+    return path
+
+
 def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False):
     """Copia el juego a work/assets/game, sin .exe/.dll, con los parches y mkxp.json."""
     assets = os.path.join(work, "assets")
     game = os.path.join(assets, "game")
     if os.path.exists(assets):
-        shutil.rmtree(assets)
+        shutil.rmtree(largo(assets))
     log("Copiando el juego (el original no se toca)...")
-    shutil.copytree(root, game, ignore=shutil.ignore_patterns(
+    shutil.copytree(largo(root), largo(game), ignore=shutil.ignore_patterns(
         "*.exe", "*.dll", "*.EXE", "*.DLL", "desktop.ini", "Thumbs.db", "*.url", "*.URL", "*.lnk"))
 
     patches = sorted(f for f in os.listdir(os.path.join(ANDROID, "patches")) if f.endswith(".rb"))
@@ -339,9 +347,9 @@ def write_ligero(game, log):
     for top in os.listdir(game):
         if top.lower() not in ("graphics", "audio") or not os.path.isdir(os.path.join(game, top)):
             continue
-        for d, _, files in os.walk(os.path.join(game, top)):
+        for d, _, files in os.walk(largo(os.path.join(game, top))):
             for f in files:
-                rel = os.path.relpath(os.path.join(d, f), game).replace(os.sep, "/")
+                rel = os.path.relpath(os.path.join(d, f), largo(game)).replace(os.sep, "/")
                 # El SoundFont lo abre el motor por su ruta real: se queda fuera del APK
                 if rel.isascii() and "\n" not in rel and not rel.lower().endswith(".sf2"):
                     names.append(rel)
@@ -437,13 +445,13 @@ def limpiar(log=print):
     def size(path):
         if os.path.isfile(path):
             return os.path.getsize(path)
-        return sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(path) for f in fs)
+        return sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(largo(path)) for f in fs)
 
     def remove(path):
         nonlocal freed
         if os.path.exists(path):
             freed += size(path)
-            shutil.rmtree(path, ignore_errors=True) if os.path.isdir(path) else os.remove(path)
+            shutil.rmtree(largo(path), ignore_errors=True) if os.path.isdir(path) else os.remove(path)
             log("Borrado: " + path)
 
     apks = os.path.join(HOME, "apks")
@@ -499,8 +507,8 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     finally:
         # La copia del juego y los archivos intermedios de Gradle ocupan casi lo mismo que el
         # juego cada uno; solo se necesitan mientras se compila.
-        shutil.rmtree(work, ignore_errors=True)
-        shutil.rmtree(os.path.join(ANDROID, "app", "build"), ignore_errors=True)
+        shutil.rmtree(largo(work), ignore_errors=True)
+        shutil.rmtree(largo(os.path.join(ANDROID, "app", "build")), ignore_errors=True)
     log("APK listo: " + apk)
     if install:
         adb_install(apk, project, sdk, log)
