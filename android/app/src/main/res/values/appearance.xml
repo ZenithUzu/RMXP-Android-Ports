@@ -31,4 +31,5 @@
     <string name="ap_move_meter">Mover medidor</string>
     <string name="ap_move_hint">Arrastra el medidor para moverlo. Su posición se guarda automáticamente.</string>
     <string name="ap_system_color">Usar color del sistema</string>
+    <string name="ap_precise">Ajuste preciso</string>
 </resources>

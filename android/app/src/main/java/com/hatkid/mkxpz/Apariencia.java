@@ -99,13 +99,14 @@ public final class Apariencia {
     public static void color(PanelLateral panel, LinearLayout box, int initial, IntConsumer change) {
         Activity a = panel.activity;
         float[] hsv = new float[3]; Color.colorToHSV(initial | 0xFF000000, hsv);
-        LinearLayout row = new LinearLayout(a);
+        LinearLayout pickerRow = new LinearLayout(a);
+        LinearLayout row = column(a);
         EditText hex = new EditText(a);
         hex.setSingleLine(); hex.setTextColor(a.getColor(R.color.rmxp_niebla));
         hex.setHint("#RRGGBB"); hex.setContentDescription(a.getString(R.string.ap_hex));
         View swatch = new View(a);
-        row.addView(hex, new LinearLayout.LayoutParams(0, panel.dp(48), 1));
-        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(panel.dp(48), panel.dp(48));
+        row.addView(hex, new LinearLayout.LayoutParams(-1, panel.dp(48)));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1, panel.dp(40));
         sp.setMargins(panel.dp(8), 0, 0, 0); row.addView(swatch, sp);
         final boolean[] syncing = {false};
         final ColorSquare[] square = new ColorSquare[1];
@@ -125,12 +126,13 @@ public final class Apariencia {
             if (axes[1] != null) axes[1].setProgress(Math.round(hsv[2]*100));
         };
         square[0] = new ColorSquare(a, hsv, () -> { refresh.run(); change.accept(Color.HSVToColor(hsv)); });
-        box.addView(square[0], new LinearLayout.LayoutParams(-1, panel.dp(112)));
+        pickerRow.addView(square[0], new LinearLayout.LayoutParams(0, panel.dp(96), 1));
+        pickerRow.addView(row, new LinearLayout.LayoutParams(panel.dp(132), -2));
+        box.addView(pickerRow);
         GradientDrawable rainbow = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
             new int[] {Color.RED, Color.YELLOW, Color.GREEN, Color.CYAN, Color.BLUE, Color.MAGENTA, Color.RED});
         hue.setProgressDrawable(rainbow);
         box.addView(hue, new LinearLayout.LayoutParams(-1, panel.dp(48)));
-        box.addView(row);
         refresh.run();
         hue.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar b, int n, boolean user) {
@@ -154,11 +156,16 @@ public final class Apariencia {
                 hex.setError(null); change.accept(c);
             }
         });
-        // Native sliders also expose both axes to keyboards, controllers and accessibility services.
-        axes[0] = slider(panel, box, R.string.ap_saturation, 0, 100, Math.round(hsv[1]*100), " %", n -> {
+        // Native sliders expose both axes to keyboards, controllers and accessibility services.
+        LinearLayout precise = column(a);
+        precise.setVisibility(View.GONE);
+        box.addView(panel.button(a.getString(R.string.ap_precise) + "  ▾", () ->
+            precise.setVisibility(precise.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE)));
+        box.addView(precise);
+        axes[0] = slider(panel, precise, R.string.ap_saturation, 0, 100, Math.round(hsv[1]*100), " %", n -> {
             hsv[1] = n/100f; refresh.run(); change.accept(Color.HSVToColor(hsv));
         });
-        axes[1] = slider(panel, box, R.string.ap_brightness, 0, 100, Math.round(hsv[2]*100), " %", n -> {
+        axes[1] = slider(panel, precise, R.string.ap_brightness, 0, 100, Math.round(hsv[2]*100), " %", n -> {
             hsv[2] = n/100f; refresh.run(); change.accept(Color.HSVToColor(hsv));
         });
     }

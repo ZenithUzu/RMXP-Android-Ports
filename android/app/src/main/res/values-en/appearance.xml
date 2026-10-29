@@ -31,4 +31,5 @@
     <string name="ap_move_meter">Move meter</string>
     <string name="ap_move_hint">Drag the meter to move it. Its position is saved automatically.</string>
     <string name="ap_system_color">Use system color</string>
+    <string name="ap_precise">Precise adjustment</string>
 </resources>
