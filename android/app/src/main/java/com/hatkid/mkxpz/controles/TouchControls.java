@@ -629,6 +629,8 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         g.setOrientation(LinearLayout.HORIZONTAL);
         for (int i = 0; i < names.length; i++) {
             android.widget.RadioButton r = new android.widget.RadioButton(new android.view.ContextThemeWrapper(mActivity, R.style.RmxpChip), null, 0);
+            r.setClickable(true);
+            r.setFocusable(true);
             r.setButtonDrawable((android.graphics.drawable.Drawable) null);
             r.setBackgroundResource(R.drawable.rmxp_chip);
             r.setTextColor(mActivity.getColorStateList(R.color.rmxp_chip_text));

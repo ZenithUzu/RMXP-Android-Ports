@@ -123,7 +123,7 @@ atribuir el trabajo a scripts, carga de recursos o renderizado.
 ## Motor v13: pausa, personalización y mandos
 
 - Pausa en menú/editor: comprueba que se detengan imagen y música, y que ambas vuelvan al cerrar. Desactiva la pausa para seguir viendo/oyendo el juego durante la edición.
-- Editor: en Ajustes cambia tamaño global, opacidad y estilo; después desactiva los ajustes globales y toca dos veces un botón para cambiar solo ese. Cierra y vuelve a abrir: debe conservarse. Los listeners de RadioGroup reemplazaban los listeners de cada RadioButton; ahora el grupo aplica los cambios.
+- Editor: en Ajustes cambia tamaño global, opacidad y estilo; después desactiva los ajustes globales y toca dos veces un botón para cambiar solo ese. Cierra y vuelve a abrir: debe conservarse. Los chips creados sin el estilo estándar de RadioButton deben habilitar explícitamente los toques; ahora son pulsables y el grupo aplica los cambios. La prueba usa eventos táctiles, no solo performClick.
 - FPS: arranca sin activar turbo, selecciona 60 o 120 explícitos, cambia de zona/menú y activa/desactiva turbo. El objetivo debe mantenerse, sujeto al rendimiento real del dispositivo. Se corrige el limitador que conservaba fixedFramerate aunque la interfaz ya solicitase otro objetivo.
 - Mando: al conectar elige Xbox o Switch. En Mando y teclado hay Botones y Sticks y cruceta. Prueba diagonales, ambos sticks, gatillos, mantener cruceta y stick en la misma dirección y soltar uno, desconectar con una tecla pulsada y reconectar. La elección se recuerda por dispositivo y los ajustes por perfil.
 
