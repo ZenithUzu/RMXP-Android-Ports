@@ -149,7 +149,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             if (c.cruceta)
                 size *= Control.CRUCETA;
             float bw = c.pastilla ? size * Control.PASTILLA : size;
-            v.badge = c.cruceta ? 0 : Math.max(dp(9), size * 0.17f);
+            v.badge = c.cruceta || c.tecla < 0 ? 0 : Math.max(dp(9), size * 0.17f);
             v.pad = v.badge * 0.6f;
             int vw = Math.round(bw + 2 * v.pad), vh = Math.round(size + 2 * v.pad);
             v.setLayoutParams(new FrameLayout.LayoutParams(vw, vh));
@@ -336,7 +336,10 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         b.setBackground(bg);
         b.setTextColor(mActivity.getColor(R.color.rmxp_niebla));
         b.setAllCaps(false);
-        b.setPadding(Math.round(dp(14)), 0, Math.round(dp(14)), 0);
+        b.setMinWidth(0);
+        b.setMinimumWidth(Math.round(dp(64)));
+        b.setTextSize(13);
+        b.setPadding(Math.round(dp(10)), 0, Math.round(dp(10)), 0);
         b.setText(text);
         b.setOnClickListener(click);
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Math.round(dp(40)));

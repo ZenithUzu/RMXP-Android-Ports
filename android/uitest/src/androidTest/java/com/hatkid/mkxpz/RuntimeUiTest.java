@@ -22,6 +22,8 @@ public class RuntimeUiTest {
         assertNotNull(v); v.performClick();
     }
     private void screenshot(String name) throws Exception {
+        instrumentation.waitForIdleSync();
+        android.os.SystemClock.sleep(250); // Wait for RenderThread, not only the UI message queue.
         android.graphics.Bitmap b=instrumentation.getUiAutomation().takeScreenshot();
         android.content.ContentValues values=new android.content.ContentValues();
         values.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME,name+".png");
