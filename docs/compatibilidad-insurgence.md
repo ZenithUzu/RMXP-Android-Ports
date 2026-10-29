@@ -29,3 +29,9 @@ Mando y teclado permite añadir una asignación presionando y soltando su entrad
 Se incluyen los botones estándar, C/Z, Guide/Back y Button 1–16. La captura admite otros códigos y ejes que Android entregue a la app. Inicio, encendido y otras entradas reservadas por Android o por el firmware del mando pueden no llegar a la aplicación. El volumen conserva su función del sistema.
 
 Las teclas y ejes se consumen en el menú, y los sticks pueden mover el foco. Confirmar/cancelar usan la distribución del mando; los atajos del juego no se ejecutan detrás del menú. La interfaz conserva la paleta dinámica de Android.
+
+## PSystem_Utilities: invalid multibyte escape
+
+Detergent puede superar RGSS Linker y fallar después al compilar el analizador JSON de `PSystem_Utilities`. Su rango `\x7f-\x9f` usa escapes de bytes incompatibles con UTF-8. `rmxp-script-compat.rb` cambia ese rango a `\u007f-\u009f` únicamente en ese script, antes de evaluarlo. Conserva el texto UTF-8 y el rechazo de controles C1; no cambia globalmente la codificación ni oculta excepciones. La prueba `tests/script_compat_check.rb` comprueba texto acentuado, controles y aislamiento respecto a otros scripts.
+
+La frecuencia de pantalla y los FPS del juego son ajustes distintos. `targetFps=0` en el registro indica la opción Original; para forzar 120 se debe seleccionar 120 en FPS del juego. La petición de refresco se reaplica al recrear la superficie; Android puede seguir limitándola por políticas del dispositivo.

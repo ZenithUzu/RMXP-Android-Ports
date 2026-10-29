@@ -580,19 +580,29 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         Apariencia.choice(panel, panel.top, R.string.ap_apply_to, names,
             target == null ? 0 : mControls.indexOf(target) + 1,
             n -> chooseColors(n == 0 ? null : mControls.get(n - 1)));
-        TextView preview = panel.label(mActivity.getString(R.string.ap_preview) + "   Esc  ▲", 16);
-        preview.setContentDescription(mActivity.getString(R.string.ap_preview));
+        LinearLayout previewRow = new LinearLayout(mActivity);
+        previewRow.setGravity(Gravity.CENTER_VERTICAL);
+        previewRow.setBaselineAligned(false);
+        previewRow.addView(panel.label(mActivity.getString(R.string.ap_preview), 13), new LinearLayout.LayoutParams(0, -2, 1));
+        Control sample = target == null ? mControls.stream().filter(c -> !c.cruceta && c.tecla > 0).findFirst().orElse(mControls.get(0)) : target;
+        ControlView preview = new ControlView(mActivity, sample, mAccent, new ControlView.Listener() {
+            public void press(int key) {} public void release(int key) {}
+            public boolean editTouch(ControlView v, MotionEvent e) { return true; }
+        });
+        previewRow.addView(preview, new LinearLayout.LayoutParams(Math.round(dp(sample.pastilla ? 104 : 72)), Math.round(dp(72))));
         Runnable refresh = () -> {
             placeAndSave();
-            Control c = target == null ? mControls.get(0) : target;
-            boolean own = c.labelOwn || mPrefs.getBoolean("label_own", false);
-            int color = c.labelOwn ? c.labelColor : mPrefs.getInt("label_color", mAccent);
-            float alpha = c.labelOwn ? c.labelOpacity : mPrefs.getInt("label_opacity", 100) / 100f;
-            preview.setTextColor(own ? (Math.round(alpha * 255) << 24) | (color & 0xFFFFFF) : 0xFFFFFFFF);
-            GradientDrawable bg = new GradientDrawable();
-            int base = c.systemColor ? mActivity.getColor(R.color.rmxp_pizarra) : c.color;
-            bg.setColor((Math.round(opacidad(c) * 192) << 24) | (base & 0xFFFFFF));
-            bg.setCornerRadius(dp(12)); preview.setBackground(bg);
+            preview.badge = dp(10); preview.pad = dp(8);
+            preview.skin = mPrefs.getInt("skin", 0);
+            preview.bodyAlpha = opacidad(sample);
+            preview.showBadge = mPrefs.getBoolean("insig_mostrar", true);
+            boolean ownBadge = mPrefs.getBoolean("insig_propia", false);
+            preview.badgeAlpha = ownBadge ? mPrefs.getInt("insig_opac", 100)/100f : preview.bodyAlpha;
+            preview.badgeColor = ownBadge ? mPrefs.getInt("insig_color", mAccent) : 0;
+            preview.labelOwn = sample.labelOwn || mPrefs.getBoolean("label_own", false);
+            preview.labelColor = sample.labelOwn ? sample.labelColor : mPrefs.getInt("label_color", mAccent);
+            preview.labelAlpha = sample.labelOwn ? sample.labelOpacity : mPrefs.getInt("label_opacity", 100)/100f;
+            preview.invalidate();
         };
         LinearLayout buttons = Apariencia.card(panel, R.string.ap_buttons, true);
         final boolean[] updatingSystem = {false};
@@ -622,7 +632,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             }
             refresh.run();
         });
-        LinearLayout labels = Apariencia.card(panel, R.string.ap_labels, true);
+        LinearLayout labels = Apariencia.card(panel, R.string.ap_labels, false);
         LinearLayout extra = Apariencia.column(mActivity);
         boolean own = target == null ? mPrefs.getBoolean("label_own", false) : target.labelOwn;
         Apariencia.toggle(panel, labels, R.string.ap_independent, own, on -> {
@@ -660,7 +670,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         Apariencia.slider(panel, badges, R.string.ap_label_opacity, 0, 100, mPrefs.getInt("insig_opac",100), " %", n -> {
             mPrefs.edit().putInt("insig_opac", n).apply(); refresh.run();
         });
-        panel.top.addView(preview); refresh.run();
+        panel.top.addView(previewRow); refresh.run();
         panel.content.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
             if (target == null) {
                 for (Control c : mControls) { c.color = 0xFFFFFFFF; c.systemColor = true; c.labelOwn = false; c.opacidad = 1; }

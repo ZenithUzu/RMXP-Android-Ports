@@ -183,8 +183,9 @@ public class OptionsMenu implements TouchControls.Actions
         Button b = panel.button(text, action);
         b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(mActivity.getColor(
             selected ? R.color.rmxp_ambar : R.color.rmxp_pizarra)));
+        b.setTextSize(13); b.setMaxLines(2);
         b.setTextColor(mActivity.getColor(selected ? R.color.rmxp_tinta : R.color.rmxp_niebla));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, panel.dp(40), 1);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, panel.dp(48), 1);
         lp.setMargins(panel.dp(2), panel.dp(2), panel.dp(2), panel.dp(2));
         row.addView(b, lp);
     }
@@ -200,11 +201,10 @@ public class OptionsMenu implements TouchControls.Actions
         for (int code : codes) {
             int key = pad.keyFor(code);
             String target = key == 0 ? mActivity.getString(R.string.rmxp_unassigned) : Teclas.nombre(key);
-            Button row = panel.button(pad.name(code) + "    →    " + target + "\n" +
-                mActivity.getString(key < 0 ? R.string.map_action : R.string.map_key), () -> selectMapping(code));
+            Button row = panel.button(pad.name(code) + "    →    " + target + (key < 0 ? "  ·  " + mActivity.getString(R.string.map_action) : ""), () -> selectMapping(code));
             row.setTextSize(14); row.setGravity(android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
             row.setContentDescription(pad.name(code) + " → " + target);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, panel.dp(60));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, panel.dp(52));
             lp.setMargins(0, panel.dp(3), 0, panel.dp(3)); box.addView(row, lp);
             if (code == mLastMapped) row.post(() -> {
                 row.requestFocus(); row.requestRectangleOnScreen(new android.graphics.Rect(0,0,row.getWidth(),row.getHeight()),false);
@@ -296,6 +296,8 @@ public class OptionsMenu implements TouchControls.Actions
     {
         PanelLateral panel = new PanelLateral(mActivity, R.string.rmxp_input);
         LinearLayout toolbar = new LinearLayout(mActivity);
+        toolbar.setBaselineAligned(false);
+        toolbar.setGravity(android.view.Gravity.CENTER_VERTICAL);
         android.widget.Spinner profile = new android.widget.Spinner(mActivity);
         profile.setContentDescription(mActivity.getString(R.string.map_layout));
         profile.setAdapter(new android.widget.ArrayAdapter<String>(mActivity,
@@ -314,6 +316,7 @@ public class OptionsMenu implements TouchControls.Actions
             new LinearLayout.LayoutParams(0,panel.dp(48),1));
         panel.top.addView(toolbar);
         LinearLayout tabs = new LinearLayout(mActivity);
+        tabs.setBaselineAligned(false);
         mappingChoice(panel, tabs, mActivity.getString(R.string.rmxp_pad_buttons), mMappingTab == 0,
             () -> { mMappingTab = 0; showInputMapping(); });
         mappingChoice(panel, tabs, mActivity.getString(R.string.map_axes), mMappingTab == 1,
@@ -463,6 +466,7 @@ public class OptionsMenu implements TouchControls.Actions
             if (best != null) {
                 WindowManager.LayoutParams lp = mActivity.getWindow().getAttributes();
                 lp.preferredDisplayModeId = best.getModeId();
+                lp.preferredRefreshRate = best.getRefreshRate();
                 mActivity.getWindow().setAttributes(lp);
                 mHz = Math.round(best.getRefreshRate());
             }

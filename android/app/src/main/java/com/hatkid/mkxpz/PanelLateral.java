@@ -39,10 +39,11 @@ public class PanelLateral {
         root.addView(panel, new FrameLayout.LayoutParams(width, -1, Gravity.END));
         LinearLayout header = new LinearLayout(activity);
         header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setBaselineAligned(false);
         TextView text = label(activity.getString(title), 20);
         header.addView(text, new LinearLayout.LayoutParams(0, dp(48), 1));
         Button close = button(activity.getString(R.string.rmxp_edit_done), this::dismiss);
-        header.addView(close, new LinearLayout.LayoutParams(-2, dp(44)));
+        header.addView(close, new LinearLayout.LayoutParams(dp(80), dp(48)));
         panel.addView(header);
         top = new LinearLayout(activity);
         top.setOrientation(LinearLayout.VERTICAL);
@@ -77,6 +78,8 @@ public class PanelLateral {
     public Button button(String text, Runnable action) {
         Button b = new Button(activity);
         b.setAllCaps(false); b.setText(text); b.setTextSize(14);
+        b.setGravity(Gravity.CENTER); b.setIncludeFontPadding(false);
+        b.setMinHeight(0); b.setMinimumHeight(0); b.setMinWidth(0); b.setMinimumWidth(0);
         b.setTextColor(activity.getColor(R.color.rmxp_niebla));
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(activity.getColor(R.color.rmxp_pizarra)); bg.setCornerRadius(dp(12));

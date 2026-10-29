@@ -34,6 +34,7 @@ public final class Apariencia {
         panel.content.addView(outer, lp);
         Button header = panel.button(a.getString(title) + (expanded ? "  ▴" : "  ▾"), () -> {});
         header.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        header.setPadding(0, 0, 0, 0);
         outer.addView(header);
         outer.addView(body);
         body.setVisibility(expanded ? View.VISIBLE : View.GONE);
@@ -57,18 +58,24 @@ public final class Apariencia {
 
     public static SeekBar slider(PanelLateral panel, LinearLayout box, int name, int min, int max,
                                  int value, String unit, IntConsumer change) {
-        TextView label = panel.label("", 14);
-        box.addView(label);
+        LinearLayout caption = new LinearLayout(panel.activity);
+        caption.setBaselineAligned(false);
+        TextView label = panel.label(panel.activity.getString(name), 14);
+        TextView amount = panel.label(value + unit, 14);
+        amount.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        caption.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
+        caption.addView(amount, new LinearLayout.LayoutParams(-2, -2));
+        box.addView(caption);
         SeekBar bar = new SeekBar(panel.activity);
         bar.setMin(min); bar.setMax(max); bar.setProgress(Math.max(min, Math.min(max, value)));
         bar.setContentDescription(panel.activity.getString(name));
         ColorStateList accent = ColorStateList.valueOf(panel.activity.getColor(R.color.rmxp_ambar));
         bar.setProgressTintList(accent); bar.setThumbTintList(accent);
-        label.setText(panel.activity.getString(name) + "   " + bar.getProgress() + unit);
+        amount.setText(bar.getProgress() + unit);
         box.addView(bar, new LinearLayout.LayoutParams(-1, panel.dp(48)));
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             public void onProgressChanged(SeekBar b, int n, boolean user) {
-                label.setText(panel.activity.getString(name) + "   " + n + unit);
+                amount.setText(n + unit);
                 if (user) change.accept(n);
             }
             public void onStartTrackingTouch(SeekBar b) {}
@@ -98,15 +105,26 @@ public final class Apariencia {
 
     public static void color(PanelLateral panel, LinearLayout box, int initial, IntConsumer change) {
         Activity a = panel.activity;
+        LinearLayout details = column(a);
+        Button expand = panel.button("", () -> {
+            details.setVisibility(details.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+        });
+        expand.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        expand.setTag("rmxp_color_picker");
+        box.addView(expand);
+        details.setVisibility(View.GONE);
+        box.addView(details);
+        box = details;
         float[] hsv = new float[3]; Color.colorToHSV(initial | 0xFF000000, hsv);
-        LinearLayout pickerRow = new LinearLayout(a);
-        LinearLayout row = column(a);
+        LinearLayout pickerRow = column(a);
+        LinearLayout row = new LinearLayout(a);
+        row.setBaselineAligned(false); row.setGravity(Gravity.CENTER_VERTICAL);
         EditText hex = new EditText(a);
         hex.setSingleLine(); hex.setTextColor(a.getColor(R.color.rmxp_niebla));
         hex.setHint("#RRGGBB"); hex.setContentDescription(a.getString(R.string.ap_hex));
         View swatch = new View(a);
-        row.addView(hex, new LinearLayout.LayoutParams(-1, panel.dp(48)));
-        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1, panel.dp(40));
+        row.addView(hex, new LinearLayout.LayoutParams(0, panel.dp(48), 1));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(panel.dp(48), panel.dp(40));
         sp.setMargins(panel.dp(8), 0, 0, 0); row.addView(swatch, sp);
         final boolean[] syncing = {false};
         final ColorSquare[] square = new ColorSquare[1];
@@ -119,6 +137,12 @@ public final class Apariencia {
             syncing[0] = true;
             hex.setText(String.format(Locale.ROOT, "#%06X", c & 0xFFFFFF));
             hex.setError(null); syncing[0] = false;
+            expand.setText(a.getString(R.string.rmxp_edit_color) + "   " + hex.getText() + "   ▾");
+            android.graphics.drawable.GradientDrawable dot = new android.graphics.drawable.GradientDrawable();
+            dot.setColor(c); dot.setCornerRadius(panel.dp(8));
+            dot.setStroke(panel.dp(1), a.getColor(R.color.rmxp_liquen)); dot.setSize(panel.dp(24), panel.dp(24));
+            expand.setCompoundDrawablesRelativeWithIntrinsicBounds(dot, null, null, null);
+            expand.setCompoundDrawablePadding(panel.dp(12));
             GradientDrawable bg = new GradientDrawable(); bg.setColor(c); bg.setCornerRadius(panel.dp(8));
             bg.setStroke(panel.dp(1), a.getColor(R.color.rmxp_liquen)); swatch.setBackground(bg);
             square[0].invalidate();
@@ -126,12 +150,13 @@ public final class Apariencia {
             if (axes[1] != null) axes[1].setProgress(Math.round(hsv[2]*100));
         };
         square[0] = new ColorSquare(a, hsv, () -> { refresh.run(); change.accept(Color.HSVToColor(hsv)); });
-        pickerRow.addView(square[0], new LinearLayout.LayoutParams(0, panel.dp(96), 1));
-        pickerRow.addView(row, new LinearLayout.LayoutParams(panel.dp(132), -2));
+        pickerRow.addView(square[0], new LinearLayout.LayoutParams(-1, panel.dp(128)));
+        pickerRow.addView(row, new LinearLayout.LayoutParams(-1, panel.dp(48)));
         box.addView(pickerRow);
         GradientDrawable rainbow = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
             new int[] {Color.RED, Color.YELLOW, Color.GREEN, Color.CYAN, Color.BLUE, Color.MAGENTA, Color.RED});
-        hue.setProgressDrawable(rainbow);
+        hue.setProgressDrawable(new android.graphics.drawable.InsetDrawable(rainbow, 0, panel.dp(20), 0, panel.dp(20)));
+        hue.setThumbTintList(ColorStateList.valueOf(a.getColor(R.color.rmxp_ambar)));
         box.addView(hue, new LinearLayout.LayoutParams(-1, panel.dp(48)));
         refresh.run();
         hue.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -153,7 +178,9 @@ public final class Apariencia {
                 swatch.setBackgroundColor(c); square[0].invalidate();
                 if (axes[0] != null) axes[0].setProgress(Math.round(hsv[1]*100));
                 if (axes[1] != null) axes[1].setProgress(Math.round(hsv[2]*100));
-                hex.setError(null); change.accept(c);
+                hex.setError(null);
+                expand.setText(a.getString(R.string.rmxp_edit_color) + "   " + text + "   ▾");
+                change.accept(c);
             }
         });
         // Native sliders expose both axes to keyboards, controllers and accessibility services.

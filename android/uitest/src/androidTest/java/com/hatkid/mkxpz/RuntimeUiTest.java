@@ -171,4 +171,40 @@ public class RuntimeUiTest {
         });
     }
 
+    @Test public void appearanceUsesRealPreviewAndAlignedTabs() throws Exception {
+        instrumentation=InstrumentationRegistry.getInstrumentation();
+        activity=(UiActivity)instrumentation.startActivitySync(new android.content.Intent(
+            instrumentation.getTargetContext(),UiActivity.class).putExtra("clear",true).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+        instrumentation.waitForIdleSync();
+        ui(()->{activity.menu.open(); activity.findViewById(R.id.rmxp_input).performClick();});
+        ui(()->{
+            View a=text(activity.getWindow().getDecorView(),activity.getString(R.string.rmxp_pad_buttons));
+            View b=text(activity.getWindow().getDecorView(),activity.getString(R.string.map_axes));
+            View c=text(activity.getWindow().getDecorView(),activity.getString(R.string.map_keyboard));
+            assertEquals(a.getTop(),b.getTop()); assertEquals(b.getTop(),c.getTop());
+            assertEquals(a.getHeight(),b.getHeight()); assertEquals(b.getHeight(),c.getHeight());
+            PanelLateral.dismissOpen(activity);
+            RadioGroup fps=activity.findViewById(R.id.rmxp_fps); fps.check(fps.getChildAt(3).getId());
+            activity.menu.refreshDisplay(); assertEquals(120,MainActivity.fps);
+            activity.menu.controls.startEditing(()->{}); click(R.string.rmxp_edit_more); click(R.string.ap_color_opacity);
+        });
+        screenshot("09-appearance");
+        ui(()->{
+            ViewGroup panel=activity.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel");
+            panel.findViewWithTag("rmxp_color_picker").performClick();
+        });
+        screenshot("10-color-picker");
+        ui(()->{
+            View panel=activity.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel");
+            SeekBar opacity=(SeekBar)description(panel,activity.getString(R.string.ap_button_opacity));
+            opacity.setKeyProgressIncrement(1); opacity.setProgress(38);
+            opacity.onKeyDown(KeyEvent.KEYCODE_DPAD_LEFT,new KeyEvent(0,KeyEvent.KEYCODE_DPAD_LEFT));
+            assertEquals(37,activity.getSharedPreferences("rmxp_opciones",0).getInt("opac_global",-1));
+            ViewGroup root=(ViewGroup)panel;
+            View color=description(root,activity.getString(R.string.ap_hex)); assertNotNull(color);
+            ((EditText)color).setText("#12ABEF");
+        });
+        ui(()->activity.finish());
+    }
+
 }

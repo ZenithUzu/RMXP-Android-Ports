@@ -9,3 +9,8 @@ class RGSSLinkerTest(unittest.TestCase):
     def test_bootstrap_audio_forwarding_and_flat_maps(self):
         r = subprocess.run(['ruby', 'tests/rgss_linker_check.rb'], cwd=ROOT, capture_output=True, text=True)
         self.assertEqual(0, r.returncode, r.stdout + r.stderr)
+
+    @unittest.skipUnless(shutil.which('ruby'), 'Ruby is available in CI')
+    def test_legacy_json_regexp(self):
+        r = subprocess.run(['ruby', 'tests/script_compat_check.rb'], cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(0, r.returncode, r.stdout + r.stderr)

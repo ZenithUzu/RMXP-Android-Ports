@@ -382,6 +382,12 @@ public class MainActivity extends SDLActivity
         if (mLayout != null) {
             mMenu = new OptionsMenu(this, new File(getFilesDir(), EXTRACTED_DIR).getAbsolutePath());
             mMenu.attachTo(mLayout);
+            // A recreated Surface loses its refresh-rate vote even if the Activity keeps focus.
+            mSurface.getHolder().addCallback(new android.view.SurfaceHolder.Callback() {
+                public void surfaceCreated(android.view.SurfaceHolder holder) { mLayout.post(() -> mMenu.refreshDisplay()); }
+                public void surfaceChanged(android.view.SurfaceHolder holder, int format, int w, int h) { mLayout.post(() -> mMenu.refreshDisplay()); }
+                public void surfaceDestroyed(android.view.SurfaceHolder holder) {}
+            });
             mMenu.partidas.pedirCarpeta(true); // solo la primera vez
         }
     }
