@@ -65,7 +65,10 @@ public class OptionsMenu implements TouchControls.Actions
         registro = new Registro(activity, new File(gamePath));
         perfil = new Perfil(activity, mPrefs, this::recargarControles);
         controls = new TouchControls(activity, mPrefs, this, pad);
-        teclado = new Teclado(activity, mPrefs, controls::keyboardVisible);
+        teclado = new Teclado(activity, mPrefs, shown -> {
+            if (shown) pad.releaseAll();
+            controls.keyboardVisible(shown);
+        });
     }
 
     private int pref(String key, int def) { return mPrefs.getInt(key, def); }
@@ -162,29 +165,87 @@ public class OptionsMenu implements TouchControls.Actions
         ((ScrollView) mPanel).smoothScrollTo(0, 0);
     }
 
-    /** "Mando y teclado": a qué tecla manda cada botón del mando físico. */
+    private int mMappingTab;
+
+    @Override public void controllerConnected(android.view.InputDevice device)
+    {
+        mHandler.post(() -> {
+            if (mRoot == null) return;
+            pad.selectProfile(pad.profile()); // Default remains usable if the chooser is dismissed.
+            controls.rebuild();
+            open();
+            showInputMapping();
+        });
+    }
+
+    private void mappingChoice(PanelLateral panel, LinearLayout row, String text, boolean selected, Runnable action)
+    {
+        Button b = panel.button(text, action);
+        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(mActivity.getColor(
+            selected ? R.color.rmxp_ambar : R.color.rmxp_pizarra)));
+        b.setTextColor(mActivity.getColor(selected ? R.color.rmxp_tinta : R.color.rmxp_niebla));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, panel.dp(40), 1);
+        lp.setMargins(panel.dp(2), panel.dp(2), panel.dp(2), panel.dp(2));
+        row.addView(b, lp);
+    }
+
+    private void mappingRows(PanelLateral panel, int[] codes)
+    {
+        LinearLayout row = null;
+        for (int i = 0; i < codes.length; i++) {
+            int code = codes[i];
+            if (i % 2 == 0) { row = new LinearLayout(mActivity); panel.content.addView(row); }
+            int key = pad.keyFor(code);
+            String role = Teclas.uso(mActivity, key);
+            Button b = panel.button(pad.name(code) + "  →  " + Teclas.nombre(key)
+                + (role.isEmpty() ? "" : "\n" + role), () -> TouchControls.pickKey(mActivity, true, k -> {
+                    pad.setKey(code, k); controls.rebuild(); showInputMapping();
+                }));
+            b.setTextSize(12); b.setPadding(panel.dp(4), 0, panel.dp(4), 0);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, panel.dp(60), 1);
+            lp.setMargins(panel.dp(2), panel.dp(3), panel.dp(2), panel.dp(3));
+            row.addView(b, lp);
+        }
+    }
+
     private void showInputMapping()
     {
-        float dp = mActivity.getResources().getDisplayMetrics().density;
         PanelLateral panel = new PanelLateral(mActivity, R.string.rmxp_input);
-        LinearLayout box = panel.content;
-        TextView hint = new TextView(mActivity);
-        hint.setText(R.string.rmxp_input_hint);
-        box.addView(hint);
-        for (Map.Entry<Integer, String> b : PadMapper.BOTONES.entrySet()) {
-            Button row = panel.button("", () -> {});
-            row.setAllCaps(false);
-            row.setText(b.getValue() + "  →  " + Teclas.nombre(pad.keyFor(b.getKey())));
-            row.setOnClickListener(v -> TouchControls.pickKey(mActivity, true, k -> {
-                pad.setKey(b.getKey(), k);
-                row.setText(b.getValue() + "  →  " + Teclas.nombre(k));
-                controls.rebuild();
-                showInputMapping();
-            }));
-            box.addView(row);
+        LinearLayout profiles = new LinearLayout(mActivity);
+        mappingChoice(panel, profiles, "Xbox", pad.profile() == PadMapper.XBOX, () -> {
+            pad.selectProfile(PadMapper.XBOX); controls.rebuild(); showInputMapping();
+        });
+        mappingChoice(panel, profiles, "Switch", pad.profile() == PadMapper.SWITCH, () -> {
+            pad.selectProfile(PadMapper.SWITCH); controls.rebuild(); showInputMapping();
+        });
+        panel.top.addView(profiles);
+        LinearLayout tabs = new LinearLayout(mActivity);
+        mappingChoice(panel, tabs, mActivity.getString(R.string.rmxp_pad_buttons), mMappingTab == 0,
+            () -> { mMappingTab = 0; showInputMapping(); });
+        mappingChoice(panel, tabs, mActivity.getString(R.string.rmxp_pad_directions), mMappingTab == 1,
+            () -> { mMappingTab = 1; showInputMapping(); });
+        panel.top.addView(tabs);
+        TextView hint = panel.label(mActivity.getString(R.string.rmxp_mapping_hint), 12);
+        panel.content.addView(hint);
+        if (mMappingTab == 0) {
+            int[] codes = { KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_BUTTON_B,
+                KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_Y,
+                KeyEvent.KEYCODE_BUTTON_L1, KeyEvent.KEYCODE_BUTTON_R1,
+                KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2,
+                KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_SELECT,
+                KeyEvent.KEYCODE_BUTTON_THUMBL, KeyEvent.KEYCODE_BUTTON_THUMBR };
+            mappingRows(panel, codes);
+        } else {
+            panel.section(R.string.rmxp_dpad);
+            mappingRows(panel, new int[] { KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT });
+            panel.section(R.string.rmxp_left_stick);
+            mappingRows(panel, new int[] { PadMapper.LS_UP, PadMapper.LS_DOWN, PadMapper.LS_LEFT, PadMapper.LS_RIGHT });
+            panel.section(R.string.rmxp_right_stick);
+            mappingRows(panel, new int[] { PadMapper.RS_UP, PadMapper.RS_DOWN, PadMapper.RS_LEFT, PadMapper.RS_RIGHT });
         }
-        box.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
-            pad.reset(); controls.rebuild(); panel.dismiss(); showInputMapping();
+        panel.content.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
+            pad.reset(); controls.rebuild(); showInputMapping();
         }));
     }
 
@@ -351,6 +412,7 @@ public class OptionsMenu implements TouchControls.Actions
         ((ScrollView) mPanel).scrollTo(0, 0);
         refreshDisplay();
         controls.releasePressed();
+        pad.releaseAll();
         applySpeed();
         mPanel.setTranslationX(mPanel.getWidth() > 0 ? mPanel.getWidth() : 1000);
         mPanel.animate().translationX(0).setDuration(180).start();
@@ -369,8 +431,9 @@ public class OptionsMenu implements TouchControls.Actions
     public void onBackground(boolean background)
     {
         mBackground = background;
-        if (background)
-            controls.releasePressed();
+        if (background) {
+            controls.releasePressed(); pad.releaseAll();
+        }
         applySpeed();
     }
 

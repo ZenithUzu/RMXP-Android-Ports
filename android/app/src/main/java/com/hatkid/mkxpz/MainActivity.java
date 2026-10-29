@@ -564,8 +564,13 @@ public class MainActivity extends SDLActivity
             return true;
         }
 
+        if (mMenu.isOpen() && isFromGamepad(evt) &&
+                (evt.getKeyCode() == mMenu.pad.cancelButton() || evt.getKeyCode() == KeyEvent.KEYCODE_BACK)) {
+            if (evt.getAction() == KeyEvent.ACTION_UP && !PanelLateral.dismissOpen(this)) mMenu.close();
+            return true;
+        }
         // While the menu is open, the keys move around the menu instead of the game
-        if (mMenu.isOpen())
+        if (mMenu.isOpen() || mMenu.controls.isEditing())
             return getWindow().superDispatchKeyEvent(evt);
 
         InputDevice device = evt.getDevice();
@@ -580,8 +585,7 @@ public class MainActivity extends SDLActivity
 
     private static boolean isFromGamepad(KeyEvent evt)
     {
-        InputDevice device = evt.getDevice();
-        return device != null && (device.getSources() & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD;
+        return com.hatkid.mkxpz.controles.PadMapper.isGamepad(evt.getDevice());
     }
 
     @Override
@@ -598,8 +602,14 @@ public class MainActivity extends SDLActivity
     @Override
     public boolean onGenericMotionEvent(MotionEvent evt)
     {
-        if (mMenu != null && mMenu.pad.onMotion(evt))
-            return true;
+        if (mMenu != null && com.hatkid.mkxpz.controles.PadMapper.isGamepad(evt.getDevice())) {
+            if (mMenu.isOpen() || mMenu.controls.isEditing()) {
+                getWindow().superDispatchGenericMotionEvent(evt);
+                return true;
+            }
+            mMenu.controls.onPhysicalInput();
+            return mMenu.pad.onMotion(evt);
+        }
 
         return super.onGenericMotionEvent(evt);
     }

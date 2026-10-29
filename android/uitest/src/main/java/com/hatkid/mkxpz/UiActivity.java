@@ -5,6 +5,8 @@ public class UiActivity extends android.app.Activity {
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(5894);
         setTitle("UI test · simulated engine");
+        if (getIntent().getBooleanExtra("clear", false))
+            getSharedPreferences("rmxp_opciones", MODE_PRIVATE).edit().clear().commit();
         android.widget.RelativeLayout layer = new android.widget.RelativeLayout(this);
         layer.setBackgroundColor(0xff254555);
         setContentView(layer);

@@ -37,7 +37,7 @@ public class RuntimeUiTest {
     @Test public void menuEditorKeyboardAndFps() throws Exception {
         instrumentation=InstrumentationRegistry.getInstrumentation();
         activity=(UiActivity)instrumentation.startActivitySync(new android.content.Intent(
-            instrumentation.getTargetContext(),UiActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+            instrumentation.getTargetContext(),UiActivity.class).putExtra("clear",true).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
         instrumentation.waitForIdleSync();
         ui(() -> {
             activity.menu.open();

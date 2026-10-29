@@ -43,6 +43,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         void keyUp(int keycode);
         void action(int action);
         boolean turboOn();
+        void controllerConnected(InputDevice device);
     }
 
     // Colores que se pueden elegir (el blanco es el "sin color")
@@ -122,7 +123,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         mLayer.removeAllViews();
         for (Control c : mControls) {
             if (c.mando != 0)
-                c.tecla = mPad.keyFor(c.mando); // misma tecla que el botón del mando
+                c.tecla = mPad.keyForScreen(c.mando); // misma tecla que el botón del mando
             ControlView v = new ControlView(mActivity, c, mAccent, this);
             v.editando = mEditing;
             v.elegido = mEditing && c == mElegido;
@@ -196,6 +197,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     public void onScreenTouched()
     {
         if (!mShown) {
+            mPad.releaseAll();
             mShown = true;
             updateVisibility();
         }
@@ -205,6 +207,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     public void onPhysicalInput()
     {
         if (mShown && !mEditing) {
+            releasePressed();
             mShown = false;
             updateVisibility();
         }
@@ -239,14 +242,17 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     private void updateForDevices()
     {
         boolean connected = false;
-        for (int id : InputDevice.getDeviceIds())
-            connected |= isPhysical(InputDevice.getDevice(id));
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice device = InputDevice.getDevice(id);
+            connected |= isPhysical(device);
+            if (PadMapper.isGamepad(device)) mPad.connected(device);
+        }
         mShown = !connected;
         updateVisibility();
     }
 
     @Override public void onInputDeviceAdded(int id) { updateForDevices(); }
-    @Override public void onInputDeviceRemoved(int id) { updateForDevices(); }
+    @Override public void onInputDeviceRemoved(int id) { mPad.disconnected(id); updateForDevices(); }
     @Override public void onInputDeviceChanged(int id) { updateForDevices(); }
 
     // ------------------------------------------------------------ pulsar
@@ -631,11 +637,13 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             r.setPadding(0, 0, 0, 0);
             r.setText(names[i]);
             r.setId(View.generateViewId());
-            r.setChecked(i == selected);
-            final int index = i;
-            r.setOnCheckedChangeListener((b, on) -> { if (on) sink.put(index); });
             g.addView(r, new android.widget.RadioGroup.LayoutParams(0, Math.round(dp(44)), 1));
+            if (i == selected) g.check(r.getId());
         }
+        g.setOnCheckedChangeListener((group, id) -> {
+            View selectedView = group.findViewById(id);
+            if (selectedView != null) sink.put(group.indexOfChild(selectedView));
+        });
         return g;
     }
 
@@ -674,7 +682,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             key.setOnClickListener(v -> pickKey(mActivity, true, k -> {
                 c.tecla = k;
                 if (c.mando != 0)
-                    mPad.setKey(c.mando, k); // el botón del mando también cambia
+                    mPad.setScreenKey(c.mando, k); // el botón del mando también cambia
                 key.setText(mActivity.getString(R.string.rmxp_edit_key) + ": " + Teclas.nombre(k));
                 rebuild();
                 save();
@@ -751,8 +759,15 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
                 actions.addView(keyCell(a, dp, Teclas.nombre(act), () -> { sink.put(act); panel.dismiss(); }));
             box.addView(actions);
         }
-        for (Map.Entry<Integer, String> k : Teclas.TODAS.entrySet())
-            grid.addView(keyCell(a, dp, k.getValue(), () -> { sink.put(k.getKey()); panel.dismiss(); }));
+        java.util.LinkedHashMap<Integer, String> keys = new java.util.LinkedHashMap<>();
+        keys.put(0, a.getString(R.string.rmxp_unassigned));
+        for (int code : Teclas.COMUNES) keys.put(code, Teclas.nombre(code));
+        keys.putAll(Teclas.TODAS);
+        for (Map.Entry<Integer, String> k : keys.entrySet()) {
+            String role = Teclas.uso(a, k.getKey());
+            grid.addView(keyCell(a, dp, k.getValue() + (role.isEmpty() ? "" : "\n" + role),
+                () -> { sink.put(k.getKey()); panel.dismiss(); }));
+        }
         box.addView(grid);
 
         panel.content.addView(box);
@@ -763,7 +778,8 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         Button b = new Button(a);
         b.setText(text);
         b.setAllCaps(false);
-        b.setTextSize(13);
+        b.setTextSize(12);
+        b.setPadding(0, 0, 0, 0);
         b.setMinWidth(0);
         b.setMinimumWidth(0);
         b.setTextColor(a.getColor(R.color.rmxp_niebla));

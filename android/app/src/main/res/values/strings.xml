@@ -36,7 +36,7 @@
     <string name="rmxp_edit_choose">Elegir tecla o acción</string>
     <string name="rmxp_keyboard">Teclado</string>
     <string name="rmxp_edit_key">Tecla</string>
-    <string name="rmxp_edit_opacity">Transparencia</string>
+    <string name="rmxp_edit_opacity">Opacidad</string>
     <string name="rmxp_edit_add">Añadir</string>
     <string name="rmxp_edit_more">Ajustes</string>
     <string name="rmxp_edit_hint">Toca un botón para elegirlo (− + cambia su tamaño, ✎ su tecla y color). Arrástralo para moverlo.</string>
@@ -68,7 +68,7 @@
     <string name="rmxp_saves_error">No se pudo copiar la partida:</string>
     <string name="rmxp_edit_same">Igual para todos</string>
     <string name="rmxp_edit_same_hint">Encendido: todos los botones usan esta medida. Apágalo para elegir una distinta en cada botón.</string>
-    <string name="rmxp_edit_locked">Igual para todos (cámbialo desde la barra de arriba)</string>
+    <string name="rmxp_edit_locked">Desactiva el ajuste global en Ajustes para cambiar solo este botón.</string>
     <string name="rmxp_size_s">Pequeño</string>
     <string name="rmxp_size_m">Mediano</string>
     <string name="rmxp_size_l">Grande</string>
@@ -108,4 +108,19 @@
     <string name="rmxp_reset_layout_confirm">¿Restablecer la distribución de controles? Se reemplazarán sus posiciones y teclas.</string>
     <string name="rmxp_global_size">Usar tamaño global</string>
     <string name="rmxp_global_opacity">Usar opacidad global</string>
+    <string name="rmxp_pad_buttons">Botones</string>
+    <string name="rmxp_pad_directions">Sticks y cruceta</string>
+    <string name="rmxp_dpad">Cruceta</string>
+    <string name="rmxp_left_stick">Stick izquierdo</string>
+    <string name="rmxp_right_stick">Stick derecho</string>
+    <string name="rmxp_mapping_hint">Elige Xbox o Switch. Toca una asignación para cambiarla; las funciones pueden variar según el juego.</string>
+    <string name="rmxp_key_use">Confirmar</string>
+    <string name="rmxp_key_back">Cancelar / menú</string>
+    <string name="rmxp_key_action">Acción</string>
+    <string name="rmxp_key_page_up">Página ↑</string>
+    <string name="rmxp_key_page_down">Página ↓</string>
+    <string name="rmxp_key_special">Especial</string>
+    <string name="rmxp_key_settings">Config.</string>
+    <string name="rmxp_key_item">Objeto (clásicos)</string>
+    <string name="rmxp_unassigned">Sin asignar</string>
 </resources>

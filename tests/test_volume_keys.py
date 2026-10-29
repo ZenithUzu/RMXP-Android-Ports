@@ -33,8 +33,8 @@ class VolumeCheck extends Base {
  String AUDIO_SERVICE="audio"; Object getSystemService(String s){return audio;}
  static class Controls {boolean isEditing(){return true;}void onPhysicalInput(){throw new AssertionError("hidden controls");}}
  static class Keyboard {boolean shown(){return false;}void hide(){}}
- static class Pad {boolean onKey(KeyEvent e){throw new AssertionError("game mapping got volume");}}
- static class Menu {int toggles;Controls controls=new Controls(); Keyboard teclado=new Keyboard();Pad pad=new Pad();boolean isOpen(){return true;}void toggle(){toggles++;}}
+ static class Pad {int cancelButton(){return 97;}boolean onKey(KeyEvent e){throw new AssertionError("game mapping got volume");}}
+ static class Menu {int toggles;Controls controls=new Controls(); Keyboard teclado=new Keyboard();Pad pad=new Pad();boolean isOpen(){return true;}void close(){toggles++;}void toggle(){toggles++;}}
  Menu mMenu;
  boolean isFromGamepad(KeyEvent e){return false;}
  VolumeCheck getWindow(){return this;}boolean superDispatchKeyEvent(KeyEvent e){throw new AssertionError("menu got volume");}

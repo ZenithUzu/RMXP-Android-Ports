@@ -118,3 +118,19 @@ atribuir el trabajo a scripts, carga de recursos o renderizado.
   **Instalar APK creado** y cancela; repetir instalar no debe mostrar creación ni
   modificar el archivo. Guardar, Crear otra app y Cambiar datos tienen acciones
   independientes. Importa la firma original para actualizar un juego instalado.
+
+
+## Motor v13: pausa, personalización y mandos
+
+- Pausa en menú/editor: comprueba que se detengan imagen y música, y que ambas vuelvan al cerrar. Desactiva la pausa para seguir viendo/oyendo el juego durante la edición.
+- Editor: en Ajustes cambia tamaño global, opacidad y estilo; después desactiva los ajustes globales y toca dos veces un botón para cambiar solo ese. Cierra y vuelve a abrir: debe conservarse. Los listeners de RadioGroup reemplazaban los listeners de cada RadioButton; ahora el grupo aplica los cambios.
+- FPS: arranca sin activar turbo, selecciona 60 o 120 explícitos, cambia de zona/menú y activa/desactiva turbo. El objetivo debe mantenerse, sujeto al rendimiento real del dispositivo. Se corrige el limitador que conservaba fixedFramerate aunque la interfaz ya solicitase otro objetivo.
+- Mando: al conectar elige Xbox o Switch. En Mando y teclado hay Botones y Sticks y cruceta. Prueba diagonales, ambos sticks, gatillos, mantener cruceta y stick en la misma dirección y soltar uno, desconectar con una tecla pulsada y reconectar. La elección se recuerda por dispositivo y los ajustes por perfil.
+
+### Base de las asignaciones
+
+Android entrega los botones por posición física: el botón sur es KEYCODE_BUTTON_A aunque Switch lo rotule B. El perfil Switch traduce esas posiciones a sus letras. Los gatillos pueden enviar eje y botón simultáneamente: se combinan para evitar doble pulsación. Fuente: https://developer.android.com/games/sdk/game-controller/controller-input
+
+Los juegos pueden cambiar sus teclas. Los perfiles incluyen confirmar (Enter; C/Espacio también disponibles), cancelar (X/Esc), acción (Z/Shift), páginas (A/S), especial (D), auxiliares (Q/W), F1, F5, modificadores y todas las teclas del selector. Essentials distingue USE/BACK/ACTION/JUMPUP/JUMPDOWN/SPECIAL: https://github.com/Maruno17/pokemon-essentials/blob/master/Data/Scripts/001_Technical/004_Input.rb y https://github.com/Maruno17/pokemon-essentials/blob/master/mkxp.json . No se presupone que todos los fangames usen la misma distribución.
+
+La pausa usa ALC_SOFT_pause_device: detiene el dispositivo OpenAL y el cursor de reproducción, sin reiniciar la música. Fuente: https://openal-soft.org/openal-extensions/SOFT_pause_device.txt . La prueba nativa verifica con un dispositivo real de OpenAL que el cursor se congela y continúa al reanudar. Las pruebas Android de interfaz usan un puente de motor simulado; no miden rendimiento del teléfono.

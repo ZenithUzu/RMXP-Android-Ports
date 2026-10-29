@@ -13,7 +13,7 @@ import android.widget.TextView;
 
 /** Shared appearance for editor and controller settings; no floating system dialogs. */
 public class PanelLateral {
-    public final LinearLayout content;
+    public final LinearLayout content, top;
     private final Activity activity;
     private final FrameLayout root;
 
@@ -40,6 +40,9 @@ public class PanelLateral {
         Button close = button(activity.getString(R.string.rmxp_edit_done), this::dismiss);
         header.addView(close, new LinearLayout.LayoutParams(-2, dp(44)));
         panel.addView(header);
+        top = new LinearLayout(activity);
+        top.setOrientation(LinearLayout.VERTICAL);
+        panel.addView(top);
         ScrollView scroll = new ScrollView(activity);
         content = new LinearLayout(activity);
         content.setOrientation(LinearLayout.VERTICAL);
