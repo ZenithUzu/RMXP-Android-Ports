@@ -1,0 +1,35 @@
+<resources>
+    <string name="ap_color_opacity">Color and opacity</string>
+    <string name="ap_buttons">Buttons</string>
+    <string name="ap_labels">Letters and symbols</string>
+    <string name="ap_independent">Use independent style</string>
+    <string name="ap_apply_to">Apply to</string>
+    <string name="ap_all">All controls</string>
+    <string name="ap_button_opacity">Button opacity</string>
+    <string name="ap_label_opacity">Label opacity</string>
+    <string name="ap_hex">Hexadecimal color</string>
+    <string name="ap_invalid_hex">Use # and six digits: #A3C7FF</string>
+    <string name="ap_hue">Hue</string>
+    <string name="ap_saturation">Saturation</string>
+    <string name="ap_brightness">Brightness</string>
+    <string name="ap_preview">Preview</string>
+    <string name="ap_show_meter">Show meter</string>
+    <string name="ap_data">Visible data</string>
+    <string name="ap_appearance">Appearance</string>
+    <string name="ap_layout">Layout</string>
+    <string name="ap_compact">Compact</string>
+    <string name="ap_list">List</string>
+    <string name="ap_text_color">Text color</string>
+    <string name="ap_text_size">Text size</string>
+    <string name="ap_background_opacity">Background opacity</string>
+    <string name="ap_position">Position</string>
+    <string name="ap_top_left">Top left</string>
+    <string name="ap_top_right">Top right</string>
+    <string name="ap_bottom_left">Bottom left</string>
+    <string name="ap_bottom_right">Bottom right</string>
+    <string name="ap_custom">Custom</string>
+    <string name="ap_move_meter">Move meter</string>
+    <string name="ap_move_hint">Drag the meter to move it. Its position is saved automatically.</string>
+    <string name="ap_system_color">Use system color</string>
+    <string name="ap_precise">Precise adjustment</string>
+</resources>

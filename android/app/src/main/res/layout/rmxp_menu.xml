@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Menú de opciones: panel a la derecha; el juego puede seguir activo o quedar en pausa -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rmxp_menu_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/rmxp_velo"
+    android:clickable="true"
+    android:focusable="false"
+    android:visibility="gone">
+
+    <ScrollView
+        android:id="@+id/rmxp_menu_panel"
+        android:layout_width="360dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:background="@drawable/rmxp_panel"
+        android:clickable="true"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="20dp">
+
+            <!-- Fuente del sistema para mantener legible el menú. -->
+            <TextView
+                android:id="@+id/rmxp_title"
+                style="@style/RmxpTitle" />
+
+            <TextView
+                android:id="@+id/rmxp_status"
+                style="@style/RmxpHint"
+                android:layout_marginTop="2dp"
+                android:text="@string/rmxp_paused" />
+
+            <Switch
+                android:id="@+id/rmxp_keep_running"
+                style="@style/RmxpSwitch"
+                android:layout_marginTop="12dp"
+                android:text="@string/rmxp_keep_running" />
+
+            <RadioGroup android:id="@+id/rmxp_sections" style="@style/RmxpChipRow">
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_section_screen" />
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_section_controls" />
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_section_saves" />
+            </RadioGroup>
+            <LinearLayout android:id="@+id/rmxp_section_0"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:visibility="visible">
+            <!-- Velocidad -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+                <TextView
+                    style="@style/RmxpSection"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/rmxp_speed" />
+                <TextView
+                    android:id="@+id/rmxp_speed_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/rmxp_ambar"
+                    android:textSize="28sp" />
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/rmxp_speed"
+                style="@style/RmxpSlider"
+                android:max="8" />
+            <TextView
+                style="@style/RmxpHint"
+                android:text="@string/rmxp_speed_hint" />
+
+            <!-- Imagen -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+                <TextView
+                    style="@style/RmxpSection"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/rmxp_stretch" />
+                <TextView
+                    android:id="@+id/rmxp_stretch_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/rmxp_ambar"
+                    android:textSize="18sp" />
+            </LinearLayout>
+            <SeekBar
+                android:id="@+id/rmxp_stretch"
+                style="@style/RmxpSlider"
+                android:max="100" />
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_stretch_hint" />
+
+            <!-- Fluidez -->
+            <TextView style="@style/RmxpSection" android:text="@string/rmxp_hz" />
+            <RadioGroup android:id="@+id/rmxp_hz" style="@style/RmxpChipRow">
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_hz_auto" />
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_hz_60" />
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_hz_max" />
+            </RadioGroup>
+            <TextView
+                android:id="@+id/rmxp_hz_hint"
+                style="@style/RmxpHint" />
+
+            <TextView style="@style/RmxpSection" android:text="@string/rmxp_fps" />
+            <RadioGroup android:id="@+id/rmxp_fps" style="@style/RmxpChipRow">
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_fps_game" />
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_fps_screen" />
+                <RadioButton style="@style/RmxpChip" android:text="60" />
+                <RadioButton style="@style/RmxpChip" android:text="120" />
+            </RadioGroup>
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_fps_hint" />
+            <Button
+                android:id="@+id/rmxp_meter"
+                style="@style/RmxpButton"
+                android:layout_marginTop="10dp"
+                android:text="@string/rmxp_meter" />
+
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rmxp_section_1"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:visibility="gone">
+            <!-- Controles -->
+            <TextView style="@style/RmxpSection" android:text="@string/rmxp_controls" />
+            <Switch
+                android:id="@+id/rmxp_pad_show"
+                style="@style/RmxpSwitch"
+                android:layout_marginTop="4dp"
+                android:text="@string/rmxp_pad_show" />
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_pad_auto_hint" />
+            <Button
+                android:id="@+id/rmxp_pad_edit"
+                style="@style/RmxpButton"
+                android:layout_marginTop="10dp"
+                android:text="@string/rmxp_pad_edit" />
+            <Button
+                android:id="@+id/rmxp_input"
+                style="@style/RmxpButton"
+                android:layout_marginTop="8dp"
+                android:text="@string/rmxp_input" />
+            <Switch
+                android:id="@+id/rmxp_vibrar"
+                style="@style/RmxpSwitch"
+                android:layout_marginTop="8dp"
+                android:text="@string/rmxp_vibrar" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/rmxp_ctrl_export"
+                    style="@style/RmxpButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/rmxp_ctrl_export" />
+                <Button
+                    android:id="@+id/rmxp_ctrl_import"
+                    style="@style/RmxpButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/rmxp_ctrl_import" />
+            </LinearLayout>
+
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rmxp_section_2"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:visibility="gone">
+            <!-- Partidas -->
+            <TextView style="@style/RmxpSection" android:text="@string/rmxp_saves" />
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_saves_hint" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/rmxp_saves_export"
+                    style="@style/RmxpButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/rmxp_saves_export" />
+                <Button
+                    android:id="@+id/rmxp_saves_import"
+                    style="@style/RmxpButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/rmxp_saves_import" />
+            </LinearLayout>
+            <Button
+                android:id="@+id/rmxp_saves_list"
+                style="@style/RmxpButton"
+                android:layout_marginTop="8dp"
+                android:text="@string/rmxp_saves_list" />
+            <Button
+                android:id="@+id/rmxp_folder"
+                style="@style/RmxpButton"
+                android:layout_marginTop="8dp"
+                android:text="@string/rmxp_folder_button" />
+            <Button
+                android:id="@+id/rmxp_log"
+                style="@style/RmxpButton"
+                android:layout_marginTop="8dp"
+                android:text="@string/rmxp_log" />
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_log_hint" />
+
+            </LinearLayout>
+            <!-- Acciones -->
+            <Button
+                android:id="@+id/rmxp_resume"
+                style="@style/RmxpButton"
+                android:layout_marginTop="28dp"
+                android:backgroundTint="@color/rmxp_ambar"
+                android:text="@string/rmxp_resume"
+                android:textColor="@color/rmxp_tinta" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/rmxp_reset"
+                    style="@style/RmxpButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/rmxp_reset" />
+                <Button
+                    android:id="@+id/rmxp_quit"
+                    style="@style/RmxpButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/rmxp_quit"
+                    android:textColor="@color/rmxp_coral" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>
