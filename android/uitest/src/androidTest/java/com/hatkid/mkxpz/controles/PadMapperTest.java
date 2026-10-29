@@ -69,4 +69,23 @@ public class PadMapperTest {
   catch(IllegalArgumentException expected){}
  }
 
+ @Test public void menuReleaseAndControllerOverlapDoNotLeaveKeyboardKeysHeld(){
+  SharedPreferences prefs=InstrumentationRegistry.getInstrumentation().getTargetContext().getSharedPreferences("pad-keyboard-held",0);prefs.edit().clear().commit();
+  List<String> events=new ArrayList<>();
+  TouchControls.Actions sink=new TouchControls.Actions(){
+   public void keyDown(int k){events.add("d"+k);}public void keyUp(int k){events.add("u"+k);}
+   public void action(int k){}public boolean turboOn(){return false;}public void controllerConnected(InputDevice d){}
+  };
+  PadMapper p=new PadMapper(prefs,sink);
+  assertFalse(p.observeKeyboard(KeyEvent.KEYCODE_SHIFT_LEFT,KeyEvent.ACTION_DOWN));
+  p.releaseAll();assertEquals(Arrays.asList("u"+KeyEvent.KEYCODE_SHIFT_LEFT),events);
+  events.clear();p.observeKeyboard(KeyEvent.KEYCODE_ENTER,KeyEvent.ACTION_DOWN);
+  p.onSource(KeyEvent.KEYCODE_BUTTON_A,true);assertTrue(events.isEmpty());
+  assertTrue(p.observeKeyboard(KeyEvent.KEYCODE_ENTER,KeyEvent.ACTION_UP));
+  p.onSource(KeyEvent.KEYCODE_BUTTON_A,false);assertEquals(Arrays.asList("u"+KeyEvent.KEYCODE_ENTER),events);
+  events.clear();p.onSource(KeyEvent.KEYCODE_BUTTON_A,true);p.observeKeyboard(KeyEvent.KEYCODE_ENTER,KeyEvent.ACTION_DOWN);
+  p.onSource(KeyEvent.KEYCODE_BUTTON_A,false);assertEquals(Arrays.asList("d"+KeyEvent.KEYCODE_ENTER),events);
+  assertFalse(p.observeKeyboard(KeyEvent.KEYCODE_ENTER,KeyEvent.ACTION_UP));
+ }
+
 }

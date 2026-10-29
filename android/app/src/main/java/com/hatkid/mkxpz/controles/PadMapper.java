@@ -44,7 +44,7 @@ public class PadMapper {
     private final TouchControls.Actions actions;
     private int layout, deviceId=-1;
     private String deviceKey;
-    private final Set<Integer> digital=new HashSet<>(), axes=new HashSet<>();
+    private final Set<Integer> digital=new HashSet<>(), axes=new HashSet<>(), keyboardHeld=new HashSet<>();
     private final Map<Integer,Integer> active=new HashMap<>(), counts=new HashMap<>();
 
     public PadMapper(SharedPreferences prefs,TouchControls.Actions actions){
@@ -161,7 +161,7 @@ public class PadMapper {
         int code=sourceForKey(event);
         if(code==0)return false;
         if(code>=KEYBOARD){
-            if(!prefs.contains("teclado_mapa_"+(code-KEYBOARD)))return false;
+            if(!prefs.contains("teclado_mapa_"+(code-KEYBOARD)))return observeKeyboard(code-KEYBOARD,event.getAction());
         }else{
             if(!connected(event.getDevice()))return true;
             if(!BOTONES.containsKey(code)&&!prefs.contains("mando_"+layout+"_"+code))return false;
@@ -171,15 +171,23 @@ public class PadMapper {
         else if(event.getAction()==KeyEvent.ACTION_UP)onSource(code,false);
         return true;
     }
+    boolean observeKeyboard(int key,int action){
+        if(action==KeyEvent.ACTION_DOWN)keyboardHeld.add(key);
+        else if(action==KeyEvent.ACTION_UP){
+            keyboardHeld.remove(key);
+            return counts.containsKey(key); // a controller still owns the same game key
+        }
+        return false; // preserve SDL text/modifier handling for unmodified keyboard events
+    }
     private void reconcile(int code){
         boolean down=digital.contains(code)||axes.contains(code);
         if(down && !active.containsKey(code)){
             int key=keyFor(code);active.put(code,key);
-            if(key>0){int n=counts.containsKey(key)?counts.get(key):0;counts.put(key,n+1);if(n==0)actions.keyDown(key);}
+            if(key>0){int n=counts.containsKey(key)?counts.get(key):0;counts.put(key,n+1);if(n==0&&!keyboardHeld.contains(key))actions.keyDown(key);}
             else if(key<0)actions.action(key);
         }else if(!down && active.containsKey(code)){
             int key=active.remove(code);
-            if(key>0){int n=counts.get(key)-1;if(n==0){counts.remove(key);actions.keyUp(key);}else counts.put(key,n);}
+            if(key>0){int n=counts.get(key)-1;if(n==0){counts.remove(key);if(!keyboardHeld.contains(key))actions.keyUp(key);}else counts.put(key,n);}
         }
     }
     private void axis(int code,float value){
@@ -244,7 +252,8 @@ public class PadMapper {
         return true;
     }
     public void releaseAll(){
-        for(int key:counts.keySet())actions.keyUp(key);
-        counts.clear();active.clear();digital.clear();axes.clear();
+        Set<Integer> held=new HashSet<>(counts.keySet());held.addAll(keyboardHeld);
+        for(int key:held)actions.keyUp(key);
+        counts.clear();active.clear();digital.clear();axes.clear();keyboardHeld.clear();
     }
 }
