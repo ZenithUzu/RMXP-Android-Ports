@@ -37,5 +37,8 @@ public class PadMapperTest {
   p.releaseAll();p.updateAxes(0,0,0,0,0,0,0,1);assertEquals(2,events.size());p.releaseAll();
   p.selectProfile(PadMapper.SWITCH);assertEquals(KeyEvent.KEYCODE_C,p.keyFor(KeyEvent.KEYCODE_BUTTON_B));
   assertEquals(PadMapper.SWITCH,new PadMapper(prefs,sink).profile());
+  prefs.edit().putInt("mando_"+KeyEvent.KEYCODE_BUTTON_A,KeyEvent.KEYCODE_F8).commit();
+  p.reset();p.selectProfile(PadMapper.XBOX);
+  assertEquals(KeyEvent.KEYCODE_F8,p.keyFor(KeyEvent.KEYCODE_BUTTON_A));
  }
 }

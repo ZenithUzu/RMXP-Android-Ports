@@ -42,8 +42,16 @@ public class ControlsUiTest {
    ControlView c=target[0];
    View decor=a.getWindow().getDecorView();
    View large=find(decor,a.getString(R.string.rmxp_size_l));assertNotNull(large);tap(large);
+  });
+  ins.waitForIdleSync();
+  ins.runOnMainSync(()->{
+   ControlView c=target[0];View decor=a.getWindow().getDecorView();
    assertEquals(2,c.control.tam);assertTrue(c.getLayoutParams().width>before[0]);
    View opacity=find(decor,"25 %");assertNotNull(opacity);tap(opacity);
+  });
+  ins.waitForIdleSync();
+  ins.runOnMainSync(()->{
+   ControlView c=target[0];View decor=a.getWindow().getDecorView();
    assertEquals(.25f,c.bodyAlpha,.001f);
    View red=find(decor,"#E5394F");assertNotNull(red);red.performClick();assertEquals(0xffe5394f,c.control.color);
   });
