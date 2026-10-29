@@ -24,6 +24,9 @@ public class ControlsUiTest {
    a.getSharedPreferences("rmxp_opciones",0).edit().putBoolean("tam_fijo",false).putBoolean("opac_fija",false).commit();
    a.menu.open();RadioGroup sections=a.findViewById(R.id.rmxp_sections);sections.check(sections.getChildAt(1).getId());
    a.findViewById(R.id.rmxp_pad_edit).performClick();
+  });
+  ins.waitForIdleSync();
+  ins.runOnMainSync(()->{
    ViewGroup layer=a.findViewById(android.R.id.content).findViewWithTag("rmxp_touch_controls");
    ControlView c=(ControlView)layer.getChildAt(0);target[0]=c;before[0]=c.getLayoutParams().width;image[0]=render(c);
    long t=android.os.SystemClock.uptimeMillis();
