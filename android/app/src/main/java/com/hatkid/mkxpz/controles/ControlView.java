@@ -75,7 +75,7 @@ public class ControlView extends View
 
         String key = Teclas.nombre(control.tecla);
         String label = control.etiqueta.isEmpty() ? key : control.etiqueta;
-        if (!control.cruceta && control.tecla > 0 && !label.equalsIgnoreCase(key)) {
+        if (editando && !control.cruceta && control.tecla > 0 && !label.equalsIgnoreCase(key)) {
             float bx = badgeLeft ? badge : getWidth() - badge, by = badge;
             canvas.saveLayerAlpha(0, 0, getWidth(), getHeight(), Math.round(badgeAlpha * 255));
             mText.setShadowLayer(0, 0, 0, 0);
@@ -110,7 +110,7 @@ public class ControlView extends View
     private int base()
     {
         if (control.color == 0xFFFFFFFF)
-            return skin == 0 ? 0x7D7D7D : 0xFFFFFF;
+            return skin == 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_pizarra) & 0xFFFFFF : 0xFFFFFF;
         return control.color & 0xFFFFFF;
     }
 
@@ -123,10 +123,10 @@ public class ControlView extends View
         int c = base();
         mStroke.setStrokeWidth(sw);
         if (skin == 0) {
-            mFill.setColor((pressed ? 0xE6000000 : 0x80000000) | c);
-            mStroke.setColor(0);
+            mFill.setColor(pressed ? 0xE6000000 | (mAccent & 0xFFFFFF) : 0xC0000000 | c);
+            mStroke.setColor(pressed ? mAccent : 0x30FFFFFF);
         } else {
-            mFill.setColor(pressed ? 0x59000000 | c : 0);
+            mFill.setColor(pressed ? 0xB3000000 | (mAccent & 0xFFFFFF) : 0x50101010);
             mStroke.setColor(0xF0000000 | c);
         }
         mText.setColor(Color.WHITE);
@@ -146,7 +146,7 @@ public class ControlView extends View
         }
         mRect.set(sw / 2, sw / 2, w - sw / 2, h - sw / 2);
         // Redondos; los anchos, rectángulos con esquinas suaves (no óvalos)
-        float r = control.pastilla ? mRect.height() * 0.3f : mRect.height() / 2;
+        float r = control.pastilla ? dp(14) : mRect.height() * 0.38f;
         canvas.drawRoundRect(mRect, r, r, mFill);
         canvas.drawRoundRect(mRect, r, r, mStroke);
 
@@ -214,27 +214,15 @@ public class ControlView extends View
 
     private void drawDpad(Canvas canvas, float w, float h, float sw)
     {
-        float t = w / 3, r = t * 0.28f, in = sw / 2; // grosor de cada brazo, esquinas
-        Path cross = new Path();
-        cross.addRoundRect(new RectF(t, in, 2 * t, h - in), r, r, Path.Direction.CW);
-        Path horiz = new Path();
-        horiz.addRoundRect(new RectF(in, t, w - in, 2 * t), r, r, Path.Direction.CW);
-        cross.op(horiz, Path.Op.UNION);
-        paints(false, sw);
-        canvas.drawPath(cross, mFill);
-        // La dirección presionada se ilumina, sin salirse de la cruz
-        if (mDir != 0) {
-            canvas.save();
-            canvas.clipPath(cross);
-            paints(true, sw);
-            if ((mDir & 1) != 0) canvas.drawRect(t, 0, 2 * t, t, mFill);
-            if ((mDir & 2) != 0) canvas.drawRect(t, 2 * t, 2 * t, h, mFill);
-            if ((mDir & 4) != 0) canvas.drawRect(0, t, t, 2 * t, mFill);
-            if ((mDir & 8) != 0) canvas.drawRect(2 * t, t, w, 2 * t, mFill);
-            canvas.restore();
-            paints(false, sw);
+        float t = w / 3, gap = dp(3), r = dp(12);
+        for (int i = 0; i < 4; i++) {
+            float x = i < 2 ? t : i == 2 ? 0 : 2*t;
+            float y = i < 2 ? i*2*t : t;
+            paints((mDir & (1 << i)) != 0, dp(1));
+            mRect.set(x + gap, y + gap, x + t - gap, y + t - gap);
+            canvas.drawRoundRect(mRect, r, r, mFill);
+            canvas.drawRoundRect(mRect, r, r, mStroke);
         }
-        canvas.drawPath(cross, mStroke);
         // Flechas
         Paint a = new Paint(Paint.ANTI_ALIAS_FLAG);
         a.setColor(Color.WHITE);
@@ -298,6 +286,7 @@ public class ControlView extends View
                 if (was && !is) mListener.release(keys[i]);
             }
             if (dir != mDir) {
+                if (dir != 0) com.hatkid.mkxpz.Haptics.pulse(this);
                 mDir = dir;
                 invalidate();
             }
@@ -307,8 +296,7 @@ public class ControlView extends View
         if (action == MotionEvent.ACTION_DOWN && !mPressed) {
             mPressed = true;
             mListener.press(control.tecla);
-            if (vibrar)
-                performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+            com.hatkid.mkxpz.Haptics.pulse(this);
             invalidate();
         } else if (up && mPressed) {
             mPressed = false;

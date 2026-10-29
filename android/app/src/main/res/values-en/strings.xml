@@ -15,7 +15,7 @@
     <string name="rmxp_hz_auto">Auto</string>
     <string name="rmxp_hz_60">60 Hz</string>
     <string name="rmxp_hz_max">Max</string>
-    <string name="rmxp_hz_hint">Requested display: %1$d Hz. Battery or temperature limits may override it.</string>
+    <string name="rmxp_hz_hint">Requested: %1$d Hz · Current display: %2$d Hz. The system may limit refresh rate.</string>
 
     <string name="rmxp_controls">On-screen controls</string>
     <string name="rmxp_pad_show">Show controls</string>
@@ -26,9 +26,9 @@
     <string name="rmxp_quit">Quit</string>
 
     <string name="rmxp_fps">Game FPS</string>
-    <string name="rmxp_fps_game">The game\'s own</string>
-    <string name="rmxp_fps_screen">Match the screen</string>
-    <string name="rmxp_fps_hint">Game default preserves its original timing. Match the screen changes the FPS target and may speed up the game; it does not remove loading stutter. This is separate from VSync.</string>
+    <string name="rmxp_fps_game">Game</string>
+    <string name="rmxp_fps_screen">Display</string>
+    <string name="rmxp_fps_hint">Game preserves its original timing. 60 and 120 are targets independent of display Hz; Display follows the requested refresh rate. Higher targets may speed up older games and do not guarantee that performance.</string>
     <string name="rmxp_pad_edit">Edit controls</string>
     <string name="rmxp_edit_reset">Reset</string>
     <string name="rmxp_edit_done">Done</string>
@@ -37,7 +37,7 @@
     <string name="rmxp_edit_key">Key</string>
     <string name="rmxp_edit_opacity">Transparency</string>
     <string name="rmxp_edit_add">Add</string>
-    <string name="rmxp_edit_more">Options ▾</string>
+    <string name="rmxp_edit_more">Settings</string>
     <string name="rmxp_edit_hint">Tap a button to select it (− + changes its size, ✎ its key and color). Drag it to move it.</string>
     <string name="rmxp_edit_opacity_all">Opacity</string>
     <string name="rmxp_edit_label">Label (e.g. A, Run)</string>
@@ -99,10 +99,13 @@
     <string name="rmxp_save_delete_q">Delete %1$s? Its copy in the RPG Maker folder is deleted too.</string>
     <string name="rmxp_save_backed">Backup: %1$s</string>
     <string name="rmxp_running">Game running</string>
-    <string name="rmxp_keep_running">Keep game running</string>
-    <string name="rmxp_keep_running_hint">While the menu or control editor is open. Turn off to pause the game.</string>
+    <string name="rmxp_keep_running">Pause in menu and editor</string>
+    <string name="rmxp_keep_running_hint">On: the game pauses while editing controls or options. Off: it keeps running behind them.</string>
     <string name="rmxp_section_screen">Display</string>
     <string name="rmxp_section_controls">Controls</string>
     <string name="rmxp_section_saves">Saves</string>
     <string name="rmxp_config_failed">Game configuration could not be restored. Rebuild the APK. Your saves are preserved.</string>
+    <string name="rmxp_reset_layout_confirm">Reset the control layout? Positions and key assignments will be replaced.</string>
+    <string name="rmxp_global_size">Use global size</string>
+    <string name="rmxp_global_opacity">Use global opacity</string>
 </resources>

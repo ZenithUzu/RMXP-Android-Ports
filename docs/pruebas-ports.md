@@ -95,3 +95,26 @@ Hz de pantalla, FPS solicitados por el juego y VSync son controles distintos.
 El arreglo de retorno a FPS originales no garantiza FPS constantes en cada zona.
 Los logs muestran tirones con y sin GC; hace falta medir una ruta repetible para
 atribuir el trabajo a scripts, carga de recursos o renderizado.
+
+## Interfaz revisada del runtime
+
+- El interruptor **Pausar en menú y editor** está al principio, antes de las pestañas.
+  Encendido pausa; apagado conserva el juego activo detrás. También debe respetarlo
+  el editor. La preferencia anterior se conserva, con el texto ahora expresado como pausa.
+- Edita un botón de una esquina, cambia su tamaño y vuelve a seleccionarlo. La barra
+  principal y las acciones de selección deben seguir ancladas. Ajustes, edición de
+  un botón y Mando y teclado abren el panel lateral con la paleta del sistema.
+- Abre el teclado: desaparece el mando táctil. Prueba ABC, símbolos y F1–F12,
+  Ctrl/Alt, flechas verticales, Home/End y borrar mantenido. Cerrar con ▼, Atrás o
+  tocar fuera devuelve los controles y libera las teclas; el toque de cierre no
+  debe pulsar también un botón del juego.
+- En pantalla de 120 Hz, selecciona FPS **120** y luego **60** con turbo apagado.
+  Repite con Hz en 60. El objetivo de FPS es independiente de la frecuencia. Anota
+  los Hz actuales, los FPS medidos, batería y temperatura; exporta el log. Si se
+  solicitan 120 Hz y Android mantiene 60, no es prueba de un límite de FPS del motor.
+- Activa/desactiva vibración y prueba cruceta, botones y teclado. Un emulador no
+  puede confirmar la sensación física del vibrador.
+- Constructor Android 0.3: **Crear APK** no abre el instalador. Después usa
+  **Instalar APK creado** y cancela; repetir instalar no debe mostrar creación ni
+  modificar el archivo. Guardar, Crear otra app y Cambiar datos tienen acciones
+  independientes. Importa la firma original para actualizar un juego instalado.

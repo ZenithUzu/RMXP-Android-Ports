@@ -65,7 +65,7 @@ public class OptionsMenu implements TouchControls.Actions
         registro = new Registro(activity, new File(gamePath));
         perfil = new Perfil(activity, mPrefs, this::recargarControles);
         controls = new TouchControls(activity, mPrefs, this, pad);
-        teclado = new Teclado(activity, mPrefs);
+        teclado = new Teclado(activity, mPrefs, controls::keyboardVisible);
     }
 
     private int pref(String key, int def) { return mPrefs.getInt(key, def); }
@@ -111,7 +111,11 @@ public class OptionsMenu implements TouchControls.Actions
         slider(R.id.rmxp_stretch, "estirar", 0, 0, v -> applyVideo());
         chips(R.id.rmxp_hz, "hz", 0, v -> applyHz());
         chips(R.id.rmxp_fps, "fps", 0, v -> applyHz());
-        toggle(R.id.rmxp_keep_running, "seguir_en_menu", 1, v -> applySpeed());
+        Switch pause = mRoot.findViewById(R.id.rmxp_keep_running);
+        pause.setChecked(pref("seguir_en_menu", 1) == 0);
+        pause.setOnCheckedChangeListener((button, checked) -> {
+            save("seguir_en_menu", checked ? 0 : 1); applySpeed();
+        });
         toggle(R.id.rmxp_pad_show, "controles", 1, v -> controls.setUserVisible(v == 1));
         toggle(R.id.rmxp_vibrar, "vibrar", 1, v -> com.hatkid.mkxpz.controles.ControlView.vibrar = v == 1);
         com.hatkid.mkxpz.controles.ControlView.vibrar = pref("vibrar", 1) == 1;
@@ -131,6 +135,7 @@ public class OptionsMenu implements TouchControls.Actions
             android.os.Process.killProcess(android.os.Process.myPid());
         });
         mRoot.findViewById(R.id.rmxp_pad_edit).setOnClickListener(v -> {
+            teclado.hide();
             mRoot.setVisibility(View.GONE);
             controls.startEditing(this::applySpeed);
             applySpeed();
@@ -161,30 +166,26 @@ public class OptionsMenu implements TouchControls.Actions
     private void showInputMapping()
     {
         float dp = mActivity.getResources().getDisplayMetrics().density;
-        LinearLayout box = new LinearLayout(mActivity);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int padding = Math.round(20 * dp);
-        box.setPadding(padding, Math.round(8 * dp), padding, 0);
+        PanelLateral panel = new PanelLateral(mActivity, R.string.rmxp_input);
+        LinearLayout box = panel.content;
         TextView hint = new TextView(mActivity);
         hint.setText(R.string.rmxp_input_hint);
         box.addView(hint);
         for (Map.Entry<Integer, String> b : PadMapper.BOTONES.entrySet()) {
-            Button row = new Button(mActivity);
+            Button row = panel.button("", () -> {});
             row.setAllCaps(false);
             row.setText(b.getValue() + "  →  " + Teclas.nombre(pad.keyFor(b.getKey())));
             row.setOnClickListener(v -> TouchControls.pickKey(mActivity, true, k -> {
                 pad.setKey(b.getKey(), k);
                 row.setText(b.getValue() + "  →  " + Teclas.nombre(k));
-                controls.rebuild(); // el botón en pantalla con el mismo nombre también cambia
+                controls.rebuild();
+                showInputMapping();
             }));
             box.addView(row);
         }
-        ScrollView scroll = new ScrollView(mActivity);
-        scroll.addView(box);
-        new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_input).setView(scroll)
-            .setPositiveButton(R.string.rmxp_edit_done, null)
-            .setNeutralButton(R.string.rmxp_edit_reset, (d, w) -> { pad.reset(); controls.rebuild(); })
-            .show();
+        box.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
+            pad.reset(); controls.rebuild(); panel.dismiss(); showInputMapping();
+        }));
     }
 
     private interface Changed { void run(int value); }
@@ -295,8 +296,33 @@ public class OptionsMenu implements TouchControls.Actions
         }
         mHzHint.setText(mActivity.getString(R.string.rmxp_hz_hint, mHz));
         // "Igual a la pantalla": el juego corre a tantos fps como Hz tenga la pantalla
-        MainActivity.nativeSetFps(pref("fps", 0) == 1 ? mHz : 0);
+        int target = fpsTarget(pref("fps", 0), mHz);
+        MainActivity.nativeSetFps(target);
+        android.view.Surface surface = SDLActivity.getNativeSurface();
+        if (surface != null && surface.isValid()) {
+            if (Build.VERSION.SDK_INT >= 31)
+                surface.setFrameRate(mHz, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
+                    android.view.Surface.CHANGE_FRAME_RATE_ALWAYS);
+            else if (Build.VERSION.SDK_INT >= 30)
+                surface.setFrameRate(mHz, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
+        }
+        mHzHint.setText(mActivity.getString(R.string.rmxp_hz_hint, mHz,
+            Math.round(display.getRefreshRate())));
+        mHandler.postDelayed(() -> {
+            if (isOpen()) mHzHint.setText(mActivity.getString(R.string.rmxp_hz_hint, mHz,
+                Math.round(display.getRefreshRate())));
+        }, 500);
+        android.util.Log.i("RMXP-Pantalla", "requestedHz=" + mHz + " actualHz="
+            + display.getRefreshRate() + " targetFps=" + target);
+
     }
+
+    static int fpsTarget(int mode, int hz)
+    {
+        return mode == 1 ? hz : mode == 2 ? 60 : mode == 3 ? 120 : 0;
+    }
+
+    public void refreshDisplay() { applyHz(); }
 
     // ---------------------------------------------------------------- controles → juego
 
@@ -321,7 +347,10 @@ public class OptionsMenu implements TouchControls.Actions
     {
         if (isOpen() || controls.isEditing())
             return;
+        teclado.hide();
         mRoot.setVisibility(View.VISIBLE);
+        ((ScrollView) mPanel).scrollTo(0, 0);
+        refreshDisplay();
         controls.releasePressed();
         applySpeed();
         mPanel.setTranslationX(mPanel.getWidth() > 0 ? mPanel.getWidth() : 1000);

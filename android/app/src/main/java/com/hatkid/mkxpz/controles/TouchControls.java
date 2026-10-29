@@ -56,7 +56,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     private final PadMapper mPad;
     private FrameLayout mLayer;
     private List<Control> mControls;
-    private boolean mEditing, mShown = true, mUserVisible = true;
+    private boolean mEditing, mShown = true, mUserVisible = true, mKeyboard;
     private View mToolbar;
 
     public TouchControls(Activity activity, SharedPreferences prefs, Actions actions, PadMapper pad)
@@ -73,6 +73,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     public void attachTo(ViewGroup parent)
     {
         mLayer = new FrameLayout(mActivity);
+        mLayer.setTag("rmxp_touch_controls");
         parent.addView(mLayer, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         mLayer.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             if (r - l != or - ol || b - t != ob - ot)
@@ -209,10 +210,17 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         }
     }
 
+    public void keyboardVisible(boolean shown)
+    {
+        if (shown) releasePressed();
+        mKeyboard = shown;
+        updateVisibility();
+    }
+
     private void updateVisibility()
     {
         if (mLayer != null)
-            mLayer.setVisibility((mUserVisible && mShown) || mEditing ? View.VISIBLE : View.GONE);
+            mLayer.setVisibility((!mKeyboard && mUserVisible && mShown) || mEditing ? View.VISIBLE : View.GONE);
     }
 
     private static boolean isPhysical(InputDevice d)
@@ -278,7 +286,6 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         releasePressed();
         mEditing = true;
         mElegido = null;
-        android.widget.Toast.makeText(mActivity, R.string.rmxp_edit_hint, android.widget.Toast.LENGTH_LONG).show();
         mToolbar = buildToolbar(onDone);
         rebuild();
         updateVisibility();
@@ -297,51 +304,10 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         int pad = Math.round(dp(6));
         bar.setPadding(pad, pad, pad, pad);
 
-        TextView grip = new TextView(mActivity);
-        grip.setText("⠿");
-        grip.setTextSize(22);
-        grip.setTextColor(mActivity.getColor(R.color.rmxp_niebla));
-        grip.setPadding(Math.round(dp(10)), 0, Math.round(dp(8)), 0);
-        // Se arrastra desde ⠿ o desde cualquier parte libre de la barra
-        View.OnTouchListener drag = new View.OnTouchListener() {
-            float dx, dy;
-            public boolean onTouch(View g, MotionEvent e) {
-                if (e.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    dx = bar.getX() - e.getRawX();
-                    dy = bar.getY() - e.getRawY();
-                } else if (e.getActionMasked() == MotionEvent.ACTION_MOVE) {
-                    bar.setX(Math.max(0, Math.min(e.getRawX() + dx, mLayer.getWidth() - bar.getWidth())));
-                    bar.setY(Math.max(0, Math.min(e.getRawY() + dy, mLayer.getHeight() - bar.getHeight())));
-                }
-                return true;
-            }
-        };
-        grip.setOnTouchListener(drag);
-        bar.setOnTouchListener(drag);
-        bar.addView(grip);
-
         // Pocas opciones a la vista: Añadir, Opciones ▾ (lo demás) y Listo
         bar.addView(toolButton(R.string.rmxp_edit_add, v -> addControl()));
         Button mas = toolButton(R.string.rmxp_edit_more, null);
-        mas.setOnClickListener(v -> {
-            String[] items = {
-                mActivity.getString(R.string.rmxp_pad_size),
-                mActivity.getString(R.string.rmxp_edit_opacity_all),
-                mActivity.getString(R.string.rmxp_edit_style),
-                mActivity.getString(R.string.rmxp_edit_color),
-                mActivity.getString(R.string.rmxp_edit_reset)
-            };
-            new android.app.AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_edit_more)
-                .setItems(items, (dialog, which) -> {
-                    switch (which) {
-                        case 0: globalChoice(true); break;
-                        case 1: globalChoice(false); break;
-                        case 2: chooseSkin(); break;
-                        case 3: chooseColors(); break;
-                        default: mControls = predeterminados(); save(); rebuild();
-                    }
-                }).setNegativeButton(android.R.string.cancel, null).show();
-        });
+        mas.setOnClickListener(v -> showEditorOptions());
         bar.addView(mas);
         Button done = toolButton(R.string.rmxp_edit_done, v -> {
             mEditing = false;
@@ -471,17 +437,11 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         if (!c.cruceta || mControls.size() > 1)
             p.addView(chico("🗑", v -> { mControls.remove(c); mElegido = null; save(); rebuild(); }));
         mPanel = p;
+        p.setTag("rmxp_selected_control");
         mLayer.addView(p, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        ControlView ref = cv;
-        p.post(() -> {
-            // Arriba del botón; si no cabe, abajo
-            float x = ref.getX() + ref.getWidth() / 2f - p.getWidth() / 2f;
-            float y = ref.getY() - p.getHeight() - dp(4);
-            if (y < 0)
-                y = ref.getY() + ref.getHeight() + dp(4);
-            p.setX(Math.max(0, Math.min(x, mLayer.getWidth() - p.getWidth())));
-            p.setY(Math.max(0, Math.min(y, mLayer.getHeight() - p.getHeight())));
-        });
+        FrameLayout.LayoutParams dock = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        dock.topMargin = Math.round(dp(64));
+        p.setLayoutParams(dock);
     }
 
     private Button chico(String t, View.OnClickListener click)
@@ -517,48 +477,46 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         editControl(c);
     }
 
-    /** Tamaño u opacidad de todos: medidas fijas y el interruptor "Igual para todos". */
-    private void globalChoice(boolean size)
+    private void showEditorOptions()
     {
-        String fijo = size ? "tam_fijo" : "opac_fija";
-        LinearLayout box = new LinearLayout(mActivity);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad = Math.round(dp(20));
-        box.setPadding(pad, Math.round(dp(8)), pad, 0);
-        if (size)
-            box.addView(chips(tallaNames(), mPrefs.getInt("tam_global", 1), i -> {
-                mPrefs.edit().putInt("tam_global", i).apply();
-                placeAll();
-            }));
-        else
-            box.addView(chips(opacNames(), indexOf(Control.OPACIDADES, mPrefs.getInt("opac_global", 75)), i -> {
-                mPrefs.edit().putInt("opac_global", Control.OPACIDADES[i]).apply();
-                placeAll();
-            }));
-        Switch same = new Switch(mActivity);
-        same.setText(R.string.rmxp_edit_same);
-        same.setChecked(mPrefs.getBoolean(fijo, true));
-        same.setPadding(0, Math.round(dp(14)), 0, 0);
-        same.setOnCheckedChangeListener((b, on) -> { mPrefs.edit().putBoolean(fijo, on).apply(); placeAll(); });
-        box.addView(same);
-        box.addView(hint(R.string.rmxp_edit_same_hint));
-        new AlertDialog.Builder(mActivity).setTitle(size ? R.string.rmxp_pad_size : R.string.rmxp_edit_opacity_all)
-            .setView(box).setPositiveButton(R.string.rmxp_edit_done, null).show();
-    }
-
-    /** Estilo de todos los botones: Moderno (relleno gris) o Contorno (solo borde blanco). */
-    private void chooseSkin()
-    {
-        LinearLayout box = new LinearLayout(mActivity);
-        int pad = Math.round(dp(20));
-        box.setPadding(pad, Math.round(dp(8)), pad, 0);
+        com.hatkid.mkxpz.PanelLateral panel = new com.hatkid.mkxpz.PanelLateral(mActivity, R.string.rmxp_edit_more);
+        LinearLayout box = panel.content;
+        panel.section(R.string.rmxp_pad_size);
+        Switch tam_fijo = new Switch(mActivity);
+        tam_fijo.setText(R.string.rmxp_global_size);
+        tam_fijo.setChecked(mPrefs.getBoolean("tam_fijo", true));
+        tam_fijo.setOnCheckedChangeListener((b, on) -> { mPrefs.edit().putBoolean("tam_fijo", on).apply(); placeAll(); });
+        box.addView(tam_fijo);
+        box.addView(chips(tallaNames(), mPrefs.getInt("tam_global", 1), i -> {
+            mPrefs.edit().putBoolean("tam_fijo", true).putInt("tam_global", i).apply(); placeAll();
+        }));
+        panel.section(R.string.rmxp_edit_opacity_all);
+        Switch opac_fija = new Switch(mActivity);
+        opac_fija.setText(R.string.rmxp_global_opacity);
+        opac_fija.setChecked(mPrefs.getBoolean("opac_fija", true));
+        opac_fija.setOnCheckedChangeListener((b, on) -> { mPrefs.edit().putBoolean("opac_fija", on).apply(); placeAll(); });
+        box.addView(opac_fija);
+        box.addView(chips(opacNames(), indexOf(Control.OPACIDADES, mPrefs.getInt("opac_global", 75)), i -> {
+            mPrefs.edit().putBoolean("opac_fija", true).putInt("opac_global", Control.OPACIDADES[i]).apply(); placeAll();
+        }));
+        panel.section(R.string.rmxp_edit_style);
         box.addView(chips(new String[] { mActivity.getString(R.string.rmxp_skin_modern),
             mActivity.getString(R.string.rmxp_skin_outline) }, mPrefs.getInt("skin", 0), i -> {
-            mPrefs.edit().putInt("skin", i).apply();
-            placeAll();
+            mPrefs.edit().putInt("skin", i).apply(); placeAll();
         }));
-        new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_edit_style).setView(box)
-            .setPositiveButton(R.string.rmxp_edit_done, null).show();
+        panel.section(R.string.rmxp_color_buttons);
+        box.addView(swatches(COLORES, color -> {
+            for (Control c : mControls) c.color = color;
+            placeAndSave();
+        }));
+        box.addView(panel.button(mActivity.getString(R.string.rmxp_badge_own), () -> { panel.dismiss(); chooseColors(); }));
+        box.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
+            new AlertDialog.Builder(mActivity).setMessage(R.string.rmxp_reset_layout_confirm)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.rmxp_edit_reset, (d, which) -> {
+                    mControls = predeterminados(); mElegido = null; save(); rebuild(); panel.dismiss();
+                }).show();
+        }));
     }
 
     /**
@@ -606,30 +564,29 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         box.addView(extra);
         box.addView(hint(R.string.rmxp_badge_hint));
 
-        ScrollView scroll = new ScrollView(mActivity);
-        scroll.addView(box);
-        new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_edit_color).setView(scroll)
-            .setPositiveButton(R.string.rmxp_edit_done, null).show();
+        com.hatkid.mkxpz.PanelLateral panel = new com.hatkid.mkxpz.PanelLateral(mActivity, R.string.rmxp_edit_color);
+        box.setPadding(0, 0, 0, 0);
+        panel.content.addView(box);
     }
 
-    /** Fila de círculos de color. */
     private View swatches(int[] colors, IntSink sink)
     {
-        LinearLayout row = new LinearLayout(mActivity);
-        row.setPadding(0, Math.round(dp(6)), 0, Math.round(dp(6)));
+        GridLayout grid = new GridLayout(mActivity);
+        grid.setColumnCount(6);
         for (int color : colors) {
             View swatch = new View(mActivity);
-            GradientDrawable d = new GradientDrawable();
-            d.setShape(GradientDrawable.OVAL);
-            d.setColor(color);
-            d.setStroke(Math.round(dp(2)), 0x66888888);
-            swatch.setBackground(d);
-            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(Math.round(dp(28)), Math.round(dp(28)));
-            p.rightMargin = Math.round(dp(6));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(color); bg.setCornerRadius(dp(12));
+            bg.setStroke(Math.round(dp(2)), 0x66888888);
+            swatch.setBackground(bg);
+            swatch.setContentDescription(String.format("#%06X", color & 0xFFFFFF));
             swatch.setOnClickListener(v -> sink.put(color));
-            row.addView(swatch, p);
+            GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+            lp.width = lp.height = Math.round(dp(44));
+            lp.setMargins(0, Math.round(dp(4)), Math.round(dp(4)), 0);
+            grid.addView(swatch, lp);
         }
-        return row;
+        return grid;
     }
 
     private String[] tallaNames()
@@ -661,13 +618,19 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         android.widget.RadioGroup g = new android.widget.RadioGroup(mActivity);
         g.setOrientation(LinearLayout.HORIZONTAL);
         for (int i = 0; i < names.length; i++) {
-            android.widget.RadioButton r = new android.widget.RadioButton(mActivity);
+            android.widget.RadioButton r = new android.widget.RadioButton(new android.view.ContextThemeWrapper(mActivity, R.style.RmxpChip), null, 0);
+            r.setButtonDrawable((android.graphics.drawable.Drawable) null);
+            r.setBackgroundResource(R.drawable.rmxp_chip);
+            r.setTextColor(mActivity.getColorStateList(R.color.rmxp_chip_text));
+            r.setGravity(Gravity.CENTER);
+            r.setTextSize(12);
+            r.setPadding(0, 0, 0, 0);
             r.setText(names[i]);
             r.setId(View.generateViewId());
             r.setChecked(i == selected);
             final int index = i;
             r.setOnCheckedChangeListener((b, on) -> { if (on) sink.put(index); });
-            g.addView(r);
+            g.addView(r, new android.widget.RadioGroup.LayoutParams(0, Math.round(dp(44)), 1));
         }
         return g;
     }
@@ -689,7 +652,6 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         int pad = Math.round(dp(20));
         box.setPadding(pad, Math.round(dp(8)), pad, 0);
 
-        AlertDialog[] dialog = new AlertDialog[1];
         if (!c.cruceta) {
             EditText label = new EditText(mActivity);
             label.setHint(R.string.rmxp_edit_label);
@@ -712,6 +674,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
                 key.setText(mActivity.getString(R.string.rmxp_edit_key) + ": " + Teclas.nombre(k));
                 rebuild();
                 save();
+                editControl(c);
             }));
             box.addView(key);
 
@@ -736,32 +699,15 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
                 i -> { c.opacidad = Control.OPACIDADES[i] / 100f; placeAndSave(); }));
 
         box.addView(label(R.string.rmxp_edit_color));
-        LinearLayout colors = new LinearLayout(mActivity);
-        for (int color : COLORES) {
-            View swatch = new View(mActivity);
-            GradientDrawable d = new GradientDrawable();
-            d.setShape(GradientDrawable.OVAL);
-            d.setColor(color);
-            d.setStroke(Math.round(dp(2)), 0x66888888);
-            swatch.setBackground(d);
-            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(Math.round(dp(28)), Math.round(dp(28)));
-            p.rightMargin = Math.round(dp(6));
-            swatch.setOnClickListener(v -> { c.color = color; placeAndSave(); });
-            colors.addView(swatch, p);
-        }
-        box.addView(colors);
+        box.addView(swatches(COLORES, color -> { c.color = color; placeAndSave(); }));
 
-        ScrollView scroll = new ScrollView(mActivity);
-        scroll.addView(box);
-        AlertDialog.Builder b = new AlertDialog.Builder(mActivity).setView(scroll)
-            .setPositiveButton(R.string.rmxp_edit_done, null);
+        com.hatkid.mkxpz.PanelLateral panel = new com.hatkid.mkxpz.PanelLateral(mActivity, R.string.rmxp_pad_edit);
+        box.setPadding(0, 0, 0, 0);
+        panel.content.addView(box);
         if (!c.cruceta || mControls.size() > 1)
-            b.setNegativeButton(R.string.rmxp_edit_delete, (d, w) -> {
-                mControls.remove(c);
-                save();
-                rebuild();
-            });
-        dialog[0] = b.show();
+            panel.content.addView(panel.button(mActivity.getString(R.string.rmxp_edit_delete), () -> {
+                mControls.remove(c); mElegido = null; save(); rebuild(); panel.dismiss();
+            }));
     }
 
     private void placeAndSave()
@@ -791,24 +737,21 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         LinearLayout box = new LinearLayout(a);
         box.setOrientation(LinearLayout.VERTICAL);
         GridLayout grid = new GridLayout(a);
-        grid.setColumnCount(6);
-        AlertDialog[] dialog = new AlertDialog[1];
+        grid.setColumnCount(4);
+        com.hatkid.mkxpz.PanelLateral panel = new com.hatkid.mkxpz.PanelLateral(a, R.string.rmxp_edit_choose);
 
         if (withActions) {
             LinearLayout actions = new LinearLayout(a);
             actions.setGravity(Gravity.CENTER);
             for (int act : new int[] { Control.TECLADO, Control.TURBO, Control.MENU, Control.OCULTAR })
-                actions.addView(keyCell(a, dp, Teclas.nombre(act), () -> { sink.put(act); dialog[0].dismiss(); }));
+                actions.addView(keyCell(a, dp, Teclas.nombre(act), () -> { sink.put(act); panel.dismiss(); }));
             box.addView(actions);
         }
         for (Map.Entry<Integer, String> k : Teclas.TODAS.entrySet())
-            grid.addView(keyCell(a, dp, k.getValue(), () -> { sink.put(k.getKey()); dialog[0].dismiss(); }));
+            grid.addView(keyCell(a, dp, k.getValue(), () -> { sink.put(k.getKey()); panel.dismiss(); }));
         box.addView(grid);
 
-        ScrollView scroll = new ScrollView(a);
-        scroll.addView(box);
-        dialog[0] = new AlertDialog.Builder(a).setTitle(R.string.rmxp_edit_choose).setView(scroll)
-            .setNegativeButton(android.R.string.cancel, null).show();
+        panel.content.addView(box);
     }
 
     private static Button keyCell(Activity a, float dp, String text, Runnable click)
@@ -819,9 +762,12 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         b.setTextSize(13);
         b.setMinWidth(0);
         b.setMinimumWidth(0);
+        b.setTextColor(a.getColor(R.color.rmxp_niebla));
+        GradientDrawable bg = new GradientDrawable(); bg.setColor(a.getColor(R.color.rmxp_pizarra)); bg.setCornerRadius(10 * dp);
+        b.setBackground(bg);
         b.setOnClickListener(v -> click.run());
         GridLayout.LayoutParams p = new GridLayout.LayoutParams();
-        p.width = Math.round(64 * dp);
+        p.width = Math.round((Math.min(360, a.getResources().getDisplayMetrics().widthPixels / dp) - 40) / 4 * dp) - Math.round(6 * dp);
         p.height = Math.round(52 * dp);
         p.setMargins(Math.round(3 * dp), Math.round(3 * dp), Math.round(3 * dp), Math.round(3 * dp));
         b.setLayoutParams(p);

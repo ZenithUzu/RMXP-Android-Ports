@@ -477,8 +477,10 @@ public class MainActivity extends SDLActivity
         if (hasFocus) {
             hideSystemBars();
             // Resume here, not in onResume: by now the new drawing surface exists
-            if (mMenu != null)
+            if (mMenu != null) {
                 mMenu.onBackground(false);
+                mMenu.refreshDisplay();
+            }
         }
     }
 
@@ -583,8 +585,9 @@ public class MainActivity extends SDLActivity
     @Override
     public boolean dispatchTouchEvent(MotionEvent evt)
     {
-        // Touching the screen brings the on-screen controls back
-        if (mMenu != null && evt.getActionMasked() == MotionEvent.ACTION_DOWN)
+        if (mMenu != null && mMenu.teclado.onOutsideTouch(evt)) return true;
+        // Keyboard consumes its dismissal gesture before controls return.
+        if (mMenu != null && !mMenu.teclado.shown() && evt.getActionMasked() == MotionEvent.ACTION_DOWN)
             mMenu.controls.onScreenTouched();
 
         return super.dispatchTouchEvent(evt);

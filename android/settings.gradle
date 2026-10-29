@@ -17,3 +17,5 @@ dependencyResolutionManagement {
 rootProject.name = "mkxp-z"
 
 include ':app'
+
+include ':uitest'
