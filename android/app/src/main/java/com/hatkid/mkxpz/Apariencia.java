@@ -108,6 +108,8 @@ public final class Apariencia {
         LinearLayout details = column(a);
         Button expand = panel.button("", () -> {
             details.setVisibility(details.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+            if (details.getVisibility() == View.VISIBLE) details.post(() -> details.requestRectangleOnScreen(
+                new Rect(0, 0, details.getWidth(), Math.min(details.getHeight(), panel.dp(192))), false));
         });
         expand.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         expand.setTag("rmxp_color_picker");
@@ -175,11 +177,7 @@ public final class Apariencia {
                 if (!text.matches("#[0-9a-fA-F]{6}")) { hex.setError(a.getString(R.string.ap_invalid_hex)); return; }
                 int c = Color.parseColor(text);
                 Color.colorToHSV(c, hsv); hue.setProgress(Math.round(hsv[0]));
-                swatch.setBackgroundColor(c); square[0].invalidate();
-                if (axes[0] != null) axes[0].setProgress(Math.round(hsv[1]*100));
-                if (axes[1] != null) axes[1].setProgress(Math.round(hsv[2]*100));
-                hex.setError(null);
-                expand.setText(a.getString(R.string.rmxp_edit_color) + "   " + text + "   ▾");
+                refresh.run(); hex.setSelection(hex.length());
                 change.accept(c);
             }
         });

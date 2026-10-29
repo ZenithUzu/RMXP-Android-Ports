@@ -14,6 +14,12 @@ public class ControlsUiTest {
    View f=find(((ViewGroup)v).getChildAt(i),s);if(f!=null)return f;
   }return null;
  }
+ private SeekBar seekbar(View v,String description){
+  if(v instanceof SeekBar && description.equals(v.getContentDescription()))return (SeekBar)v;
+  if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){
+   SeekBar found=seekbar(((ViewGroup)v).getChildAt(i),description);if(found!=null)return found;
+  }return null;
+ }
  private void tap(View v){
   assertTrue("Chip must accept touch input",v.isClickable());
   long t=android.os.SystemClock.uptimeMillis();float x=v.getWidth()/2f,y=v.getHeight()/2f;
@@ -48,7 +54,7 @@ public class ControlsUiTest {
    ControlView c=target[0];View decor=a.getWindow().getDecorView();
    assertEquals(2,c.control.tam);assertTrue(c.getLayoutParams().width>before[0]);
    View open=find(decor,a.getString(R.string.ap_color_opacity));assertNotNull(open);assertTrue(open instanceof Button);open.performClick();
-   SeekBar opacity=(SeekBar)find(decor,a.getString(R.string.ap_button_opacity));assertNotNull(opacity);
+   SeekBar opacity=seekbar(decor,a.getString(R.string.ap_button_opacity));assertNotNull(opacity);
    opacity.setKeyProgressIncrement(1);opacity.setProgress(24);
    opacity.onKeyDown(KeyEvent.KEYCODE_DPAD_RIGHT,new KeyEvent(0,KeyEvent.KEYCODE_DPAD_RIGHT));
   });

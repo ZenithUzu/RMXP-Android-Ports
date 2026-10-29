@@ -577,19 +577,21 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             names[i + 1] = c.cruceta ? mActivity.getString(R.string.rmxp_dpad) :
                 c.etiqueta.isEmpty() ? Teclas.nombre(c.tecla) : c.etiqueta;
         }
-        Apariencia.choice(panel, panel.top, R.string.ap_apply_to, names,
+        android.widget.Spinner scope = Apariencia.choice(panel, panel.top, R.string.ap_apply_to, names,
             target == null ? 0 : mControls.indexOf(target) + 1,
             n -> chooseColors(n == 0 ? null : mControls.get(n - 1)));
         LinearLayout previewRow = new LinearLayout(mActivity);
         previewRow.setGravity(Gravity.CENTER_VERTICAL);
         previewRow.setBaselineAligned(false);
-        previewRow.addView(panel.label(mActivity.getString(R.string.ap_preview), 13), new LinearLayout.LayoutParams(0, -2, 1));
+        panel.top.removeAllViews();
+        previewRow.addView(scope, new LinearLayout.LayoutParams(0, Math.round(dp(48)), 1));
         Control sample = target == null ? mControls.stream().filter(c -> !c.cruceta && c.tecla > 0).findFirst().orElse(mControls.get(0)) : target;
         ControlView preview = new ControlView(mActivity, sample, mAccent, new ControlView.Listener() {
             public void press(int key) {} public void release(int key) {}
             public boolean editTouch(ControlView v, MotionEvent e) { return true; }
         });
-        previewRow.addView(preview, new LinearLayout.LayoutParams(Math.round(dp(sample.pastilla ? 104 : 72)), Math.round(dp(72))));
+        preview.setContentDescription(mActivity.getString(R.string.ap_preview));
+        previewRow.addView(preview, new LinearLayout.LayoutParams(Math.round(dp(sample.pastilla ? 88 : 64)), Math.round(dp(56))));
         Runnable refresh = () -> {
             placeAndSave();
             preview.badge = dp(10); preview.pad = dp(8);
