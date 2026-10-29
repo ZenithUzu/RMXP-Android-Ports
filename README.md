@@ -8,7 +8,7 @@ Convierte un fangame de RPG Maker XP, VX o VX Ace (por ejemplo, uno hecho con
 Pokémon Essentials) en una **app de Android propia**: con su nombre, su icono
 y su firma. No hace falta JoiPlay ni otra app intermedia.
 
-¿Sin PC? Usa la app compañera [**Portémon para Android**](https://github.com/ZenithUzu/RPGMK-AndroidPort-Apk): arma el APK desde el mismo teléfono, con el mismo motor y la misma firma.
+¿Sin PC? Usa la app compañera [**Portémon para Android**](https://github.com/ZenithUzu/portemon-android): arma el APK desde el mismo teléfono, con el mismo motor y la misma firma.
 
 En Windows, arrastras la carpeta del juego sobre `Portar.bat`, revisas los
 datos y presionas **Crear APK**. Si el teléfono está conectado, se instala
@@ -83,12 +83,12 @@ El APK queda en `C:\Users\<tú>\RMXP-Android-Ports\apks\`. Las copias de trabajo
 
 ## Probar el juego y ver su log desde la PC
 
-La interfaz separa **Compilación** y **Log del juego**, con los datos del APK a la
+La interfaz separa **Construcción** y **Android en vivo**, con los datos del APK a la
 izquierda. Conecta un solo teléfono por USB, activa la depuración USB y acepta
-su aviso de autorización. Deja marcadas **Instalar y abrir al terminar (USB)** y
+su aviso de autorización. Deja marcadas **Instalar y abrir por USB** y
 **Capturar log del juego al abrirlo**.
 
-Al terminar, el juego se abre y su registro aparece en **Log del juego**. Se
+Al terminar, el juego se abre y su registro aparece en **Android en vivo**. Se
 captura desde el arranque y continúa si la app se cierra o reinicia. El archivo
 se guarda automáticamente en `%USERPROFILE%\RMXP-Android-Ports\registros\`.
 **Abrir y capturar** permite repetir la prueba sin compilar; **Detener** termina
@@ -150,7 +150,7 @@ python tools\rmxp_analyze.py "C:\Juegos\Mi Fangame"
 
 ### Reportar un problema
 
-Abre un [issue](https://github.com/ZenithUzu/RMXP-Android-Ports/issues) e incluye:
+Abre un [issue](https://github.com/ZenithUzu/portemon-pc/issues) e incluye:
 
 - Juego y versión; versión del motor y herramienta usada para crear el APK.
 - Modelo del teléfono y versión de Android.

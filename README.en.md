@@ -8,7 +8,7 @@ Turns an RPG Maker XP, VX or VX Ace fangame (for example, one made with
 Pokémon Essentials) into **its own Android app**, with its own name, icon
 and signature. No JoiPlay or other middleman app needed.
 
-No PC? Use the companion app [**Portémon for Android**](https://github.com/ZenithUzu/RPGMK-AndroidPort-Apk): it builds the APK on the phone itself, with the same engine and the same signature.
+No PC? Use the companion app [**Portémon for Android**](https://github.com/ZenithUzu/portemon-android): it builds the APK on the phone itself, with the same engine and the same signature.
 
 On Windows, drag the game folder onto `Portar.bat`, check the details and
 press **Crear APK** (Create APK). If your phone is connected, it installs
@@ -132,7 +132,7 @@ The PC interface separates **Compilación** (build output) from **Log del juego*
 
 See the [PC/Android comparison](docs/paridad-pc-android.md), [test guide](docs/pruebas-ports.md) and [UI audit](docs/auditoria-interfaz.md) (Spanish).
 
-Open an [issue](https://github.com/ZenithUzu/RMXP-Android-Ports/issues) with the game/version, engine/tool version, phone model, Android version, reproduction steps, expected/actual result and log. For performance problems, include the area, FPS target, current screen Hz and turbo state. Remove personal data before attaching files; do not publish signing keys, passwords or full games.
+Open an [issue](https://github.com/ZenithUzu/portemon-pc/issues) with the game/version, engine/tool version, phone model, Android version, reproduction steps, expected/actual result and log. For performance problems, include the area, FPS target, current screen Hz and turbo state. Remove personal data before attaching files; do not publish signing keys, passwords or full games.
 
 ## For developers
 

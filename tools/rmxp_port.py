@@ -46,7 +46,7 @@ ANDROID = os.path.join(REPO, "android")
 HOME = os.path.join(os.path.expanduser("~"), "RMXP-Android-Ports")
 # Motor ya compilado (librerías .so). Se publica con .github/workflows/motor.yml.
 MOTOR_VERSION = "motor-v13"
-MOTOR_URL = "https://github.com/ZenithUzu/RMXP-Android-Ports/releases/download/%s/motor-android.zip" % MOTOR_VERSION
+MOTOR_URL = "https://github.com/ZenithUzu/portemon-pc/releases/download/%s/motor-android.zip" % MOTOR_VERSION
 WINDOWS = os.name == "nt"
 
 
@@ -1150,7 +1150,7 @@ def gui(initial=None):
         """Avisa si en GitHub hay cambios o un motor más nuevo que el de esta copia."""
         try:
             import urllib.request as u
-            api = "https://api.github.com/repos/ZenithUzu/RMXP-Android-Ports/"
+            api = "https://api.github.com/repos/ZenithUzu/portemon-pc/"
             rel = json.load(u.urlopen(api + "releases?per_page=30", timeout=8))
             nums = [int(r["tag_name"][7:]) for r in rel if re.fullmatch(r"motor-v\d+", r["tag_name"])]
             if nums and max(nums) > int(MOTOR_VERSION[7:]):
