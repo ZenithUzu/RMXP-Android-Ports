@@ -600,18 +600,17 @@ public class MainActivity extends SDLActivity
     }
 
     @Override
-    public boolean onGenericMotionEvent(MotionEvent evt)
+    public boolean dispatchGenericMotionEvent(MotionEvent evt)
     {
         if (mMenu != null && com.hatkid.mkxpz.controles.PadMapper.isGamepad(evt.getDevice())) {
             if (mMenu.isOpen() || mMenu.controls.isEditing()) {
-                getWindow().superDispatchGenericMotionEvent(evt);
-                return true;
+                return true; // Do not let SDL consume axes behind an overlay.
             }
             mMenu.controls.onPhysicalInput();
             return mMenu.pad.onMotion(evt);
         }
 
-        return super.onGenericMotionEvent(evt);
+        return super.dispatchGenericMotionEvent(evt);
     }
 
     /**
