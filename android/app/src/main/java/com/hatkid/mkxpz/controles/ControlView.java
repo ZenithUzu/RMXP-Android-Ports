@@ -129,7 +129,7 @@ public class ControlView extends View
             mFill.setColor(pressed ? 0xB3000000 | (mAccent & 0xFFFFFF) : 0x50101010);
             mStroke.setColor(0xF0000000 | c);
         }
-        mText.setColor(Color.WHITE);
+        mText.setColor(pressed ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
         mText.setShadowLayer(dp(skin == 0 ? 1.5f : 2.5f), 0, 0, skin == 0 ? 0x66000000 : 0xAA000000);
     }
 
@@ -228,9 +228,13 @@ public class ControlView extends View
         a.setColor(Color.WHITE);
         a.setShadowLayer(dp(1.5f), 0, 0, 0x66000000);
         float s = t * 0.15f, c = w / 2;
+        a.setColor((mDir & 1) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
         drawArrow(canvas, a, c, t * 0.5f, 0, -s);
+        a.setColor((mDir & 2) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
         drawArrow(canvas, a, c, h - t * 0.5f, 0, s);
+        a.setColor((mDir & 4) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
         drawArrow(canvas, a, t * 0.5f, h / 2, -s, 0);
+        a.setColor((mDir & 8) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
         drawArrow(canvas, a, w - t * 0.5f, h / 2, s, 0);
     }
 

@@ -167,6 +167,7 @@ public class Teclado implements SDLActivity.KeyboardHook
                 case MotionEvent.ACTION_DOWN:
                     Haptics.pulse(view);
                     bg.setColor(pressed);
+                    v.setTextColor(mActivity.getColor(R.color.rmxp_tinta));
                     if (code < 0) {
                         special(code);
                         return true;
@@ -202,6 +203,7 @@ public class Teclado implements SDLActivity.KeyboardHook
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     bg.setColor(normal);
+                    v.setTextColor(mActivity.getColor(on || mModifiers.contains(code) ? R.color.rmxp_tinta : R.color.rmxp_niebla));
                     if (repeat[0] != null)
                         mHandler.removeCallbacks(repeat[0]);
                     if (code > 0 && mDown.remove(code))

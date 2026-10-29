@@ -101,7 +101,6 @@
     <string name="rmxp_save_backed">Respaldo: %1$s</string>
     <string name="rmxp_running">Juego activo</string>
     <string name="rmxp_keep_running">Pausar en menú y editor</string>
-    <string name="rmxp_keep_running_hint">Activado: el juego se detiene mientras ajustas opciones o controles. Desactivado: sigue detrás.</string>
     <string name="rmxp_section_screen">Pantalla</string>
     <string name="rmxp_section_controls">Controles</string>
     <string name="rmxp_section_saves">Partidas</string>

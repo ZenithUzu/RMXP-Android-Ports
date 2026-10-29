@@ -11,6 +11,7 @@ on:
       - android/settings.gradle
       - android/app/build.gradle
       - android/patches/**
+      - .github/scripts/probar-interfaz.sh
       - .github/workflows/plantilla.yml
   workflow_run:
     workflows: [Motor de Android]

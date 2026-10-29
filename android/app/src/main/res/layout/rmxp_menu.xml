@@ -22,8 +22,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="24dp"
-            android:paddingTop="20dp"
+            android:paddingStart="20dp"
+            android:paddingTop="12dp"
             android:paddingEnd="20dp"
             android:paddingBottom="20dp">
 
@@ -43,7 +43,6 @@
                 style="@style/RmxpSwitch"
                 android:layout_marginTop="12dp"
                 android:text="@string/rmxp_keep_running" />
-            <TextView style="@style/RmxpHint" android:text="@string/rmxp_keep_running_hint" />
 
             <RadioGroup android:id="@+id/rmxp_sections" style="@style/RmxpChipRow">
                 <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_section_screen" />

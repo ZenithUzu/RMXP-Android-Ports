@@ -100,7 +100,6 @@
     <string name="rmxp_save_backed">Backup: %1$s</string>
     <string name="rmxp_running">Game running</string>
     <string name="rmxp_keep_running">Pause in menu and editor</string>
-    <string name="rmxp_keep_running_hint">On: the game pauses while editing controls or options. Off: it keeps running behind them.</string>
     <string name="rmxp_section_screen">Display</string>
     <string name="rmxp_section_controls">Controls</string>
     <string name="rmxp_section_saves">Saves</string>
