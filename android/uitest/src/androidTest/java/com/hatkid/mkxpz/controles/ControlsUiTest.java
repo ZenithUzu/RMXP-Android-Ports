@@ -64,4 +64,50 @@ public class ControlsUiTest {
    a.finish();
   });
  }
+ @Test public void controllerStartupBadgesAndToolbar(){
+  android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
+  UiActivity a=(UiActivity)ins.startActivitySync(new android.content.Intent(ins.getTargetContext(),UiActivity.class).putExtra("clear",true).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+  ins.waitForIdleSync();
+  ins.runOnMainSync(()->a.menu.controllerConnected(null));
+  ins.waitForIdleSync();
+  ins.runOnMainSync(()->{
+   assertFalse(a.menu.isOpen());
+   assertNull(a.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel"));
+   a.menu.open();
+   a.findViewById(R.id.rmxp_pad_edit).performClick();
+  });
+  ins.waitForIdleSync();
+  ins.runOnMainSync(()->{
+   View handle=find(a.getWindow().getDecorView(),a.getString(R.string.rmxp_edit_move_toolbar));
+   assertNotNull(handle);
+   View bar=(View)handle.getParent();float y=bar.getY();
+   long t=android.os.SystemClock.uptimeMillis();
+   handle.dispatchTouchEvent(MotionEvent.obtain(t,t,MotionEvent.ACTION_DOWN,10,10,0));
+   handle.dispatchTouchEvent(MotionEvent.obtain(t,t+20,MotionEvent.ACTION_MOVE,10,80,0));
+   handle.dispatchTouchEvent(MotionEvent.obtain(t,t+40,MotionEvent.ACTION_UP,10,80,0));
+   assertTrue("Toolbar must move away from the top controls",bar.getY()>y);
+   find(bar,a.getString(R.string.rmxp_edit_more)).performClick();
+  });
+  ins.waitForIdleSync();
+  ins.runOnMainSync(()->{
+   Switch badges=(Switch)find(a.getWindow().getDecorView(),a.getString(R.string.rmxp_badge_show));
+   assertNotNull(badges);assertTrue(badges.isChecked());badges.setChecked(false);
+   ViewGroup layer=a.findViewById(android.R.id.content).findViewWithTag("rmxp_touch_controls");
+   for(int i=0;i<layer.getChildCount();i++)
+    if(layer.getChildAt(i) instanceof ControlView)assertFalse(((ControlView)layer.getChildAt(i)).showBadge);
+   PanelLateral.dismissOpen(a);
+   find(layer,a.getString(R.string.rmxp_edit_done)).performClick();
+   a.menu.controls.recargar();
+   for(int i=0;i<layer.getChildCount();i++)
+    if(layer.getChildAt(i) instanceof ControlView){
+     ControlView c=(ControlView)layer.getChildAt(i);assertFalse(c.editando);assertFalse(c.showBadge);
+    }
+   a.getSharedPreferences("rmxp_opciones",0).edit().putBoolean("insig_mostrar",true).commit();
+   a.menu.controls.recargar();
+   for(int i=0;i<layer.getChildCount();i++)
+    if(layer.getChildAt(i) instanceof ControlView)assertTrue(((ControlView)layer.getChildAt(i)).showBadge);
+   a.finish();
+  });
+ }
+
 }
