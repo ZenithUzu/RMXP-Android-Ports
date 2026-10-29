@@ -63,3 +63,35 @@ el diagnóstico anterior genera muchas líneas y ralentiza la tienda.
 
 La compilación correcta confirma que el código construye; no sustituye la prueba
 de la venta en el teléfono ni demuestra que todos los fangames funcionen.
+
+
+## Menú, volumen y ritmo del juego (motor-v12)
+
+Recrea el APK y actualiza encima usando la misma firma. Los APK ya instalados
+no cambian al hacer Pull.
+
+1. En **Controles**, deja **Mantener el juego activo** encendido: tanto el menú
+   como el editor deben mostrar el juego moviéndose detrás. El estado dice
+   **Juego activo**. Apágalo: ambos deben dejar la imagen quieta y el menú decir
+   **En pausa**. Cierra y abre la app: debe conservar la elección.
+2. Repite con avance rápido activo. Sal a otra app y vuelve con el menú y el
+   editor abiertos. Fuera de la app siempre debe pausarse; al volver debe respetar
+   la preferencia. Al cerrar menú/editor debe recuperar velocidad normal o turbo.
+3. Sube y baja volumen durante el juego, en cada pestaña del menú y en el editor.
+   Debe cambiar el volumen multimedia y no enviar esas teclas al juego.
+4. Con turbo apagado, alterna **Igual a la pantalla → Los del juego**. Debe
+   recuperar los FPS que pide el juego, incluso si los cambió mientras estaba
+   forzado. Prueba la misma ruta y menú antes/después, durante un minuto.
+5. En Añil cambia VSync, cierra y abre dos veces. Exporta el log desde **Partidas**
+   si aparece Zlib o un error JSON. El registro identifica la versión del APK y
+   si se restauró la configuración incluida. No se rescatan opciones de pantalla
+   desde un archivo dañado.
+6. Para los dos iconos en volumen por aplicación: indica modelo del teléfono,
+   Android/HyperOS/MIUI y manda captura con el panel expandido. Comprueba si ambos
+   deslizadores cambian el mismo audio y si aparecen también tras reiniciar el
+   teléfono. El log actual no permite atribuirlo a una sesión de audio concreta.
+
+Hz de pantalla, FPS solicitados por el juego y VSync son controles distintos.
+El arreglo de retorno a FPS originales no garantiza FPS constantes en cada zona.
+Los logs muestran tirones con y sin GC; hace falta medir una ruta repetible para
+atribuir el trabajo a scripts, carga de recursos o renderizado.

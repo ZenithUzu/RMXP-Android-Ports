@@ -831,6 +831,9 @@ struct GraphicsPrivate {
     SDL_GLContext glCtx;
     
     int frameRate;
+#ifdef __ANDROID__
+    int gameFrameRate = DEF_FRAMERATE;
+#endif
     int ffSpeed = 1;      /* fast forward multiplier in use */
     unsigned ffCount = 0; /* frames seen while fast forwarding */
     int frameCount;
@@ -1183,6 +1186,9 @@ Graphics::Graphics(RGSSThreadData *data) {
     } else if (data->config.fixedFramerate < 0) {
         p->fpsLimiter.disabled = true;
     }
+#ifdef __ANDROID__
+    p->gameFrameRate = p->frameRate;
+#endif
 }
 
 Graphics::~Graphics() { delete p; }
@@ -1246,8 +1252,9 @@ void Graphics::update(bool checkForShutdown) {
         SDL_GL_MakeCurrent(p->threadData->window, p->threadData->glContext);
     }
     
-    int fps = rmxpFps;
-    if (fps > 0 && fps != p->frameRate) {
+    int forcedFps = rmxpFps;
+    int fps = forcedFps > 0 ? forcedFps : p->gameFrameRate;
+    if (fps != p->frameRate) {
         p->frameRate = fps;
         p->ffSpeed = 0; /* forces the limiter update below */
         shState->input().recalcRepeat((unsigned int)fps);
@@ -1410,6 +1417,8 @@ DEF_ATTR_SIMPLE(Graphics, FrameCount, int, p->frameCount)
 
 void Graphics::setFrameRate(int value) {
 #ifdef __ANDROID__
+    // Keep game requests even while overridden, so switching back restores the current rate.
+    p->gameFrameRate = clamp(value, 10, 120);
     if (rmxpFps > 0) /* the player chose "match the screen" in the options menu */
         return;
 #endif

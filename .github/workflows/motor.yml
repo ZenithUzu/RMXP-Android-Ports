@@ -14,7 +14,7 @@ on:
       version:
         description: "Nombre de la versión (debe coincidir con MOTOR_VERSION en tools/rmxp_port.py)"
         required: true
-        default: "motor-v11"
+        default: "motor-v12"
 
 permissions:
   contents: write

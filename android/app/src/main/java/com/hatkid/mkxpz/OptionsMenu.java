@@ -3,7 +3,6 @@ package com.hatkid.mkxpz;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
-import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -47,6 +46,7 @@ public class OptionsMenu implements TouchControls.Actions
     private Medidor mMedidor;
     public final Teclado teclado;
     private boolean mTurbo = false;
+    private boolean mBackground;
     private int mHz = 60;
 
     public final TouchControls controls;
@@ -99,18 +99,19 @@ public class OptionsMenu implements TouchControls.Actions
     {
         TextView title = mRoot.findViewById(R.id.rmxp_title);
         title.setText(mActivity.getTitle());
-        Typeface gameFont = findGameFont();
-        if (gameFont != null)
-            title.setTypeface(gameFont);
 
         mSpeedValue = mRoot.findViewById(R.id.rmxp_speed_value);
         mStretchValue = mRoot.findViewById(R.id.rmxp_stretch_value);
         mHzHint = mRoot.findViewById(R.id.rmxp_hz_hint);
 
+        chips(R.id.rmxp_sections, "seccion_menu", 0, this::selectSection);
+        selectSection(pref("seccion_menu", 0));
+
         slider(R.id.rmxp_speed, "velocidad", 5, 2, v -> applySpeed());
         slider(R.id.rmxp_stretch, "estirar", 0, 0, v -> applyVideo());
         chips(R.id.rmxp_hz, "hz", 0, v -> applyHz());
         chips(R.id.rmxp_fps, "fps", 0, v -> applyHz());
+        toggle(R.id.rmxp_keep_running, "seguir_en_menu", 1, v -> applySpeed());
         toggle(R.id.rmxp_pad_show, "controles", 1, v -> controls.setUserVisible(v == 1));
         toggle(R.id.rmxp_vibrar, "vibrar", 1, v -> com.hatkid.mkxpz.controles.ControlView.vibrar = v == 1);
         com.hatkid.mkxpz.controles.ControlView.vibrar = pref("vibrar", 1) == 1;
@@ -132,6 +133,7 @@ public class OptionsMenu implements TouchControls.Actions
         mRoot.findViewById(R.id.rmxp_pad_edit).setOnClickListener(v -> {
             mRoot.setVisibility(View.GONE);
             controls.startEditing(this::applySpeed);
+            applySpeed();
         });
         mRoot.findViewById(R.id.rmxp_input).setOnClickListener(v -> showInputMapping());
         mRoot.findViewById(R.id.rmxp_meter).setOnClickListener(v -> mMedidor.showSettings());
@@ -144,6 +146,15 @@ public class OptionsMenu implements TouchControls.Actions
             else
                 partidas.pedirCarpeta(false);
         });
+    }
+
+    private void selectSection(int selected)
+    {
+        int[] ids = { R.id.rmxp_section_0, R.id.rmxp_section_1, R.id.rmxp_section_2 };
+        selected = Math.max(0, Math.min(selected, ids.length - 1));
+        for (int i = 0; i < ids.length; i++)
+            mRoot.findViewById(ids[i]).setVisibility(i == selected ? View.VISIBLE : View.GONE);
+        ((ScrollView) mPanel).smoothScrollTo(0, 0);
     }
 
     /** "Mando y teclado": a qué tecla manda cada botón del mando físico. */
@@ -221,24 +232,6 @@ public class OptionsMenu implements TouchControls.Actions
         });
     }
 
-    /** Usa la primera fuente .ttf/.otf del juego para el título del menú. */
-    private Typeface findGameFont()
-    {
-        File[] fonts = new File(mGamePath, "Fonts").listFiles();
-        if (fonts == null)
-            return null;
-        for (File f : fonts) {
-            String n = f.getName().toLowerCase();
-            if (n.endsWith(".ttf") || n.endsWith(".otf")) {
-                try {
-                    return Typeface.createFromFile(f);
-                } catch (Exception ignored) {
-                }
-            }
-        }
-        return null;
-    }
-
     // ---------------------------------------------------------------- aplicar
 
     private void applyAll()
@@ -253,11 +246,14 @@ public class OptionsMenu implements TouchControls.Actions
 
     private void applySpeed()
     {
+        if (mRoot == null) return;
         int speed = pref("velocidad", 5);
         mSpeedValue.setText("x" + speed);
         controls.refreshTurbo();
-        if (!isOpen() && !controls.isEditing())
-            MainActivity.nativeSetSpeed(mTurbo ? speed : 1);
+        boolean paused = mBackground || ((isOpen() || controls.isEditing()) && pref("seguir_en_menu", 1) == 0);
+        MainActivity.nativeSetSpeed(paused ? 0 : mTurbo ? speed : 1);
+        ((TextView) mRoot.findViewById(R.id.rmxp_status)).setText(
+            paused ? R.string.rmxp_paused : R.string.rmxp_running);
     }
 
     private void applyVideo()
@@ -325,8 +321,9 @@ public class OptionsMenu implements TouchControls.Actions
     {
         if (isOpen() || controls.isEditing())
             return;
-        // El juego sigue corriendo detrás del menú (antes se pausaba y la imagen quedaba quieta)
         mRoot.setVisibility(View.VISIBLE);
+        controls.releasePressed();
+        applySpeed();
         mPanel.setTranslationX(mPanel.getWidth() > 0 ? mPanel.getWidth() : 1000);
         mPanel.animate().translationX(0).setDuration(180).start();
         mRoot.findViewById(R.id.rmxp_resume).requestFocus();
@@ -343,10 +340,10 @@ public class OptionsMenu implements TouchControls.Actions
     /** Al salir a otra app el juego se pausa (no dibuja sin pantalla); al volver sigue. */
     public void onBackground(boolean background)
     {
+        mBackground = background;
         if (background)
-            MainActivity.nativeSetSpeed(0);
-        else if (!isOpen() && !controls.isEditing())
-            applySpeed();
+            controls.releasePressed();
+        applySpeed();
     }
 
     public void toggle()

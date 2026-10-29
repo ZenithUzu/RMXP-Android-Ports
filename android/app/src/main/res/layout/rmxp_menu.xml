@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Menú de opciones: panel a la derecha; el juego queda en pausa y visible a la izquierda -->
+<!-- Menú de opciones: panel a la derecha; el juego puede seguir activo o quedar en pausa -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rmxp_menu_root"
     android:layout_width="match_parent"
@@ -27,7 +27,7 @@
             android:paddingEnd="20dp"
             android:paddingBottom="20dp">
 
-            <!-- El título usa la fuente del propio fangame (de su carpeta Fonts) -->
+            <!-- Fuente del sistema para mantener legible el menú. -->
             <TextView
                 android:id="@+id/rmxp_title"
                 style="@style/RmxpTitle" />
@@ -38,6 +38,14 @@
                 android:layout_marginTop="2dp"
                 android:text="@string/rmxp_paused" />
 
+            <RadioGroup android:id="@+id/rmxp_sections" style="@style/RmxpChipRow">
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_section_screen" />
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_section_controls" />
+                <RadioButton style="@style/RmxpChip" android:text="@string/rmxp_section_saves" />
+            </RadioGroup>
+            <LinearLayout android:id="@+id/rmxp_section_0"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:visibility="visible">
             <!-- Velocidad -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -117,6 +125,17 @@
                 android:layout_marginTop="10dp"
                 android:text="@string/rmxp_meter" />
 
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rmxp_section_1"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:visibility="gone">
+            <Switch
+                android:id="@+id/rmxp_keep_running"
+                style="@style/RmxpSwitch"
+                android:layout_marginTop="12dp"
+                android:text="@string/rmxp_keep_running" />
+            <TextView style="@style/RmxpHint" android:text="@string/rmxp_keep_running_hint" />
+
             <!-- Controles -->
             <TextView style="@style/RmxpSection" android:text="@string/rmxp_controls" />
             <Switch
@@ -160,6 +179,10 @@
                     android:text="@string/rmxp_ctrl_import" />
             </LinearLayout>
 
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rmxp_section_2"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:visibility="gone">
             <!-- Partidas -->
             <TextView style="@style/RmxpSection" android:text="@string/rmxp_saves" />
             <TextView style="@style/RmxpHint" android:text="@string/rmxp_saves_hint" />
@@ -199,6 +222,7 @@
                 android:text="@string/rmxp_log" />
             <TextView style="@style/RmxpHint" android:text="@string/rmxp_log_hint" />
 
+            </LinearLayout>
             <!-- Acciones -->
             <Button
                 android:id="@+id/rmxp_resume"

@@ -15,7 +15,7 @@
     <string name="rmxp_hz_auto">Auto</string>
     <string name="rmxp_hz_60">60 Hz</string>
     <string name="rmxp_hz_max">Max</string>
-    <string name="rmxp_hz_hint">Screen at %1$d Hz. More Hz looks smoother but uses more battery.</string>
+    <string name="rmxp_hz_hint">Requested display: %1$d Hz. Battery or temperature limits may override it.</string>
 
     <string name="rmxp_controls">On-screen controls</string>
     <string name="rmxp_pad_show">Show controls</string>
@@ -28,7 +28,7 @@
     <string name="rmxp_fps">Game FPS</string>
     <string name="rmxp_fps_game">The game\'s own</string>
     <string name="rmxp_fps_screen">Match the screen</string>
-    <string name="rmxp_fps_hint">Match the screen: 60 Hz = 60 fps, 120 Hz = 120 fps. Essentials v20 and newer look smoother; older games also run faster.</string>
+    <string name="rmxp_fps_hint">Game default preserves its original timing. Match the screen changes the FPS target and may speed up the game; it does not remove loading stutter. This is separate from VSync.</string>
     <string name="rmxp_pad_edit">Edit controls</string>
     <string name="rmxp_edit_reset">Reset</string>
     <string name="rmxp_edit_done">Done</string>
@@ -98,4 +98,10 @@
     <string name="rmxp_save_delete">Delete</string>
     <string name="rmxp_save_delete_q">Delete %1$s? Its copy in the RPG Maker folder is deleted too.</string>
     <string name="rmxp_save_backed">Backup: %1$s</string>
+    <string name="rmxp_running">Game running</string>
+    <string name="rmxp_keep_running">Keep game running</string>
+    <string name="rmxp_keep_running_hint">While the menu or control editor is open. Turn off to pause the game.</string>
+    <string name="rmxp_section_screen">Display</string>
+    <string name="rmxp_section_controls">Controls</string>
+    <string name="rmxp_section_saves">Saves</string>
 </resources>

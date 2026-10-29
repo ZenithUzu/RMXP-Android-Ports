@@ -176,16 +176,28 @@ public class MainActivity extends SDLActivity
      * Puts back the APK's mkxp.json before each start. Some games rewrite it from their options
      * menu, and a broken one makes the engine skip our patches (e.g. "uninitialized constant Zlib").
      */
-    private void restoreConfig(File gameDir)
+    private boolean restoreConfig(File gameDir)
     {
-        try (InputStream in = getAssets().open(ASSETS_GAME_DIR + "/mkxp.json");
-             FileOutputStream out = new FileOutputStream(new File(gameDir, "mkxp.json"))) {
+        android.util.AtomicFile config = new android.util.AtomicFile(new File(gameDir, "mkxp.json"));
+        FileOutputStream out = null;
+        try (InputStream in = getAssets().open(ASSETS_GAME_DIR + "/mkxp.json")) {
+            java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
             byte[] buf = new byte[8192];
             int n;
-            while ((n = in.read(buf)) > 0)
-                out.write(buf, 0, n);
-        } catch (IOException e) {
-            Log.w(TAG, "Could not restore mkxp.json: " + e);
+            while ((n = in.read(buf)) != -1)
+                buffer.write(buf, 0, n);
+            byte[] data = buffer.toByteArray();
+            // Both packagers generate strict JSON; never start without a readable patch list.
+            new org.json.JSONObject(new String(data, java.nio.charset.StandardCharsets.UTF_8));
+            out = config.startWrite();
+            out.write(data);
+            config.finishWrite(out);
+            Log.i(TAG, "Restored packaged mkxp.json; APK version=" + versionCode());
+            return true;
+        } catch (Exception e) {
+            if (out != null) config.failWrite(out);
+            Log.e(TAG, "Could not restore mkxp.json; game was not started", e);
+            return false;
         }
     }
 
@@ -269,6 +281,13 @@ public class MainActivity extends SDLActivity
     private void runSDLThread()
     {
         if (!mStarted) {
+            File bundled = new File(getFilesDir(), EXTRACTED_DIR);
+            if (GAME_PATH.equals(bundled.getAbsolutePath()) && hasBundledAssets()
+                    && !restoreConfig(bundled)) {
+                Toast.makeText(this, R.string.rmxp_update_failed, Toast.LENGTH_LONG).show();
+                finish();
+                return;
+            }
             Log.i(TAG, "Game path: " + GAME_PATH);
         }
 
@@ -387,7 +406,6 @@ public class MainActivity extends SDLActivity
                 if (new File(dest, EXTRACT_MARKER).exists() && markerIsCurrent()) {
                     GAME_PATH = dest.getAbsolutePath();
                     Log.i(TAG, "Using bundled game at " + GAME_PATH);
-                    restoreConfig(dest);
                     syncPartidas();
                     runSDLThread();
                 } else if (sExtracting) {
@@ -477,6 +495,7 @@ public class MainActivity extends SDLActivity
     protected void onResume()
     {
         super.onResume();
+        setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
         hideSystemBars();
         // Al volver (por ejemplo, de dar el permiso de la carpeta): trae partidas nuevas de ahí
         if (mStarted && mMenu != null)
@@ -508,6 +527,20 @@ public class MainActivity extends SDLActivity
     @Override
     public boolean dispatchKeyEvent(KeyEvent evt)
     {
+        int code = evt.getKeyCode();
+        if (code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN
+                || code == KeyEvent.KEYCODE_VOLUME_MUTE) {
+            // SDL bypasses Activity's volume handling; use the music stream in every overlay.
+            if (evt.getAction() == KeyEvent.ACTION_DOWN) {
+                android.media.AudioManager audio = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+                if (audio != null && (code != KeyEvent.KEYCODE_VOLUME_MUTE || evt.getRepeatCount() == 0))
+                    audio.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC,
+                        code == KeyEvent.KEYCODE_VOLUME_UP ? android.media.AudioManager.ADJUST_RAISE
+                        : code == KeyEvent.KEYCODE_VOLUME_DOWN ? android.media.AudioManager.ADJUST_LOWER
+                        : android.media.AudioManager.ADJUST_TOGGLE_MUTE, android.media.AudioManager.FLAG_SHOW_UI);
+            }
+            return true;
+        }
         if (mMenu == null)
             return super.dispatchKeyEvent(evt);
 
@@ -524,10 +557,8 @@ public class MainActivity extends SDLActivity
         if (mMenu.isOpen())
             return getWindow().superDispatchKeyEvent(evt);
 
-        int code = evt.getKeyCode();
-        boolean volume = code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN || code == KeyEvent.KEYCODE_VOLUME_MUTE;
         InputDevice device = evt.getDevice();
-        if (!volume && device != null && !device.isVirtual())
+        if (device != null && !device.isVirtual())
             mMenu.controls.onPhysicalInput(); // a real gamepad/keyboard is in use: hide on-screen controls
 
         if (mMenu.pad.onKey(evt))

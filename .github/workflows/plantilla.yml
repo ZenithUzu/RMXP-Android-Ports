@@ -23,16 +23,38 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: plantilla-main
+  cancel-in-progress: true
+
 jobs:
   plantilla:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+      - name: Esperar el motor publicado
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          motor=$(python3 - <<'PYTHON'
+          import ast
+          tree = ast.parse(open('tools/rmxp_port.py', encoding='utf-8').read())
+          print(next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign)
+                     and any(isinstance(t, ast.Name) and t.id == 'MOTOR_VERSION' for t in n.targets)))
+          PYTHON
+          )
+          for intento in $(seq 1 180); do
+            if gh release view "$motor" --json assets --jq '.assets[].name' | grep -qx motor-android.zip; then exit 0; fi
+            echo "Esperando $motor ($intento/180)..."
+            sleep 10
+          done
+          echo "El motor no se publicó a tiempo"; exit 1
       - name: Armar la plantilla (descarga el motor de MOTOR_VERSION)
         run: |
           chmod +x android/gradlew

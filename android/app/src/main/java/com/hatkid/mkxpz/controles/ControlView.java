@@ -256,6 +256,20 @@ public class ControlView extends View
         canvas.drawPath(path, p);
     }
 
+    public void releasePressed()
+    {
+        int[] keys = { KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT };
+        for (int i = 0; i < keys.length; i++)
+            if ((mDir & (1 << i)) != 0)
+                mListener.release(keys[i]);
+        if (mPressed)
+            mListener.release(control.tecla);
+        mDir = 0;
+        mPressed = false;
+        invalidate();
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent e)

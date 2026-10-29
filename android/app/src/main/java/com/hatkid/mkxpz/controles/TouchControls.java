@@ -263,8 +263,19 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
 
     public boolean isEditing() { return mEditing; }
 
+    public void releasePressed()
+    {
+        if (mLayer == null) return;
+        for (int i = 0; i < mLayer.getChildCount(); i++) {
+            View child = mLayer.getChildAt(i);
+            if (child instanceof ControlView)
+                ((ControlView) child).releasePressed();
+        }
+    }
+
     public void startEditing(Runnable onDone)
     {
+        releasePressed();
         mEditing = true;
         mElegido = null;
         android.widget.Toast.makeText(mActivity, R.string.rmxp_edit_hint, android.widget.Toast.LENGTH_LONG).show();
@@ -313,23 +324,23 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         bar.addView(toolButton(R.string.rmxp_edit_add, v -> addControl()));
         Button mas = toolButton(R.string.rmxp_edit_more, null);
         mas.setOnClickListener(v -> {
-            android.widget.PopupMenu m = new android.widget.PopupMenu(mActivity, mas);
-            m.getMenu().add(0, 1, 0, R.string.rmxp_pad_size);
-            m.getMenu().add(0, 2, 0, R.string.rmxp_edit_opacity_all);
-            m.getMenu().add(0, 3, 0, R.string.rmxp_edit_style);
-            m.getMenu().add(0, 4, 0, R.string.rmxp_edit_color);
-            m.getMenu().add(0, 5, 0, R.string.rmxp_edit_reset);
-            m.setOnMenuItemClickListener(it -> {
-                switch (it.getItemId()) {
-                    case 1: globalChoice(true); break;
-                    case 2: globalChoice(false); break;
-                    case 3: chooseSkin(); break;
-                    case 4: chooseColors(); break;
-                    default: mControls = predeterminados(); save(); rebuild();
-                }
-                return true;
-            });
-            m.show();
+            String[] items = {
+                mActivity.getString(R.string.rmxp_pad_size),
+                mActivity.getString(R.string.rmxp_edit_opacity_all),
+                mActivity.getString(R.string.rmxp_edit_style),
+                mActivity.getString(R.string.rmxp_edit_color),
+                mActivity.getString(R.string.rmxp_edit_reset)
+            };
+            new android.app.AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_edit_more)
+                .setItems(items, (dialog, which) -> {
+                    switch (which) {
+                        case 0: globalChoice(true); break;
+                        case 1: globalChoice(false); break;
+                        case 2: chooseSkin(); break;
+                        case 3: chooseColors(); break;
+                        default: mControls = predeterminados(); save(); rebuild();
+                    }
+                }).setNegativeButton(android.R.string.cancel, null).show();
         });
         bar.addView(mas);
         Button done = toolButton(R.string.rmxp_edit_done, v -> {
