@@ -123,4 +123,6 @@
     <string name="rmxp_key_settings">Config.</string>
     <string name="rmxp_key_item">Objeto (clásicos)</string>
     <string name="rmxp_unassigned">Sin asignar</string>
+    <string name="rmxp_badge_show">Mostrar letras pequeñas de las teclas</string>
+    <string name="rmxp_edit_move_toolbar">Mover barra del editor</string>
 </resources>

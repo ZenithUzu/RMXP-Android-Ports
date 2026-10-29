@@ -160,6 +160,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             v.setAlpha(1);
             v.bodyAlpha = opacidad(c);
             boolean propia = mPrefs.getBoolean("insig_propia", false);
+            v.showBadge = mPrefs.getBoolean("insig_mostrar", true);
             v.badgeAlpha = propia ? mPrefs.getInt("insig_opac", 100) / 100f : v.bodyAlpha;
             v.badgeColor = propia ? mPrefs.getInt("insig_color", 0) : 0;
             v.badgeLeft = c.x < 0.5f; // L con su letra a la izquierda, R a la derecha
@@ -310,6 +311,33 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         bar.setBackground(bg);
         int pad = Math.round(dp(6));
         bar.setPadding(pad, pad, pad, pad);
+
+        TextView handle = new TextView(mActivity);
+        handle.setText("⠿");
+        handle.setTextSize(24);
+        handle.setTextColor(mActivity.getColor(R.color.rmxp_niebla));
+        handle.setGravity(Gravity.CENTER);
+        handle.setContentDescription(mActivity.getString(R.string.rmxp_edit_move_toolbar));
+        bar.addView(handle, new LinearLayout.LayoutParams(Math.round(dp(40)), Math.round(dp(44))));
+        handle.setOnTouchListener(new View.OnTouchListener() {
+            private float startX, startY, baseX, baseY;
+            public boolean onTouch(View v, MotionEvent e) {
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startX = e.getRawX(); startY = e.getRawY();
+                        baseX = bar.getX(); baseY = bar.getY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        bar.setX(Math.max(0, Math.min(mLayer.getWidth() - bar.getWidth(), baseX + e.getRawX() - startX)));
+                        bar.setY(Math.max(0, Math.min(mLayer.getHeight() - bar.getHeight(), baseY + e.getRawY() - startY)));
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        return true;
+                    default: return false;
+                }
+            }
+        });
 
         // Pocas opciones a la vista: Añadir, Opciones ▾ (lo demás) y Listo
         bar.addView(toolButton(R.string.rmxp_edit_add, v -> addControl()));
@@ -491,6 +519,14 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     {
         com.hatkid.mkxpz.PanelLateral panel = new com.hatkid.mkxpz.PanelLateral(mActivity, R.string.rmxp_edit_more);
         LinearLayout box = panel.content;
+        Switch badges = new Switch(mActivity);
+        badges.setText(R.string.rmxp_badge_show);
+        badges.setChecked(mPrefs.getBoolean("insig_mostrar", true));
+        badges.setOnCheckedChangeListener((b, on) -> {
+            mPrefs.edit().putBoolean("insig_mostrar", on).apply();
+            placeAll();
+        });
+        box.addView(badges);
         panel.section(R.string.rmxp_pad_size);
         Switch tam_fijo = new Switch(mActivity);
         tam_fijo.setText(R.string.rmxp_global_size);

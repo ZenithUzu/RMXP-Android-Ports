@@ -122,4 +122,6 @@
     <string name="rmxp_key_settings">Settings</string>
     <string name="rmxp_key_item">Item (older games)</string>
     <string name="rmxp_unassigned">Unassigned</string>
+    <string name="rmxp_badge_show">Show small key labels</string>
+    <string name="rmxp_edit_move_toolbar">Move editor toolbar</string>
 </resources>

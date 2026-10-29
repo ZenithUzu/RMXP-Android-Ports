@@ -39,7 +39,7 @@ public class PadMapper {
     private final SharedPreferences prefs;
     private final TouchControls.Actions actions;
     private int layout, deviceId=-1;
-    private String deviceKey, prompted;
+    private String deviceKey;
     private final Set<Integer> digital=new HashSet<>(), axes=new HashSet<>();
     private final Map<Integer,Integer> active=new HashMap<>(), counts=new HashMap<>();
 
@@ -81,7 +81,7 @@ public class PadMapper {
         releaseAll();layout=selected==SWITCH?SWITCH:XBOX;
         SharedPreferences.Editor e=prefs.edit().putInt("mando_layout",layout);
         if(deviceKey!=null)e.putInt(deviceKey,layout);
-        e.apply();prompted=null;
+        e.apply();
     }
     public void reset(){
         releaseAll();SharedPreferences.Editor e=prefs.edit();
@@ -104,11 +104,12 @@ public class PadMapper {
             if(fresh)actions.controllerConnected(device);
             return true;
         }
-        if(!deviceKey.equals(prompted)){prompted=deviceKey;actions.controllerConnected(device);}
-        return false;
+        prefs.edit().putInt(deviceKey,layout).apply();
+        if(fresh)actions.controllerConnected(device);
+        return true;
     }
     public void disconnected(int id){
-        if(id==deviceId){releaseAll();deviceId=-1;deviceKey=null;prompted=null;}
+        if(id==deviceId){releaseAll();deviceId=-1;deviceKey=null;}
     }
     public int cancelButton(){return layout==SWITCH?KeyEvent.KEYCODE_BUTTON_A:KeyEvent.KEYCODE_BUTTON_B;}
     public boolean onKey(KeyEvent event){

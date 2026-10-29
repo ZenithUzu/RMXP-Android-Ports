@@ -44,6 +44,7 @@ public class ControlView extends View
     /** Transparencia del botón y de su insignia (por separado); color propio de la insignia (0 = el normal). */
     float bodyAlpha = 1, badgeAlpha = 1;
     int badgeColor;
+    boolean showBadge = true;
     boolean badgeLeft; // insignia en la esquina izquierda (botones del lado izquierdo, como L)
     /** Editor: borde punteado en todos y borde lleno en el elegido, para saber cuál se edita. */
     boolean editando, elegido;
@@ -75,7 +76,7 @@ public class ControlView extends View
 
         String key = Teclas.nombre(control.tecla);
         String label = control.etiqueta.isEmpty() ? key : control.etiqueta;
-        if (editando && !control.cruceta && control.tecla > 0 && !label.equalsIgnoreCase(key)) {
+        if (showBadge && !control.cruceta && control.tecla > 0 && !label.equalsIgnoreCase(key)) {
             float bx = badgeLeft ? badge : getWidth() - badge, by = badge;
             canvas.saveLayerAlpha(0, 0, getWidth(), getHeight(), Math.round(badgeAlpha * 255));
             mText.setShadowLayer(0, 0, 0, 0);

@@ -171,10 +171,8 @@ public class OptionsMenu implements TouchControls.Actions
     {
         mHandler.post(() -> {
             if (mRoot == null) return;
-            pad.selectProfile(pad.profile()); // Default remains usable if the chooser is dismissed.
+            controls.releasePressed();
             controls.rebuild();
-            open();
-            showInputMapping();
         });
     }
 
@@ -423,6 +421,9 @@ public class OptionsMenu implements TouchControls.Actions
     {
         if (!isOpen())
             return;
+        PanelLateral.dismissOpen(mActivity);
+        mPanel.animate().cancel();
+        mPanel.setTranslationX(0);
         mRoot.setVisibility(View.GONE);
         applySpeed(); // quita la pausa
     }
