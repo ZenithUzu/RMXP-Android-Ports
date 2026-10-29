@@ -97,6 +97,11 @@ public class RuntimeUiTest {
             activity.findViewById(R.id.rmxp_input).performClick();
         });
         screenshot("05-controller");
+        ui(() -> {
+            assertTrue(PanelLateral.dismissOpen(activity));
+            assertTrue(activity.menu.isOpen());
+            assertEquals(0,MainActivity.speed);
+        });
         ui(() -> { assertEquals(android.content.pm.PackageManager.PERMISSION_GRANTED,
             activity.checkSelfPermission(android.Manifest.permission.VIBRATE));activity.finish(); });
     }

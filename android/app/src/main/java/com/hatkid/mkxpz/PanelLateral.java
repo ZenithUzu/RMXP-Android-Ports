@@ -48,6 +48,14 @@ public class PanelLateral {
         host.addView(root, new ViewGroup.LayoutParams(-1, -1));
     }
 
+    public static boolean dismissOpen(Activity activity) {
+        ViewGroup host = activity.findViewById(android.R.id.content);
+        View panel = host.findViewWithTag("rmxp_side_panel");
+        if (panel == null) return false;
+        host.removeView(panel);
+        return true;
+    }
+
     public int dp(float n) { return Math.round(n * activity.getResources().getDisplayMetrics().density); }
     public void dismiss() { if (root.getParent() != null) ((ViewGroup) root.getParent()).removeView(root); }
     public TextView label(String text, int size) {

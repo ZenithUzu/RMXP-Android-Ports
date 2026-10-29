@@ -21,6 +21,7 @@ class KeyEvent {
  int getKeyCode(){return key;} int getAction(){return action;}int getRepeatCount(){return repeat;}InputDevice getDevice(){return null;}
 }
 class VolumeCheck extends Base {
+ static class PanelLateral {static boolean open;static boolean dismissOpen(Object activity){boolean was=open;open=false;return was;}}
  static class android {static class media {static class AudioManager {
   static int STREAM_MUSIC=3, ADJUST_RAISE=1, ADJUST_LOWER=-1, ADJUST_TOGGLE_MUTE=101, FLAG_SHOW_UI=1;
   int count,last;
@@ -33,7 +34,7 @@ class VolumeCheck extends Base {
  static class Controls {boolean isEditing(){return true;}void onPhysicalInput(){throw new AssertionError("hidden controls");}}
  static class Keyboard {boolean shown(){return false;}void hide(){}}
  static class Pad {boolean onKey(KeyEvent e){throw new AssertionError("game mapping got volume");}}
- static class Menu {Controls controls=new Controls(); Keyboard teclado=new Keyboard();Pad pad=new Pad();boolean isOpen(){return true;}void toggle(){}}
+ static class Menu {int toggles;Controls controls=new Controls(); Keyboard teclado=new Keyboard();Pad pad=new Pad();boolean isOpen(){return true;}void toggle(){toggles++;}}
  Menu mMenu;
  boolean isFromGamepad(KeyEvent e){return false;}
  VolumeCheck getWindow(){return this;}boolean superDispatchKeyEvent(KeyEvent e){throw new AssertionError("menu got volume");}
@@ -48,6 +49,9 @@ class VolumeCheck extends Base {
   v.mMenu=new Menu();
   v.check(25,0,0,2,-1);v.check(25,0,1,3,-1);v.check(25,1,0,3,-1);
   v.check(164,0,0,4,101);v.check(164,0,1,4,101);v.check(164,1,0,4,101);
+  PanelLateral.open=true;
+  if(!v.dispatchKeyEvent(new KeyEvent(4,1,0)) || PanelLateral.open || v.mMenu.toggles!=0)
+   throw new AssertionError("Back closed underlying menu instead of side panel");
  }
 }
 '''.replace('METHOD', method)
