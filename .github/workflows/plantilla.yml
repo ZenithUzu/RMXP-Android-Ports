@@ -47,6 +47,10 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           chmod +x android/gradlew
           python3 -m unittest discover -s tests -v
+      - name: Compilar interfaz y pruebas antes de arrancar el emulador
+        run: |
+          mkdir -p /tmp/rmxp-ui-empty
+          android/gradlew -p android -PprebuiltLibs=/tmp/rmxp-ui-empty --no-daemon :uitest:assembleDebug :uitest:assembleDebugAndroidTest
       - name: Probar interfaz compartida en Android 16 (motor simulado)
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -55,7 +59,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           script: |
-            android/gradlew -p android --no-daemon :uitest:connectedDebugAndroidTest
+            android/gradlew -p android -PprebuiltLibs=/tmp/rmxp-ui-empty --no-daemon :uitest:connectedDebugAndroidTest
             adb pull /sdcard/Android/data/com.zenithuzu.rmxpuitest/files/screenshots capturas-ui
       - uses: actions/upload-artifact@v4
         if: always()
