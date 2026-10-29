@@ -35,6 +35,8 @@ import time
 import unicodedata
 import urllib.request
 import zipfile
+from contextlib import contextmanager
+from functools import wraps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rmxp_analyze  # noqa: E402
@@ -580,43 +582,86 @@ def adb_install(apk, project, sdk, log, on_launch=None):
     adb_launch(adb, project["id"], log, on_launch)
 
 
-def limpiar(log=print):
-    """Borra lo que ya no sirve: APKs viejos (deja el más nuevo de cada juego), restos de
-    compilación y motores de versiones anteriores. Nunca toca las firmas (juegos/)."""
-    freed = 0
+_workspace_mutex = threading.RLock()
+_workspace_depth = threading.local()
 
-    def size(path):
-        if os.path.isfile(path):
-            return os.path.getsize(path)
-        return sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(largo(path)) for f in fs)
 
-    def remove(path):
-        nonlocal freed
-        if os.path.exists(path):
-            freed += size(path)
-            shutil.rmtree(largo(path), ignore_errors=True) if os.path.isdir(path) else os.remove(path)
-            log("Borrado: " + path)
+@contextmanager
+def workspace_guard():
+    """Compilar, extraer ZIP y limpiar no pueden tocar el mismo espacio simultáneamente."""
+    if not _workspace_mutex.acquire(blocking=False):
+        raise PortError("Portémon está trabajando. Espera a que termine antes de limpiar o crear otro APK.")
+    lock = None
+    acquired = False
+    nested = getattr(_workspace_depth, "active", False)
+    try:
+        if not nested:
+            os.makedirs(HOME, exist_ok=True)
+            lock = open(os.path.join(HOME, "portemon.lock"), "a+b")
+            if os.path.getsize(lock.name) == 0:
+                lock.write(b"0")
+                lock.flush()
+            lock.seek(0)
+            try:
+                if WINDOWS:
+                    import msvcrt
+                    msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+            except OSError as error:
+                raise PortError("Otra ventana de Portémon está trabajando. Espera a que termine.") from error
+            _workspace_depth.active = True
+        yield
+    finally:
+        if lock is not None:
+            if acquired:
+                lock.seek(0)
+                if WINDOWS:
+                    import msvcrt
+                    msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+                _workspace_depth.active = False
+            lock.close()
+        _workspace_mutex.release()
 
-    apks = os.path.join(HOME, "apks")
-    if os.path.isdir(apks):
-        newest = {}
-        for f in sorted(os.listdir(apks), key=lambda f: os.path.getmtime(os.path.join(apks, f)), reverse=True):
-            game = re.sub(r" v[^ ]*\.apk(\.part)?$", "", f)
-            if game in newest or f.endswith(".part"):
-                remove(os.path.join(apks, f))
-            else:
-                newest[game] = f
-    remove(os.path.join(HOME, "trabajo"))
-    remove(os.path.join(HOME, "zips"))
-    remove(os.path.join(ANDROID, "app", "build"))
-    motores = os.path.join(HOME, "motor")
-    if os.path.isdir(motores):
-        for v in os.listdir(motores):
-            if v != MOTOR_VERSION:
-                remove(os.path.join(motores, v))
-    log("Listo. Espacio liberado: %.0f MB" % (freed / 1048576))
+
+def workspace_operation(function):
+    @wraps(function)
+    def guarded(*args, **kwargs):
+        with workspace_guard():
+            return function(*args, **kwargs)
+    return guarded
+
+
+@workspace_operation
+def limpiar(log=print, confirm=None, include_build=False):
+    """Muestra el plan; solo elimina después de una confirmación explícita."""
+    import portemon_clean
+    candidates = portemon_clean.plan(HOME, ANDROID, MOTOR_VERSION, include_build)
+    log("Portémon · Limpieza de archivos")
+    log("Se conservan juegos, ZIP extraídos, firmas, partidas, logs y el motor actual.")
+    if not candidates:
+        log("No hay archivos para limpiar.")
+        return 0
+    total = sum(c.size for c in candidates)
+    for item in candidates:
+        log("[%s] %.1f MB  %s" % (item.category, item.size / 1048576, item.path))
+    log("Total previsto: %.1f MB en %d elementos." % (total / 1048576, len(candidates)))
+    if confirm is None or not confirm():
+        log("Vista previa terminada. No se eliminó ningún archivo.")
+        return 0
+    freed, failures = portemon_clean.execute(candidates, log)
+    log("Limpieza terminada: %.1f MB liberados; %d elementos sin eliminar." % (freed / 1048576, failures))
+    if failures:
+        raise PortError("Algunos archivos no se pudieron eliminar. Revisa los mensajes anteriores.")
     return freed
 
+
+@workspace_operation
 
 def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
          install=False, motor_dir=None, log=print, ligero=False, fondo="gris", on_launch=None):
@@ -661,6 +706,7 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     return apk
 
 
+@workspace_operation
 def abrir_zip(path, log=print):
     """Descomprime el .zip del juego en una carpeta de trabajo y devuelve la que tiene Game.ini."""
     import zipfile
@@ -679,6 +725,7 @@ def abrir_zip(path, log=print):
     raise PortError("Ese .zip no tiene Game.ini. Elige el .zip del juego (o su carpeta).")
 
 
+@workspace_operation
 def plantilla(motor_dir=None, log=print):
     """APK sin juego para la app del teléfono (RPGMK-AndroidPort-Apk): el motor, los parches
     en assets/rmxp/patches y la biblioteca de Ruby en assets/rmxp/rmxp_ruby. El teléfono le
@@ -709,8 +756,8 @@ def plantilla(motor_dir=None, log=print):
 # Interfaz (tkinter, viene con Python). Arrastrar y soltar si está tkinterdnd2.
 # --------------------------------------------------------------------------
 
-COLORS = {"tinta": "#0F2629", "pizarra": "#1A3A3E", "musgo": "#2E5B5F",
-          "niebla": "#E9F3F0", "liquen": "#8DB1AA", "ambar": "#F2B544", "coral": "#E46F5E"}
+COLORS = {"tinta": "#10151F", "pizarra": "#1B2433", "musgo": "#33445C",
+          "niebla": "#EDF3FA", "liquen": "#A6B4C8", "ambar": "#67DFC0", "coral": "#FF958D"}
 
 
 def gui(initial=None):
@@ -723,70 +770,102 @@ def gui(initial=None):
         DND_FILES, win = None, tk.Tk()
 
     C = COLORS
-    win.title("RMXP-Android-Ports")
+    win.title("Portémon · PC")
     win.configure(bg=C["tinta"])
-    win.geometry("1120x800")
-    win.minsize(980, 740)
+    win.geometry("1200x840")
+    win.minsize(1000, 700)
     base = tkfont.nametofont("TkDefaultFont").actual()["family"]
-    f_title = (base, 20, "bold")
-    f_body = (base, 11)
-    f_small = (base, 10)
+    f_title, f_body, f_small = (base, 23, "bold"), (base, 11), (base, 10)
     events = queue.Queue()
-    apk_events = queue.Queue(maxsize=2000)  # la vista es limitada; el archivo conserva todas las lineas
+    apk_events = queue.Queue(maxsize=2000)
     state = {"root": None, "icon": None, "sf2": None, "busy": False,
-             "capture": None, "package": None, "closed": False}
+             "capture": None, "package": None, "closed": False, "apk": None}
 
     def label(parent, text, fg=C["niebla"], font=f_body, **kw):
         return tk.Label(parent, text=text, bg=parent["bg"], fg=fg, font=font, anchor="w", justify="left", **kw)
 
     def button(parent, text, cmd, bg=C["pizarra"], fg=C["niebla"]):
         return tk.Button(parent, text=text, command=cmd, bg=bg, fg=fg, activebackground=C["musgo"],
-                         activeforeground=C["niebla"], relief="flat", font=f_body, padx=14, pady=6,
+                         activeforeground=C["niebla"], relief="flat", font=f_body, padx=14, pady=9,
                          cursor="hand2", highlightthickness=0, bd=0)
 
-    pad = dict(padx=24)
-    label(win, "RMXP / Android Ports", font=f_title).pack(fill="x", pady=(20, 4), **pad)
-    label(win, "Prepara el APK, ejecútalo en tu teléfono y revisa el juego desde aquí.",
-          fg=C["liquen"], font=f_small).pack(fill="x", **pad)
+    header = tk.Frame(win, bg=C["tinta"])
+    header.pack(fill="x", padx=28, pady=(20, 14))
+    mark = label(header, "P →", fg=C["tinta"], font=(base, 21, "bold"), padx=14, pady=8)
+    mark.configure(bg=C["ambar"])
+    mark.pack(side="left", padx=(0, 16))
+    brand = tk.Frame(header, bg=C["tinta"])
+    brand.pack(side="left")
+    label(brand, "Portémon", font=f_title).pack(anchor="w")
+    label(brand, "TU JUEGO. SU PROPIA APP DE ANDROID.", fg=C["liquen"], font=(base, 9, "bold")).pack(anchor="w")
+    label(header, "PC  /  ESPACIO DE TRABAJO", fg=C["ambar"], font=f_small).pack(side="right")
 
-    workspace = tk.Frame(win, bg=C["tinta"])
-    workspace.pack(fill="both", expand=True, pady=16, **pad)
-    left = tk.Frame(workspace, bg=C["tinta"], width=390)
-    left.pack(side="left", fill="y", padx=(0, 20))
+    workspace = tk.PanedWindow(win, orient="horizontal", bg=C["tinta"], bd=0, sashwidth=14, sashrelief="flat")
+    workspace.pack(fill="both", expand=True, padx=28, pady=(0, 20))
+    left = tk.Frame(workspace, bg=C["tinta"], width=420)
     right = tk.Frame(workspace, bg=C["tinta"])
-    right.pack(side="right", fill="both", expand=True)
-    pad = dict(padx=0)
-    label(left, "1  /  PREPARAR EL JUEGO", fg=C["ambar"], font=f_small).pack(anchor="w", pady=(0, 10))
+    workspace.add(left, minsize=380, width=430)
+    workspace.add(right, minsize=500)
 
-    drop = tk.Frame(left, bg=C["pizarra"], highlightbackground=C["musgo"], highlightthickness=2)
-    drop.pack(fill="x", pady=(0, 14), **pad)
-    drop_text = label(drop, "Arrastra aquí la carpeta del juego" if DND_FILES else
-                      "Elige la carpeta del juego (o arrástrala sobre Portar.bat)", font=(base, 13))
-    drop_text.config(wraplength=350)
-    drop_text.pack(fill="x", padx=12, pady=12)
-    button(drop, "Elegir carpeta", lambda: choose(filedialog.askdirectory(title="Carpeta del juego"))
-           ).pack(side="left", padx=8, pady=(0, 10))
-    button(drop, "Elegir .zip", lambda: choose(filedialog.askopenfilename(title="Juego en .zip", filetypes=[("Zip", "*.zip")]))
-           ).pack(side="left", padx=8, pady=(0, 10))
+    style = ttk.Style(win)
+    style.theme_use("clam")
+    style.configure("TNotebook", background=C["tinta"], borderwidth=0)
+    style.configure("TNotebook.Tab", background=C["pizarra"], foreground=C["liquen"], padding=(18, 11))
+    style.map("TNotebook.Tab", background=[("selected", C["musgo"])], foreground=[("selected", C["niebla"])])
+    style.configure("TProgressbar", background=C["ambar"], troughcolor=C["pizarra"], borderwidth=0)
+    style.configure("Vertical.TScrollbar", background=C["musgo"], troughcolor=C["tinta"], borderwidth=0, arrowsize=10)
 
-    form = tk.Frame(left, bg=C["tinta"])
-    form.pack(fill="x", **pad)
+    viewport = tk.Frame(left, bg=C["tinta"])
+    viewport.pack(fill="both", expand=True)
+    canvas = tk.Canvas(viewport, bg=C["tinta"], highlightthickness=0, bd=0)
+    scroll = ttk.Scrollbar(viewport, orient="vertical", command=canvas.yview)
+    scroll.pack(side="right", fill="y")
+    canvas.pack(side="left", fill="both", expand=True)
+    canvas.configure(yscrollcommand=scroll.set)
+    content = tk.Frame(canvas, bg=C["tinta"])
+    content_id = canvas.create_window((0, 0), window=content, anchor="nw")
+    content.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    canvas.bind("<Configure>", lambda e: canvas.itemconfigure(content_id, width=e.width))
+
+    def scroll_form(event):
+        widget = event.widget
+        while widget is not None and widget != canvas:
+            widget = getattr(widget, "master", None)
+        if widget == canvas:
+            direction = -1 if getattr(event, "num", None) == 4 or event.delta > 0 else 1
+            canvas.yview_scroll(direction * 3, "units")
+            return "break"
+    canvas.bind_all("<MouseWheel>", scroll_form, add="+")
+    canvas.bind_all("<Button-4>", scroll_form, add="+")
+    canvas.bind_all("<Button-5>", scroll_form, add="+")
+
+    def section(title, subtitle):
+        card = tk.Frame(content, bg=C["pizarra"], padx=18, pady=16)
+        card.pack(fill="x", pady=(0, 12), padx=(0, 8))
+        label(card, title, fg=C["ambar"], font=(base, 10, "bold")).pack(fill="x")
+        label(card, subtitle, fg=C["liquen"], font=f_small, wraplength=345).pack(fill="x", pady=(5, 12))
+        return card
+
+    drop = section("01  /  ORIGEN", "Elige la carpeta del juego o su archivo ZIP.")
+    drop_text = label(drop, "Arrastra tu juego aquí" if DND_FILES else "Sin juego seleccionado", font=(base, 13, "bold"), wraplength=340)
+    drop_text.pack(fill="x", pady=(0, 10))
+    choices = tk.Frame(drop, bg=C["pizarra"])
+    choices.pack(fill="x")
+    button(choices, "Carpeta…", lambda: choose(filedialog.askdirectory(title="Carpeta del juego")), bg=C["musgo"]).pack(side="left", padx=(0, 8))
+    button(choices, "Archivo ZIP…", lambda: choose(filedialog.askopenfilename(title="Juego en .zip", filetypes=[("Zip", "*.zip")])), bg=C["musgo"]).pack(side="left")
+
+    form = section("02  /  IDENTIDAD DEL JUEGO", "Revisa los datos antes de crear el APK.")
     fields = {}
-    for row, (key, text) in enumerate((("title", "Nombre de la app"), ("author", "Autor (para la firma)"),
-                                       ("version", "Versión"))):
-        label(form, text, fg=C["liquen"]).grid(row=row, column=0, sticky="w", pady=3)
-        e = tk.Entry(form, bg=C["pizarra"], fg=C["niebla"], insertbackground=C["niebla"], relief="flat",
-                     font=f_body, highlightthickness=1, highlightbackground=C["musgo"], highlightcolor=C["ambar"])
-        e.grid(row=row, column=1, sticky="ew", padx=(12, 0), pady=3, ipady=4)
-        fields[key] = e
-    form.columnconfigure(1, weight=1)
+    for key, text in (("title", "Nombre de la app"), ("author", "Autor (para la firma)"), ("version", "Versión")):
+        label(form, text, fg=C["liquen"], font=f_small).pack(fill="x", pady=(5, 4))
+        entry = tk.Entry(form, bg=C["tinta"], fg=C["niebla"], insertbackground=C["niebla"], relief="flat",
+                         font=f_body, highlightthickness=1, highlightbackground=C["musgo"], highlightcolor=C["ambar"])
+        entry.pack(fill="x", ipady=7, pady=(0, 5))
+        fields[key] = entry
 
-    extras = tk.Frame(left, bg=C["tinta"])
-    extras.pack(fill="x", pady=(10, 0), **pad)
-    icon_lbl = label(extras, "Icono: el de la app base", fg=C["liquen"], font=f_small)
-    sf2_lbl = label(extras, "Música MIDI: sin SoundFont", fg=C["liquen"], font=f_small)
-    icon_lbl.config(wraplength=210)
-    sf2_lbl.config(wraplength=210)
+    extras = section("03  /  RECURSOS", "Icono y música MIDI opcionales.")
+    icon_lbl = label(extras, "Icono de la plantilla", fg=C["liquen"], font=f_small, wraplength=340)
+    sf2_lbl = label(extras, "Sin SoundFont externo", fg=C["liquen"], font=f_small, wraplength=340)
 
     def pick(key, lbl, prefix, types):
         path = filedialog.askopenfilename(filetypes=types)
@@ -794,82 +873,80 @@ def gui(initial=None):
             state[key] = path
             lbl.config(text=prefix + os.path.basename(path), fg=C["niebla"])
 
-    button(extras, "Icono (PNG)...", lambda: pick("icon", icon_lbl, "Icono: ", [("PNG", "*.png")])).grid(row=0, column=0, sticky="w")
-    icon_lbl.grid(row=0, column=1, sticky="w", padx=12)
-    button(extras, "SoundFont (.sf2)...", lambda: pick("sf2", sf2_lbl, "Música MIDI: ", [("SoundFont", "*.sf2")])).grid(row=1, column=0, sticky="w", pady=6)
-    sf2_lbl.grid(row=1, column=1, sticky="w", padx=12)
+    button(extras, "Elegir icono PNG…", lambda: pick("icon", icon_lbl, "Icono: ", [("PNG", "*.png")]), bg=C["musgo"]).pack(fill="x")
+    icon_lbl.pack(fill="x", pady=(5, 12))
+    button(extras, "Elegir SoundFont…", lambda: pick("sf2", sf2_lbl, "MIDI: ", [("SoundFont", "*.sf2")]), bg=C["musgo"]).pack(fill="x")
+    sf2_lbl.pack(fill="x", pady=(5, 12))
     fondo = tk.StringVar(value="gris")
-    label(extras, "Fondo del icono", fg=C["liquen"], font=f_small).grid(row=2, column=0, sticky="w")
-    fondos = tk.Frame(extras, bg=C["tinta"])
-    fondos.grid(row=2, column=1, sticky="w", padx=12)
+    label(extras, "Fondo del icono", fg=C["liquen"], font=f_small).pack(fill="x")
+    fondos = tk.Frame(extras, bg=C["pizarra"])
+    fondos.pack(fill="x", pady=(4, 0))
     for nombre in ("gris", "negro", "blanco"):
-        tk.Radiobutton(fondos, text=nombre.capitalize(), value=nombre, variable=fondo, bg=C["tinta"], fg=C["niebla"],
-                       selectcolor=C["pizarra"], activebackground=C["tinta"], font=f_small,
-                       highlightthickness=0, bd=0).pack(side="left", padx=(0, 10))
+        tk.Radiobutton(fondos, text=nombre.capitalize(), value=nombre, variable=fondo, bg=C["pizarra"], fg=C["niebla"],
+                       selectcolor=C["tinta"], activebackground=C["pizarra"], font=f_small,
+                       highlightthickness=0, bd=0).pack(side="left", padx=(0, 12))
 
-    install = tk.BooleanVar(value=True)
-    tk.Checkbutton(left, text="Instalar y abrir al terminar (USB)", variable=install,
-                   bg=C["tinta"], fg=C["niebla"], selectcolor=C["pizarra"], activebackground=C["tinta"],
-                   activeforeground=C["niebla"], font=f_body, highlightthickness=0, bd=0
-                   ).pack(anchor="w", pady=(12, 0), **pad)
-    ligero = tk.BooleanVar(value=False)
-    tk.Checkbutton(left, text="Ahorrar espacio (experimental)", variable=ligero,
-                   bg=C["tinta"], fg=C["niebla"], selectcolor=C["pizarra"], activebackground=C["tinta"],
-                   activeforeground=C["niebla"], font=f_body, highlightthickness=0, bd=0
-                   ).pack(anchor="w", **pad)
+    options = section("04  /  AL TERMINAR", "La carpeta original, las firmas y las partidas se conservan.")
+    install, ligero, capture = tk.BooleanVar(value=True), tk.BooleanVar(value=False), tk.BooleanVar(value=True)
+    for text, variable in (("Instalar y abrir por USB", install), ("Capturar log del juego al abrirlo", capture),
+                           ("Ahorrar espacio (experimental)", ligero)):
+        tk.Checkbutton(options, text=text, variable=variable, bg=C["pizarra"], fg=C["niebla"], selectcolor=C["tinta"],
+                       activebackground=C["pizarra"], activeforeground=C["niebla"], font=f_small,
+                       highlightthickness=0, bd=0).pack(anchor="w", pady=4)
 
-    capture = tk.BooleanVar(value=True)
-    tk.Checkbutton(left, text="Capturar log del juego al abrirlo", variable=capture,
-                   bg=C["tinta"], fg=C["niebla"], selectcolor=C["pizarra"], activebackground=C["tinta"],
-                   font=f_body, highlightthickness=0, bd=0).pack(anchor="w", **pad)
-    go = button(left, "Crear APK", lambda: start(), bg=C["ambar"], fg=C["tinta"])
-    go.config(font=(base, 13, "bold"), pady=10)
-    go.pack(fill="x", pady=14, **pad)
-
-    progress = ttk.Progressbar(left, mode="indeterminate")
+    action = tk.Frame(left, bg=C["tinta"], pady=8)
+    action.pack(fill="x")
+    go = button(action, "Crear APK", lambda: start(), bg=C["ambar"], fg=C["tinta"])
+    go.config(font=(base, 13, "bold"), pady=12)
+    go.pack(fill="x", pady=(0, 10))
+    progress = ttk.Progressbar(action, mode="indeterminate")
     progress.pack(fill="x")
-    status = label(left, "Listo para elegir un juego.", fg=C["liquen"], font=f_small, wraplength=380)
-    status.pack(fill="x", pady=10)
-    label(left, "La carpeta original y las partidas se conservan.", fg=C["liquen"],
-          font=f_small, wraplength=380).pack(anchor="w")
+    status = label(action, "Listo para elegir un juego.", fg=C["liquen"], font=f_small, wraplength=370)
+    status.pack(fill="x", pady=(8, 0))
 
-    label(right, "2  /  COMPILAR Y PROBAR", fg=C["ambar"], font=f_small).pack(anchor="w", pady=(0, 10))
-    style = ttk.Style(win)
-    style.theme_use("clam")
-    style.configure("TNotebook", background=C["tinta"], borderwidth=0)
-    style.configure("TNotebook.Tab", background=C["pizarra"], foreground=C["niebla"], padding=(14, 9))
-    style.map("TNotebook.Tab", background=[("selected", C["musgo"])])
+    heading = tk.Frame(right, bg=C["tinta"])
+    heading.pack(fill="x", pady=(0, 12))
+    label(heading, "Actividad del proyecto", font=(base, 16, "bold")).pack(side="left")
+
+    def open_output():
+        path = state["apk"]
+        if path and os.path.isfile(path):
+            if WINDOWS:
+                subprocess.Popen(["explorer", "/select,", path])
+            else:
+                subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", os.path.dirname(path)])
+    output_button = button(heading, "Ver APK…", open_output, bg=C["musgo"])
+    output_button.pack(side="right")
+    output_button.config(state="disabled")
+    label(right, "Construcción y registro de Android, siempre a mano.", fg=C["liquen"], font=f_small).pack(fill="x", pady=(0, 12))
     tabs = ttk.Notebook(right)
     tabs.pack(fill="both", expand=True)
-    build_page = tk.Frame(tabs, bg=C["tinta"])
-    apk_page = tk.Frame(tabs, bg=C["tinta"])
-    tabs.add(build_page, text="Compilación")
-    tabs.add(apk_page, text="Log del juego")
+    build_page, apk_page = tk.Frame(tabs, bg=C["tinta"]), tk.Frame(tabs, bg=C["tinta"])
+    tabs.add(build_page, text="Construcción")
+    tabs.add(apk_page, text="Android en vivo")
     controls = tk.Frame(apk_page, bg=C["tinta"])
-    controls.pack(fill="x", pady=8)
+    controls.pack(fill="x", pady=10)
     open_game = button(controls, "Abrir y capturar", lambda: launch(), bg=C["musgo"])
     open_game.pack(side="left")
     open_game.config(state="disabled")
     stop_log = button(controls, "Detener", lambda: stop_capture())
     stop_log.pack(side="left", padx=5)
     button(controls, "Guardar copia…", lambda: save_log()).pack(side="left")
-    capture_status = label(apk_page, "Conecta un teléfono por USB y crea el APK con instalación activada.",
-                           fg=C["liquen"], font=f_small, wraplength=550)
+    capture_status = label(apk_page, "Conecta tu teléfono por USB para ver el registro del juego.", fg=C["liquen"], font=f_small, wraplength=520)
     capture_status.pack(fill="x", pady=(0, 8))
 
     def text_area(parent):
         frame = tk.Frame(parent, bg=C["tinta"])
         frame.pack(fill="both", expand=True)
-        box = tk.Text(frame, bg="#0A1C1E", fg=C["liquen"], font=("Consolas", 9), relief="flat",
-                      wrap="word", highlightthickness=0, padx=10, pady=8)
+        box = tk.Text(frame, bg="#0B1018", fg=C["liquen"], font=("Consolas", 10), relief="flat",
+                      wrap="word", highlightthickness=1, highlightbackground=C["pizarra"], padx=16, pady=14)
         scroll = ttk.Scrollbar(frame, command=box.yview)
         scroll.pack(side="right", fill="y")
         box.configure(yscrollcommand=scroll.set)
         box.pack(fill="both", expand=True)
         return box
 
-    logbox = text_area(build_page)
-    apkbox = text_area(apk_page)
+    logbox, apkbox = text_area(build_page), text_area(apk_page)
     logbox.tag_config("ok", foreground=C["ambar"])
     logbox.tag_config("error", foreground=C["coral"])
 
@@ -992,8 +1069,7 @@ def gui(initial=None):
             try:
                 apk = port(log=lambda t: events.put((t, None)), **args)
                 events.put(("Listo. APK en: " + apk, "ok"))
-                if WINDOWS:
-                    subprocess.Popen(["explorer", "/select,", apk])
+                events.put((apk, "apk"))
             except PortError as e:
                 events.put((str(e), "error"))
             except Exception as e:  # noqa: BLE001 - mostrar cualquier fallo en la ventana
@@ -1013,6 +1089,9 @@ def gui(initial=None):
                 open_game.config(state="normal" if state["package"] else "disabled")
                 progress.stop()
                 status.config(text="Proceso terminado. Revisa el resultado en el registro.")
+            elif tag == "apk":
+                state["apk"] = text
+                output_button.config(state="normal")
             elif tag == "package":
                 state["package"] = text
             elif tag == "capture":
@@ -1055,7 +1134,9 @@ def gui(initial=None):
             for i, p in enumerate(paths, 1):
                 events.put(("\n[%d/%d] %s" % (i, len(paths), os.path.basename(p)), "ok"))
                 try:
-                    events.put(("Listo: " + port(p, log=lambda t: events.put((t, None)), **opts), "ok"))
+                    apk = port(p, log=lambda t: events.put((t, None)), **opts)
+                    events.put(("Listo: " + apk, "ok"))
+                    events.put((apk, "apk"))
                 except Exception as e:  # noqa: BLE001 - seguir con los demás
                     events.put((str(e), "error"))
             events.put((None, "fin"))
@@ -1110,10 +1191,18 @@ def main():
     ap.add_argument("--ligero", action="store_true", help="ahorrar espacio: Graphics/Audio se leen del APK")
     ap.add_argument("--fondo-icono", choices=sorted(FONDOS_ICONO), default="gris", help="color detrás del icono")
     ap.add_argument("--plantilla", action="store_true", help="APK sin juego para la app del teléfono")
-    ap.add_argument("--limpiar", action="store_true", help="borrar APKs viejos y restos de compilación")
+    ap.add_argument("--limpiar", action="store_true", help="revisar y limpiar APKs y motores anteriores")
+    ap.add_argument("--ver-limpieza", action="store_true", help="mostrar la limpieza sin eliminar archivos")
+    ap.add_argument("--incluir-compilacion", action="store_true", help="incluir archivos regenerables de Gradle")
     a = ap.parse_args()
-    if a.limpiar:
-        return limpiar()
+    if a.limpiar or a.ver_limpieza:
+        try:
+            return limpiar(confirm=None if a.ver_limpieza else
+                           lambda: input("¿Eliminar solo estos elementos? Escribe SI: ").strip().upper() == "SI",
+                           include_build=a.incluir_compilacion)
+        except (PortError, OSError, EOFError, KeyboardInterrupt) as error:
+            print("Limpieza detenida: " + str(error))
+            sys.exit(1)
     if a.plantilla:
         print("Plantilla lista: " + plantilla(a.motor))
         return

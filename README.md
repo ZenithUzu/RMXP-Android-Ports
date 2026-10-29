@@ -1,12 +1,14 @@
 **Español** | [English](README.en.md)
 
-# RMXP-Android-Ports
+# Portémon · PC
+
+> Antes RMXP-Android-Ports. Portémon mantiene la carpeta de datos `RMXP-Android-Ports` y los perfiles existentes para seguir usando las mismas firmas. La interfaz ofrece un formulario desplazable y los registros de construcción y Android al lado. El APK se sigue guardando; su carpeta se abre solo al pulsar **Ver APK…**.
 
 Convierte un fangame de RPG Maker XP, VX o VX Ace (por ejemplo, uno hecho con
 Pokémon Essentials) en una **app de Android propia**: con su nombre, su icono
 y su firma. No hace falta JoiPlay ni otra app intermedia.
 
-¿Sin PC? Usa la app compañera [**RPGMK-AndroidPort**](https://github.com/ZenithUzu/RPGMK-AndroidPort-Apk): arma el APK desde el mismo teléfono, con el mismo motor y la misma firma.
+¿Sin PC? Usa la app compañera [**Portémon para Android**](https://github.com/ZenithUzu/RPGMK-AndroidPort-Apk): arma el APK desde el mismo teléfono, con el mismo motor y la misma firma.
 
 En Windows, arrastras la carpeta del juego sobre `Portar.bat`, revisas los
 datos y presionas **Crear APK**. Si el teléfono está conectado, se instala
@@ -77,7 +79,7 @@ motor ya compilado desde las versiones (releases) de este repositorio.
 
 El APK queda en `C:\Users\<tú>\RMXP-Android-Ports\apks\`. Las copias de trabajo se borran solas al terminar.
 
-**`Limpiar.bat`** borra los APK viejos (deja el más nuevo de cada juego), restos de compilación y motores anteriores. Úsalo después de actualizar la herramienta. Nunca toca las firmas.
+**`Limpiar.bat`** muestra un menú y una vista previa con rutas y espacio recuperable. Puedes limpiar APK anteriores (conservando el más reciente de cada juego), archivos `.apk.part` y motores antiguos; los archivos de compilación de Gradle son opcionales. Solo elimina al escribir `SI`. Conserva copias de juegos, ZIP extraídos, firmas, partidas, registros y el motor actual. Si otra ventana está creando un APK, la limpieza se detiene. Los errores se muestran sin contar esos archivos como eliminados.
 
 ## Probar el juego y ver su log desde la PC
 

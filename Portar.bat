@@ -1,5 +1,5 @@
 @echo off
-rem RMXP-Android-Ports: arrastra la carpeta del juego sobre este archivo, o ábrelo y elige la carpeta.
+rem Portémon: arrastra la carpeta del juego sobre este archivo, o ábrelo y elige la carpeta.
 chcp 65001 >nul
 where python >nul 2>nul || (
   echo No encontre Python. Instalalo desde https://www.python.org/downloads/ marcando "Add python.exe to PATH".

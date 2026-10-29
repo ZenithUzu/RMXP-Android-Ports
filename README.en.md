@@ -1,12 +1,14 @@
 [Español](README.md) | **English**
 
-# RMXP-Android-Ports
+# Portémon · PC
+
+> Previously RMXP-Android-Ports. Portémon retains the `RMXP-Android-Ports` data folder and existing profiles to preserve signing continuity. The interface places a scrollable project form beside build and Android logs. APKs are still saved; open their location using **Ver APK…**.
 
 Turns an RPG Maker XP, VX or VX Ace fangame (for example, one made with
 Pokémon Essentials) into **its own Android app**, with its own name, icon
 and signature. No JoiPlay or other middleman app needed.
 
-No PC? Use the companion app [**RPGMK-AndroidPort**](https://github.com/ZenithUzu/RPGMK-AndroidPort-Apk): it builds the APK on the phone itself, with the same engine and the same signature.
+No PC? Use the companion app [**Portémon for Android**](https://github.com/ZenithUzu/RPGMK-AndroidPort-Apk): it builds the APK on the phone itself, with the same engine and the same signature.
 
 On Windows, drag the game folder onto `Portar.bat`, check the details and
 press **Crear APK** (Create APK). If your phone is connected, it installs
@@ -77,7 +79,7 @@ prebuilt engine from this repository's releases.
 
 The APK ends up in `C:\Users\<you>\RMXP-Android-Ports\apks\`. Working copies are deleted automatically when done.
 
-**`Limpiar.bat`** deletes old APKs (keeps the newest one per game), build leftovers and previous engines. Run it after updating the tool. It never touches signatures.
+**`Limpiar.bat`** provides a menu and preview showing paths and recoverable space. Clean older APKs (keeping the newest per game), `.apk.part` files and older engines; Gradle build files are optional. Type `SI` to confirm deletion. Game copies, extracted ZIPs, signing keys, saves, logs and the current engine are preserved. Cleanup refuses to run while another instance is building. Errors are reported without counting failed removals as freed space.
 
 ## When the fangame releases a new version
 
