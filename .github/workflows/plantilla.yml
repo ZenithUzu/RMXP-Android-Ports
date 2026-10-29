@@ -47,6 +47,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
           chmod +x android/gradlew
+          sudo apt-get install -y libopenal1
           python3 -m unittest discover -s tests -v
       - name: Compilar interfaz y pruebas antes de arrancar el emulador
         run: |

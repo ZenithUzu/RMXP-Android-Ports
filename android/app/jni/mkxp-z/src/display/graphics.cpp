@@ -65,6 +65,7 @@
 
 #ifdef __ANDROID__
 #include <jni.h>
+#include "rmxp-audio-pause.h"
 #include <atomic>
 
 /* RMXP-Android-Ports: values set from the Java options menu (MainActivity). */
@@ -93,6 +94,7 @@ Java_com_hatkid_mkxpz_MainActivity_nativeGetDrawnFrames(JNIEnv *, jclass) {
 extern "C" JNIEXPORT void JNICALL
 Java_com_hatkid_mkxpz_MainActivity_nativeSetSpeed(JNIEnv *, jclass, jint speed) {
     rmxpSpeed = std::max(0, std::min((int)speed, 10));
+    rmxpSetAudioPaused(rmxpSpeed == 0);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -733,7 +735,9 @@ struct FPSLimiter {
         adj.resetFlag = false;
     }
     
-    void setDesiredFPS(uint16_t value) { tpf = tickFreq / value; }
+    uint16_t desiredFPS;
+    void setDesiredFPS(uint16_t value) { desiredFPS = value; tpf = tickFreq / value; }
+    uint16_t getDesiredFPS() const { return desiredFPS; }
     
     void delay() {
         if (disabled)
@@ -1238,6 +1242,7 @@ void Graphics::update(bool checkForShutdown) {
      * app: the picture froze and the next swap blocked the UI (ANR). Let go of the surface
      * while paused and bind to the window's current one when resuming. */
     if (rmxpSpeed == 0) {
+        rmxpSetAudioPaused(true);
         SDL_GL_MakeCurrent(p->threadData->window, NULL);
         /* A reset (F12, "Restart game") or quit leaves the pause the normal way, so the
          * surface is bound again first; it's processed at the start of the next update.
@@ -1250,20 +1255,26 @@ void Graphics::update(bool checkForShutdown) {
             p->checkSyncLock();
         }
         SDL_GL_MakeCurrent(p->threadData->window, p->threadData->glContext);
+        rmxpSetAudioPaused(rmxpSpeed == 0);
     }
     
     int forcedFps = rmxpFps;
     int fps = forcedFps > 0 ? forcedFps : p->gameFrameRate;
     if (fps != p->frameRate) {
         p->frameRate = fps;
-        p->ffSpeed = 0; /* forces the limiter update below */
         shState->input().recalcRepeat((unsigned int)fps);
     }
     
-    int speed = rmxpSpeed;
-    if (speed != p->ffSpeed) {
+    int speed = std::max(1, (int)rmxpSpeed);
+    const Config &config = p->threadData->config;
+    bool disabled = forcedFps == 0 && (config.syncToRefreshrate || config.fixedFramerate < 0);
+    int baseRate = forcedFps == 0 && config.fixedFramerate > 0 ? config.fixedFramerate : fps;
+    int targetRate = baseRate * speed;
+    // Read the real limiter state: startup/config/reset can replace it without changing frameRate.
+    if (speed != p->ffSpeed || p->fpsLimiter.getDesiredFPS() != targetRate || p->fpsLimiter.disabled != disabled) {
         p->ffSpeed = speed;
-        p->fpsLimiter.setDesiredFPS(p->frameRate * speed);
+        p->fpsLimiter.disabled = disabled;
+        p->fpsLimiter.setDesiredFPS(targetRate);
         p->fpsLimiter.resetFrameAdjust();
     }
     

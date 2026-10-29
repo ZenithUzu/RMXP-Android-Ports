@@ -28,6 +28,11 @@
 #include <SDL_sound.h>
 #include <SDL_ttf.h>
 #include <alc.h>
+#ifdef __ANDROID__
+#include "display/rmxp-audio-pause.h"
+#include <atomic>
+extern std::atomic<int> rmxpSpeed;
+#endif
 
 #include <assert.h>
 #include <string.h>
@@ -142,6 +147,9 @@ int rgssThreadFun(void *userdata)
 	}
 
 	alcMakeContextCurrent(alcCtx);
+#ifdef __ANDROID__
+    rmxpSetAudioPaused(rmxpSpeed == 0);
+#endif
 
 	try {
 		SharedState::initInstance(threadData);
