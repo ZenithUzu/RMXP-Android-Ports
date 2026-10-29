@@ -47,7 +47,7 @@ public class ControlsUiTest {
   ins.runOnMainSync(()->{
    ControlView c=target[0];View decor=a.getWindow().getDecorView();
    assertEquals(2,c.control.tam);assertTrue(c.getLayoutParams().width>before[0]);
-   View open=find(decor,a.getString(R.string.ap_color_opacity));assertNotNull(open);open.performClick();
+   View open=find(decor,a.getString(R.string.ap_color_opacity));assertNotNull(open);assertTrue(open instanceof Button);open.performClick();
    SeekBar opacity=(SeekBar)find(decor,a.getString(R.string.ap_button_opacity));assertNotNull(opacity);
    opacity.setKeyProgressIncrement(1);opacity.setProgress(24);
    opacity.onKeyDown(KeyEvent.KEYCODE_DPAD_RIGHT,new KeyEvent(0,KeyEvent.KEYCODE_DPAD_RIGHT));

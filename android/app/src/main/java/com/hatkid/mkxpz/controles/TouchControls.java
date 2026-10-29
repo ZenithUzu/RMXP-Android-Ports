@@ -760,14 +760,6 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             box.addView(hint(R.string.rmxp_edit_locked));
         else
             box.addView(chips(tallaNames(), c.tam, i -> { c.tam = i; placeAndSave(); }));
-        box.addView(label(R.string.rmxp_edit_opacity));
-        if (mPrefs.getBoolean("opac_fija", true))
-            box.addView(hint(R.string.rmxp_edit_locked));
-        else
-            box.addView(hint(R.string.ap_color_opacity));
-
-
-
         com.hatkid.mkxpz.PanelLateral panel = new com.hatkid.mkxpz.PanelLateral(mActivity, R.string.rmxp_pad_edit);
         box.setPadding(0, 0, 0, 0);
         panel.content.addView(box);
