@@ -63,6 +63,11 @@ class Utilidades(unittest.TestCase):
         self.assertEqual(json.loads(rmxp_port.strip_json_comments(text)),
                          {"url": "http://a//b", "lista": [1, 2]})
 
+    def test_comas_y_comentarios_dentro_de_cadenas_se_conservan(self):
+        text = '{"texto": ",} /* literal */ // literal", "lista": [1, /* comentario */ ],}'
+        self.assertEqual(json.loads(rmxp_port.strip_json_comments(text)),
+                         {"texto": ",} /* literal */ // literal", "lista": [1]})
+
     def test_stage_conserva_preload_del_juego(self):
         root = make_game({"Game.ini": "[Game]\n", "Game.exe": "x",
                           "mkxp.json": '{"preloadScript": ["suyo.rb"], // nota\n "syncToRefreshrate": true}'})

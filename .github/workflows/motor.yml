@@ -4,12 +4,18 @@
 name: Motor de Android
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - android/app/jni/**
+      - android/tools/**
+      - .github/workflows/motor.yml
   workflow_dispatch:
     inputs:
       version:
         description: "Nombre de la versión (debe coincidir con MOTOR_VERSION en tools/rmxp_port.py)"
         required: true
-        default: "motor-v1"
+        default: "motor-v11"
 
 permissions:
   contents: write
@@ -23,6 +29,23 @@ jobs:
         working-directory: android
     steps:
       - uses: actions/checkout@v4
+
+      - name: Elegir version del motor
+        working-directory: .
+        env:
+          PEDIDA: ${{ inputs.version }}
+        run: |
+          python3 - <<'PY'
+          import ast, os, re
+          tree = ast.parse(open('tools/rmxp_port.py', encoding='utf-8').read())
+          version = next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign)
+                         and any(isinstance(t, ast.Name) and t.id == 'MOTOR_VERSION' for t in n.targets))
+          version = os.environ.get('PEDIDA') or version
+          if not re.fullmatch(r'motor-v\d+', version):
+              raise ValueError('Version de motor invalida')
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write('MOTOR_RELEASE=' + version + '\n')
+          PY
 
       # El Ruby de Ubuntu instala gemas en /var/lib/gems (sin permiso); este no
       - uses: ruby/setup-ruby@v1
@@ -39,10 +62,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ inputs.version }}" build/motor-android.zip \
-            --title "Motor de Android (${{ inputs.version }})" \
+          gh release create "$MOTOR_RELEASE" build/motor-android.zip \
+            --title "Motor de Android ($MOTOR_RELEASE)" \
             --notes "Librerías del motor compiladas desde el commit ${{ github.sha }} por GitHub Actions. La herramienta (Portar.bat) las descarga sola; no hace falta bajarlas a mano. Código fuente: este mismo repositorio (GPL-2.0-or-later)." \
-            || gh release upload "${{ inputs.version }}" build/motor-android.zip --clobber
+            || gh release upload "$MOTOR_RELEASE" build/motor-android.zip --clobber
 
       # La plantilla para la app del teléfono (RPGMK-AndroidPort-Apk) con este mismo motor.
       # Se publica como "plantilla-ultima"; la app la toma en su próxima compilación.
@@ -57,4 +80,4 @@ jobs:
           cp "$HOME/RMXP-Android-Ports/apks/Plantilla v1.apk" plantilla.apk
           gh release delete plantilla-ultima --yes --cleanup-tag || true
           gh release create plantilla-ultima plantilla.apk --title "plantilla-ultima" \
-            --notes "Motor ${{ inputs.version }} sin juego, para RPGMK-AndroidPort-Apk. Hecho de ${GITHUB_SHA::7}."
+            --notes "Motor $MOTOR_RELEASE sin juego, para RPGMK-AndroidPort-Apk. Hecho de ${GITHUB_SHA::7}."

@@ -43,7 +43,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = os.path.join(REPO, "android")
 HOME = os.path.join(os.path.expanduser("~"), "RMXP-Android-Ports")
 # Motor ya compilado (librerías .so). Se publica con .github/workflows/motor.yml.
-MOTOR_VERSION = "motor-v10"
+MOTOR_VERSION = "motor-v11"
 MOTOR_URL = "https://github.com/ZenithUzu/RMXP-Android-Ports/releases/download/%s/motor-android.zip" % MOTOR_VERSION
 WINDOWS = os.name == "nt"
 
@@ -283,11 +283,32 @@ def strip_json_comments(text):
         elif text.startswith("/*", i):
             end = text.find("*/", i + 2)
             i = len(text) if end < 0 else end + 2
+            out.append(" ")
             continue
         else:
             out.append(c)
         i += 1
-    return re.sub(r",(\s*[}\]])", r"\1", "".join(out))  # comas sobrantes
+    text, out, i, in_str = "".join(out), [], 0, False
+    while i < len(text):
+        c = text[i]
+        if in_str:
+            out.append(c)
+            if c == "\\":
+                out.append(text[i + 1:i + 2])
+                i += 1
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+            out.append(c)
+        elif c == ',':
+            j = i + 1
+            while j < len(text) and text[j].isspace(): j += 1
+            if j == len(text) or text[j] not in "}]": out.append(c)
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out)
 
 
 def find_soundfont(game):
