@@ -294,7 +294,6 @@ public class OptionsMenu implements TouchControls.Actions
                 mHz = Math.round(best.getRefreshRate());
             }
         }
-        mHzHint.setText(mActivity.getString(R.string.rmxp_hz_hint, mHz));
         // "Igual a la pantalla": el juego corre a tantos fps como Hz tenga la pantalla
         int target = fpsTarget(pref("fps", 0), mHz);
         MainActivity.nativeSetFps(target);

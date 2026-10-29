@@ -25,6 +25,7 @@ import org.libsdl.app.SDLActivity;
  */
 public class Teclado implements SDLActivity.KeyboardHook
 {
+    public interface VisibilitySink { void accept(boolean shown); }
     // Etiqueta, tecla de Android (0 = solo texto), texto que escribe (null = ninguno), ancho
     private static final Object[][][] FILAS = {
         { k("1"), k("2"), k("3"), k("4"), k("5"), k("6"), k("7"), k("8"), k("9"), k("0"),
@@ -75,10 +76,10 @@ public class Teclado implements SDLActivity.KeyboardHook
     private int mPage;
     private final java.util.Set<Integer> mDown = new java.util.HashSet<>();
     private final java.util.Set<Integer> mModifiers = new java.util.HashSet<>();
-    private final java.util.function.Consumer<Boolean> mVisibility;
+    private final VisibilitySink mVisibility;
 
 
-    public Teclado(Activity activity, SharedPreferences prefs, java.util.function.Consumer<Boolean> visibility)
+    public Teclado(Activity activity, SharedPreferences prefs, VisibilitySink visibility)
     {
         mActivity = activity;
         mVisibility = visibility;
