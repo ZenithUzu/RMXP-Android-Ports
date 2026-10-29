@@ -105,4 +105,39 @@ public class RuntimeUiTest {
         ui(() -> { assertEquals(android.content.pm.PackageManager.PERMISSION_GRANTED,
             activity.checkSelfPermission(android.Manifest.permission.VIBRATE));activity.finish(); });
     }
+    @Test public void performancePanelPersistsAppearanceAndMoves() throws Exception {
+        instrumentation=InstrumentationRegistry.getInstrumentation();
+        activity=(UiActivity)instrumentation.startActivitySync(new android.content.Intent(
+            instrumentation.getTargetContext(),UiActivity.class).putExtra("clear",true).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+        instrumentation.waitForIdleSync();
+        ui(()->{
+            activity.menu.open();activity.findViewById(R.id.rmxp_meter).performClick();
+            assertNotNull(activity.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel"));
+            Switch fps=(Switch)text(activity.getWindow().getDecorView(),activity.getString(R.string.rmxp_meter_fps));
+            fps.setChecked(true);
+            ViewGroup panel=activity.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel");
+            SeekBar opacity=(SeekBar)description(panel,activity.getString(R.string.ap_background_opacity));
+            opacity.setKeyProgressIncrement(1);opacity.setProgress(36);
+            opacity.onKeyDown(KeyEvent.KEYCODE_DPAD_LEFT,new KeyEvent(0,KeyEvent.KEYCODE_DPAD_LEFT));
+            assertEquals(35,activity.getSharedPreferences("rmxp_opciones",0).getInt("med_background",-1));
+            Spinner position=(Spinner)description(panel,activity.getString(R.string.ap_position));
+            position.setSelection(3);
+        });
+        screenshot("06-performance-panel");
+        ui(()->{
+            assertEquals(3,activity.getSharedPreferences("rmxp_opciones",0).getInt("med_anchor",-1));
+            click(R.string.ap_move_meter);
+            assertFalse(activity.menu.isOpen());
+            assertNull(activity.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel"));
+            activity.finish();
+        });
+    }
+    private View description(View v,String value) {
+        if(value.equals(v.getContentDescription()))return v;
+        if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++) {
+            View found=description(((ViewGroup)v).getChildAt(i),value);if(found!=null)return found;
+        }
+        return null;
+    }
+
 }

@@ -180,3 +180,7 @@ This project's code is published under [GPL-2.0-or-later](LICENSE). Third-party 
 This is an independent project, without affiliation or endorsement from Nintendo, The Pokémon Company, Game Freak, the RPG Maker rights holders or fangame authors. Trademarks and assets belong to their respective owners.
 
 The software is provided without warranty under its license terms. Back up saves and signing keys before testing updates.
+
+### Control appearance and performance overlay
+
+The shared Android runtime offers a side panel to edit all controls or one button: color picker, #RRGGBB input and continuous 0–100% opacity, with separate styles for button bodies, labels/symbols and key badges. The performance panel selects visible data, compact/list layout, text color and size, background opacity and position. Android 12+ wallpaper colors still theme the interface; manually chosen colors remain fixed. Existing profiles remain readable.

@@ -14,7 +14,7 @@ import android.widget.TextView;
 /** Shared appearance for editor and controller settings; no floating system dialogs. */
 public class PanelLateral {
     public final LinearLayout content, top;
-    private final Activity activity;
+    public final Activity activity;
     private final FrameLayout root;
 
     public PanelLateral(Activity activity, int title) {
@@ -49,6 +49,7 @@ public class PanelLateral {
         scroll.addView(content);
         panel.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         host.addView(root, new ViewGroup.LayoutParams(-1, -1));
+        close.requestFocus();
     }
 
     public static boolean dismissOpen(Activity activity) {

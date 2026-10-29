@@ -2,7 +2,7 @@ package com.hatkid.mkxpz;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
+
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -15,9 +15,8 @@ import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
+
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.RandomAccessFile;
@@ -34,14 +33,11 @@ public class Medidor
     private static final String[] KEYS = { "med_fps", "med_vel", "med_ram", "med_cpu", "med_bat" };
     private static final int[] NAMES = { R.string.rmxp_meter_fps, R.string.rmxp_meter_speed,
         R.string.rmxp_meter_ram, R.string.rmxp_meter_cpu, R.string.rmxp_meter_battery };
-    private static final int[] COLORES = { 0xFFF2B544, 0xFFFFFFFF, 0xFF4CAF50, 0xFF00BCD4,
-        0xFFE5394F, 0xFFFF7043, 0xFF9C27B0, 0xFF212121 };
-
     private final Activity mActivity;
     private final SharedPreferences mPrefs;
     private final IntSupplier mSpeed;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private TextView mLabel;
+    private TextView mLabel, mPreview;
     private int mLastFrames;
     private long mLastCpu, mLastTime;
 
@@ -81,13 +77,14 @@ public class Medidor
                         v.setY(Math.max(0, Math.min(e.getRawY() + dy, parent.getHeight() - v.getHeight())));
                         return true;
                     case MotionEvent.ACTION_UP:
-                        mPrefs.edit().putFloat("med_x", v.getX() / parent.getWidth())
-                            .putFloat("med_y", v.getY() / parent.getHeight()).apply();
+                        mPrefs.edit().putInt("med_anchor", 4).putFloat("med_x", v.getX() / Math.max(1, parent.getWidth()))
+                            .putFloat("med_y", v.getY() / Math.max(1, parent.getHeight())).apply();
                         return true;
                 }
                 return false;
             }
         });
+        mLabel.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> place());
         layout.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> place());
 
         mLastFrames = MainActivity.nativeGetDrawnFrames();
@@ -107,17 +104,29 @@ public class Medidor
         View parent = (View) mLabel.getParent();
         if (parent == null || parent.getWidth() == 0)
             return;
-        mLabel.setX(mPrefs.getFloat("med_x", 0) * parent.getWidth());
-        mLabel.setY(mPrefs.getFloat("med_y", 0) * parent.getHeight());
+        float maxX = Math.max(0, parent.getWidth() - mLabel.getWidth());
+        float maxY = Math.max(0, parent.getHeight() - mLabel.getHeight());
+        int anchor = mPrefs.getInt("med_anchor", mPrefs.contains("med_x") ? 4 : 0);
+        mLabel.setX(anchor == 4 ? Math.max(0, Math.min(maxX, mPrefs.getFloat("med_x", 0)*parent.getWidth())) :
+            (anchor == 1 || anchor == 3 ? maxX : 0));
+        mLabel.setY(anchor == 4 ? Math.max(0, Math.min(maxY, mPrefs.getFloat("med_y", 0)*parent.getHeight())) :
+            (anchor >= 2 ? maxY : 0));
     }
 
     private void apply()
     {
-        mLabel.setTextColor(mPrefs.getInt("med_color", COLORES[0]));
+        if (mLabel == null) return;
+        mLabel.setTextColor(mPrefs.getInt("med_color", mActivity.getColor(R.color.rmxp_ambar)));
+        mLabel.setTextSize(Math.max(10, Math.min(24, mPrefs.getInt("med_text_size", 13))));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(10 * mActivity.getResources().getDisplayMetrics().density);
+        bg.setColor((Math.round(Math.max(0, Math.min(100, mPrefs.getInt("med_background", 35)))*2.55f) << 24)
+            | (mActivity.getColor(R.color.rmxp_tinta) & 0xFFFFFF));
+        mLabel.setBackground(bg);
         boolean any = false;
         for (int i = 0; i < KEYS.length; i++)
             any |= on(i);
-        mLabel.setVisibility(any ? View.VISIBLE : View.GONE);
+        mLabel.setVisibility(any && mPrefs.getBoolean("med_enabled", true) ? View.VISIBLE : View.GONE);
         place();
     }
 
@@ -165,55 +174,93 @@ public class Medidor
                     items.add("BAT " + level + " %  " + b.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10 + " °C");
                 }
             }
-            mLabel.setText(String.join(items.size() > 2 ? "\n" : "   ", items));
+            int mode = mPrefs.getInt("med_layout", 1);
+            if (mode == 1) {
+                StringBuilder compact = new StringBuilder();
+                for (int i = 0; i < items.size(); i++) {
+                    if (i > 0) compact.append(i % 2 == 0 ? "\n" : " · ");
+                    compact.append(items.get(i));
+                }
+                mLabel.setText(compact.toString());
+            } else mLabel.setText(String.join(mode == 2 || items.size() > 2 ? "\n" : "   ", items));
         }
+        if (mPreview != null && mPreview.isAttachedToWindow()) {
+            mPreview.setText(mLabel.getText());
+            mPreview.setTextSize(mPrefs.getInt("med_text_size", 13));
+            mPreview.setTextColor(mLabel.getCurrentTextColor());
+            mPreview.setBackground(mLabel.getBackground().getConstantState().newDrawable());
+        } else mPreview = null;
         mLastFrames = frames;
         mLastCpu = cpu;
         mLastTime = now;
     }
 
-    /** Ventana para elegir qué datos ver y el color. */
-    public void showSettings()
+    /** Same themed side panel as the controls editor; edits preview immediately. */
+    public void showSettings(Runnable move)
     {
-        float dp = mActivity.getResources().getDisplayMetrics().density;
-        LinearLayout box = new LinearLayout(mActivity);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad = Math.round(20 * dp);
-        box.setPadding(pad, Math.round(8 * dp), pad, 0);
+        PanelLateral panel = new PanelLateral(mActivity, R.string.rmxp_meter);
+        Runnable refresh = () -> { apply(); update(); };
+        Apariencia.toggle(panel, panel.top, R.string.ap_show_meter, mPrefs.getBoolean("med_enabled", true), on -> {
+            mPrefs.edit().putBoolean("med_enabled", on).apply(); refresh.run();
+        });
+        LinearLayout data = Apariencia.card(panel, R.string.ap_data, true);
         for (int i = 0; i < KEYS.length; i++) {
             final int index = i;
-            CheckBox c = new CheckBox(mActivity);
-            c.setText(NAMES[i]);
-            c.setChecked(on(i));
-            c.setOnCheckedChangeListener((b, checked) -> {
-                mPrefs.edit().putBoolean(KEYS[index], checked).apply();
-                apply();
-                update();
+            Apariencia.toggle(panel, data, NAMES[i], on(i), checked -> {
+                mPrefs.edit().putBoolean(KEYS[index], checked).apply(); refresh.run();
             });
-            box.addView(c);
         }
-        LinearLayout colors = new LinearLayout(mActivity);
-        colors.setPadding(0, Math.round(12 * dp), 0, 0);
-        for (int color : COLORES) {
-            View swatch = new View(mActivity);
-            GradientDrawable d = new GradientDrawable();
-            d.setShape(GradientDrawable.OVAL);
-            d.setColor(color);
-            d.setStroke(Math.round(2 * dp), 0x66888888);
-            swatch.setBackground(d);
-            swatch.setOnClickListener(v -> { mPrefs.edit().putInt("med_color", color).apply(); apply(); });
-            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(Math.round(28 * dp), Math.round(28 * dp));
-            p.rightMargin = Math.round(6 * dp);
-            colors.addView(swatch, p);
+        LinearLayout appearance = Apariencia.card(panel, R.string.ap_appearance, true);
+        Apariencia.choice(panel, appearance, R.string.ap_layout,
+            new String[]{mActivity.getString(R.string.ap_compact), mActivity.getString(R.string.ap_list)},
+            mPrefs.getInt("med_layout", 1) == 2 ? 1 : 0, index -> {
+                mPrefs.edit().putInt("med_layout", index == 0 ? 1 : 2).apply(); refresh.run();
+            });
+        android.widget.Button color = panel.button(mActivity.getString(R.string.ap_text_color) + "  ▾", () -> {});
+        appearance.addView(color);
+        LinearLayout picker = Apariencia.column(mActivity);
+        appearance.addView(picker); picker.setVisibility(View.GONE);
+        color.setOnClickListener(v -> picker.setVisibility(picker.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
+        final boolean[] updatingSystem = {false};
+        android.widget.Switch system = Apariencia.toggle(panel, picker, R.string.ap_system_color, !mPrefs.contains("med_color"), on -> {
+            if (updatingSystem[0]) return;
+            if (on) mPrefs.edit().remove("med_color").apply();
+            else mPrefs.edit().putInt("med_color", mActivity.getColor(R.color.rmxp_ambar)).apply();
+            refresh.run(); showSettings(move);
+        });
+        Apariencia.color(panel, picker, mPrefs.getInt("med_color", mActivity.getColor(R.color.rmxp_ambar)), c -> {
+            mPrefs.edit().putInt("med_color", c).apply();
+            updatingSystem[0] = true; system.setChecked(false); updatingSystem[0] = false;
+            refresh.run();
+        });
+        Apariencia.slider(panel, appearance, R.string.ap_text_size, 10, 24, mPrefs.getInt("med_text_size",13), " sp", n -> {
+            mPrefs.edit().putInt("med_text_size", n).apply(); refresh.run();
+        });
+        Apariencia.slider(panel, appearance, R.string.ap_background_opacity, 0, 100, mPrefs.getInt("med_background",35), " %", n -> {
+            mPrefs.edit().putInt("med_background", n).apply(); refresh.run();
+        });
+        Apariencia.choice(panel, appearance, R.string.ap_position, new String[]{
+            mActivity.getString(R.string.ap_top_left), mActivity.getString(R.string.ap_top_right),
+            mActivity.getString(R.string.ap_bottom_left), mActivity.getString(R.string.ap_bottom_right),
+            mActivity.getString(R.string.ap_custom)},
+            mPrefs.getInt("med_anchor", mPrefs.contains("med_x") ? 4 : 0), n -> {
+                mPrefs.edit().putInt("med_anchor", n).apply(); refresh.run();
+            });
+        appearance.addView(panel.button(mActivity.getString(R.string.ap_move_meter), () -> {
+            boolean any = false;
+            for (int i = 0; i < KEYS.length; i++) any |= on(i);
+            SharedPreferences.Editor edit = mPrefs.edit().putBoolean("med_enabled", true);
+            if (!any) edit.putBoolean(KEYS[0], true);
+            edit.apply(); refresh.run(); panel.dismiss(); move.run();
+        }));
+        appearance.addView(panel.label(mActivity.getString(R.string.ap_move_hint),12));
+        TextView preview = panel.label("60 FPS · ×1\nRAM 181 MB · CPU 6 %\nBAT 46 % · 38 °C", 13);
+        preview.setContentDescription(mActivity.getString(R.string.ap_preview));
+        if (mLabel != null) {
+            preview.setText(mLabel.getText()); preview.setTextSize(mPrefs.getInt("med_text_size",13));
+            preview.setTextColor(mLabel.getCurrentTextColor());
         }
-        box.addView(colors);
-        TextView hint = new TextView(mActivity);
-        hint.setText(R.string.rmxp_meter_hint);
-        hint.setPadding(0, Math.round(12 * dp), 0, 0);
-        box.addView(hint);
-        ScrollView scroll = new ScrollView(mActivity);
-        scroll.addView(box);
-        new AlertDialog.Builder(mActivity).setTitle(R.string.rmxp_meter).setView(scroll)
-            .setPositiveButton(R.string.rmxp_edit_done, null).show();
+        panel.top.addView(preview);
+        mPreview = preview;
     }
 }

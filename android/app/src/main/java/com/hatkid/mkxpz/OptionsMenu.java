@@ -144,7 +144,7 @@ public class OptionsMenu implements TouchControls.Actions
             applySpeed();
         });
         mRoot.findViewById(R.id.rmxp_input).setOnClickListener(v -> showInputMapping());
-        mRoot.findViewById(R.id.rmxp_meter).setOnClickListener(v -> mMedidor.showSettings());
+        mRoot.findViewById(R.id.rmxp_meter).setOnClickListener(v -> mMedidor.showSettings(this::close));
         mRoot.findViewById(R.id.rmxp_saves_export).setOnClickListener(v -> partidas.export());
         mRoot.findViewById(R.id.rmxp_saves_import).setOnClickListener(v -> partidas.pickImport());
         mRoot.findViewById(R.id.rmxp_log).setOnClickListener(v -> registro.save());

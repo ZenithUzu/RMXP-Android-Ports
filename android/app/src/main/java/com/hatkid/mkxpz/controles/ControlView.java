@@ -43,6 +43,9 @@ public class ControlView extends View
     int skin; // 0 Moderno, 1 Contorno
     /** Transparencia del botón y de su insignia (por separado); color propio de la insignia (0 = el normal). */
     float bodyAlpha = 1, badgeAlpha = 1;
+    boolean labelOwn, symbolsPass;
+    int labelColor = Color.WHITE;
+    float labelAlpha = 1;
     int badgeColor;
     boolean showBadge = true;
     boolean badgeLeft; // insignia en la esquina izquierda (botones del lado izquierdo, como L)
@@ -71,8 +74,17 @@ public class ControlView extends View
         canvas.saveLayerAlpha(0, 0, getWidth(), getHeight(), Math.round(bodyAlpha * 255));
         canvas.translate(pad, pad);
         float w = getWidth() - 2 * pad, h = getHeight() - 2 * pad, sw = dp(2);
+        symbolsPass = false;
         drawBody(canvas, w, h, sw);
         canvas.restore();
+        if (labelOwn) {
+            canvas.saveLayerAlpha(0, 0, getWidth(), getHeight(), Math.round(labelAlpha * 255));
+            canvas.translate(pad, pad);
+            symbolsPass = true;
+            drawBody(canvas, w, h, sw);
+            canvas.restore();
+            symbolsPass = false;
+        }
 
         String key = Teclas.nombre(control.tecla);
         String label = control.etiqueta.isEmpty() ? key : control.etiqueta;
@@ -110,7 +122,7 @@ public class ControlView extends View
     /** Color base: el elegido, o gris (Moderno) / blanco (Contorno) si no se eligió ninguno. */
     private int base()
     {
-        if (control.color == 0xFFFFFFFF)
+        if (control.systemColor)
             return skin == 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_pizarra) & 0xFFFFFF : 0xFFFFFF;
         return control.color & 0xFFFFFF;
     }
@@ -131,6 +143,7 @@ public class ControlView extends View
             mStroke.setColor(0xF0000000 | c);
         }
         mText.setColor(pressed ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
+        if (labelOwn) mText.setColor(labelColor | 0xFF000000);
         mText.setShadowLayer(dp(skin == 0 ? 1.5f : 2.5f), 0, 0, skin == 0 ? 0x66000000 : 0xAA000000);
     }
 
@@ -148,8 +161,11 @@ public class ControlView extends View
         mRect.set(sw / 2, sw / 2, w - sw / 2, h - sw / 2);
         // Redondos; los anchos, rectángulos con esquinas suaves (no óvalos)
         float r = control.pastilla ? dp(14) : mRect.height() * 0.38f;
-        canvas.drawRoundRect(mRect, r, r, mFill);
-        canvas.drawRoundRect(mRect, r, r, mStroke);
+        if (!symbolsPass) {
+            canvas.drawRoundRect(mRect, r, r, mFill);
+            canvas.drawRoundRect(mRect, r, r, mStroke);
+        }
+        if (labelOwn && !symbolsPass) return;
 
         if (control.tecla < 0) {
             drawActionIcon(canvas, w, h);
@@ -166,10 +182,13 @@ public class ControlView extends View
     {
         float kw = w * 0.92f, kh = h * 0.62f, x0 = (w - kw) / 2, y0 = (h - kh) / 2, r = kh * 0.18f;
         mRect.set(x0, y0, x0 + kw, y0 + kh);
-        canvas.drawRoundRect(mRect, r, r, mFill);
-        canvas.drawRoundRect(mRect, r, r, mStroke);
+        if (!symbolsPass) {
+            canvas.drawRoundRect(mRect, r, r, mFill);
+            canvas.drawRoundRect(mRect, r, r, mStroke);
+        }
+        if (labelOwn && !symbolsPass) return;
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        p.setColor(Color.WHITE);
+        p.setColor(labelOwn ? labelColor | 0xFF000000 : Color.WHITE);
         p.setShadowLayer(dp(1.5f), 0, 0, 0x66000000);
         float gap = kw * 0.045f, key = (kw - 7 * gap) / 6, rowH = (kh - 4 * gap) / 3, kr = key * 0.18f;
         for (int row = 0; row < 2; row++)
@@ -184,7 +203,7 @@ public class ControlView extends View
     private void drawActionIcon(Canvas canvas, float w, float h)
     {
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        p.setColor(control.tecla == Control.TURBO && isActivated() ? mAccent : Color.WHITE);
+        p.setColor(labelOwn ? labelColor | 0xFF000000 : control.tecla == Control.TURBO && isActivated() ? mAccent : Color.WHITE);
         p.setShadowLayer(dp(1.5f), 0, 0, 0x66000000);
         float s = Math.min(w, h) * 0.2f, cx = w / 2, cy = h / 2;
         Path path = new Path();
@@ -221,21 +240,24 @@ public class ControlView extends View
             float y = i < 2 ? i*2*t : t;
             paints((mDir & (1 << i)) != 0, dp(1));
             mRect.set(x + gap, y + gap, x + t - gap, y + t - gap);
-            canvas.drawRoundRect(mRect, r, r, mFill);
-            canvas.drawRoundRect(mRect, r, r, mStroke);
+            if (!symbolsPass) {
+                canvas.drawRoundRect(mRect, r, r, mFill);
+                canvas.drawRoundRect(mRect, r, r, mStroke);
+            }
         }
+        if (labelOwn && !symbolsPass) return;
         // Flechas
         Paint a = new Paint(Paint.ANTI_ALIAS_FLAG);
         a.setColor(Color.WHITE);
         a.setShadowLayer(dp(1.5f), 0, 0, 0x66000000);
         float s = t * 0.15f, c = w / 2;
-        a.setColor((mDir & 1) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
+        a.setColor(labelOwn ? labelColor | 0xFF000000 : (mDir & 1) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
         drawArrow(canvas, a, c, t * 0.5f, 0, -s);
-        a.setColor((mDir & 2) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
+        a.setColor(labelOwn ? labelColor | 0xFF000000 : (mDir & 2) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
         drawArrow(canvas, a, c, h - t * 0.5f, 0, s);
-        a.setColor((mDir & 4) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
+        a.setColor(labelOwn ? labelColor | 0xFF000000 : (mDir & 4) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
         drawArrow(canvas, a, t * 0.5f, h / 2, -s, 0);
-        a.setColor((mDir & 8) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
+        a.setColor(labelOwn ? labelColor | 0xFF000000 : (mDir & 8) != 0 ? getContext().getColor(com.hatkid.mkxpz.R.color.rmxp_tinta) : Color.WHITE);
         drawArrow(canvas, a, w - t * 0.5f, h / 2, s, 0);
     }
 

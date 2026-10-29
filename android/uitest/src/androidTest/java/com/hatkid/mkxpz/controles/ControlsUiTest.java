@@ -47,13 +47,19 @@ public class ControlsUiTest {
   ins.runOnMainSync(()->{
    ControlView c=target[0];View decor=a.getWindow().getDecorView();
    assertEquals(2,c.control.tam);assertTrue(c.getLayoutParams().width>before[0]);
-   View opacity=find(decor,"25 %");assertNotNull(opacity);tap(opacity);
+   View open=find(decor,a.getString(R.string.ap_color_opacity));assertNotNull(open);open.performClick();
+   SeekBar opacity=(SeekBar)find(decor,a.getString(R.string.ap_button_opacity));assertNotNull(opacity);
+   opacity.setKeyProgressIncrement(1);opacity.setProgress(24);
+   opacity.onKeyDown(KeyEvent.KEYCODE_DPAD_RIGHT,new KeyEvent(0,KeyEvent.KEYCODE_DPAD_RIGHT));
   });
   ins.waitForIdleSync();
   ins.runOnMainSync(()->{
    ControlView c=target[0];View decor=a.getWindow().getDecorView();
    assertEquals(.25f,c.bodyAlpha,.001f);
-   View red=find(decor,"#E5394F");assertNotNull(red);red.performClick();assertEquals(0xffe5394f,c.control.color);
+   EditText hex=(EditText)find(decor,a.getString(R.string.ap_hex));assertNotNull(hex);
+   hex.setText("#wrong");assertNotNull(hex.getError());assertEquals(0xffffffff,c.control.color);
+   hex.setText("#E5394F");assertNull(hex.getError());assertEquals(0xffe5394f,c.control.color);
+   assertFalse(c.control.systemColor);
   });
   ins.waitForIdleSync();
   ins.runOnMainSync(()->{
@@ -106,6 +112,35 @@ public class ControlsUiTest {
    a.menu.controls.recargar();
    for(int i=0;i<layer.getChildCount();i++)
     if(layer.getChildAt(i) instanceof ControlView)assertTrue(((ControlView)layer.getChildAt(i)).showBadge);
+   a.finish();
+  });
+ }
+
+ @Test public void symbolsRemainVisibleWithInvisibleBodyAndSurviveExport(){
+  android.app.Instrumentation ins=InstrumentationRegistry.getInstrumentation();
+  UiActivity a=(UiActivity)ins.startActivitySync(new android.content.Intent(ins.getTargetContext(),UiActivity.class)
+    .putExtra("clear",true).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+  ins.waitForIdleSync();
+  ins.runOnMainSync(()->{
+   ControlView.Listener listener=new ControlView.Listener(){
+    public void press(int key){} public void release(int key){}
+    public boolean editTouch(ControlView v,MotionEvent e){return false;}
+   };
+   for(int key:new int[]{KeyEvent.KEYCODE_ESCAPE,Control.TECLADO,Control.TURBO,0}){
+    Control c=Control.boton("test","Esc",key,.5f,.5f,1,false);c.cruceta=key==0;
+    c.labelOwn=true;c.labelColor=Color.RED;c.labelOpacity=1;c.systemColor=false;c.color=Color.WHITE;c.opacidad=0;
+    java.util.List<Control> list=new java.util.ArrayList<>();list.add(c);
+    Control copy=Control.fromJson(Control.toJson(list)).get(0);
+    assertTrue(copy.labelOwn);assertFalse(copy.systemColor);assertEquals(Color.WHITE,copy.color);
+    assertEquals(Color.RED,copy.labelColor);assertEquals(0,copy.opacidad,.001f);
+    ControlView view=new ControlView(a,copy,Color.BLUE,listener);
+    view.layout(0,0,180,180);view.bodyAlpha=0;view.labelOwn=true;view.labelAlpha=1;view.labelColor=Color.RED;
+    Bitmap b=render(view);boolean visible=false;
+    for(int y=0;y<b.getHeight();y++)for(int x=0;x<b.getWidth();x++)visible|=Color.alpha(b.getPixel(x,y))>0;
+    assertTrue("Labels and icons must be independent of the body",visible);
+    view.labelAlpha=0;b=render(view);
+    for(int y=0;y<b.getHeight();y++)for(int x=0;x<b.getWidth();x++)assertEquals(0,Color.alpha(b.getPixel(x,y)));
+   }
    a.finish();
   });
  }

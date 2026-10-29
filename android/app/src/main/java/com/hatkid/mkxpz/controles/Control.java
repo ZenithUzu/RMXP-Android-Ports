@@ -24,10 +24,12 @@ public class Control
     /** Alto en dp de cada talla (la cruceta es CRUCETA veces más grande; las alargadas, PASTILLA de ancho). */
     public static final int[] TALLAS = { 52, 64, 80 };
     public static final float CRUCETA = 2.3f, PASTILLA = 1.6f;
-    /** Opacidades que se pueden elegir, en %. */
-    public static final int[] OPACIDADES = { 25, 50, 75, 100 };
     public int color;           // ARGB
-    public float opacidad;      // 0.1 - 1
+    public boolean systemColor = true;
+    public float opacidad;      // 0 - 1
+    public boolean labelOwn;
+    public int labelColor = 0xFFFFFFFF;
+    public float labelOpacity = 1;
     public boolean pastilla;    // forma alargada en vez de círculo
     public int mando;           // botón de mando que comparte la tecla (KEYCODE_BUTTON_*), 0 = ninguno
 
@@ -91,6 +93,7 @@ public class Control
     {
         return new JSONObject().put("id", id).put("cruceta", cruceta).put("tecla", tecla)
             .put("etiqueta", etiqueta).put("x", x).put("y", y).put("tam", tam)
+            .put("systemColor", systemColor).put("labelOwn", labelOwn).put("labelColor", labelColor).put("labelOpacity", labelOpacity)
             .put("color", color).put("opacidad", opacidad).put("pastilla", pastilla).put("mando", mando);
     }
 
@@ -99,7 +102,11 @@ public class Control
         Control c = boton(o.getString("id"), o.optString("etiqueta"), o.getInt("tecla"),
             (float) o.getDouble("x"), (float) o.getDouble("y"), o.getInt("tam"), o.optBoolean("pastilla"));
         c.cruceta = o.optBoolean("cruceta");
+        c.labelOwn = o.optBoolean("labelOwn", false);
+        c.labelColor = o.optInt("labelColor", 0xFFFFFFFF);
+        c.labelOpacity = Math.max(0, Math.min(1, (float)o.optDouble("labelOpacity", 1)));
         c.color = o.optInt("color", 0xFFFFFFFF);
+        c.systemColor = o.optBoolean("systemColor", c.color == 0xFFFFFFFF);
         c.opacidad = (float) o.optDouble("opacidad", 1);
         c.mando = o.optInt("mando", mandoPorDefecto(c.id));
         return c;

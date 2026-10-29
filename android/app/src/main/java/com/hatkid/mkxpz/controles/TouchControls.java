@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.hatkid.mkxpz.R;
+import com.hatkid.mkxpz.Apariencia;
+import com.hatkid.mkxpz.PanelLateral;
 
 /**
  * Controles en pantalla estilo Kirin: cada botón se puede mover, añadir, borrar, mapear,
@@ -45,10 +47,6 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         boolean turboOn();
         void controllerConnected(InputDevice device);
     }
-
-    // Colores que se pueden elegir (el blanco es el "sin color")
-    static final int[] COLORES = { 0xFFFFFFFF, 0xFFE5394F, 0xFFF2B544, 0xFF4CAF50, 0xFF2196F3,
-        0xFF9C27B0, 0xFFFF7043, 0xFF00BCD4, 0xFF607D8B, 0xFF212121 };
 
     private final Activity mActivity;
     private final SharedPreferences mPrefs;
@@ -162,7 +160,10 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             boolean propia = mPrefs.getBoolean("insig_propia", false);
             v.showBadge = mPrefs.getBoolean("insig_mostrar", true);
             v.badgeAlpha = propia ? mPrefs.getInt("insig_opac", 100) / 100f : v.bodyAlpha;
-            v.badgeColor = propia ? mPrefs.getInt("insig_color", 0) : 0;
+            v.badgeColor = propia ? (mPrefs.getInt("insig_color", mAccent) | 0xFF000000) : 0;
+            v.labelOwn = c.labelOwn || mPrefs.getBoolean("label_own", false);
+            v.labelColor = c.labelOwn ? c.labelColor : mPrefs.getInt("label_color", mAccent);
+            v.labelAlpha = c.labelOwn ? c.labelOpacity : mPrefs.getInt("label_opacity", 100) / 100f;
             v.badgeLeft = c.x < 0.5f; // L con su letra a la izquierda, R a la derecha
             v.skin = mPrefs.getInt("skin", 0);
             v.invalidate();
@@ -542,20 +543,15 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         opac_fija.setChecked(mPrefs.getBoolean("opac_fija", true));
         opac_fija.setOnCheckedChangeListener((b, on) -> { mPrefs.edit().putBoolean("opac_fija", on).apply(); placeAll(); });
         box.addView(opac_fija);
-        box.addView(chips(opacNames(), indexOf(Control.OPACIDADES, mPrefs.getInt("opac_global", 75)), i -> {
-            opac_fija.setChecked(true); mPrefs.edit().putInt("opac_global", Control.OPACIDADES[i]).apply(); placeAll();
-        }));
+        Apariencia.slider(panel, box, R.string.ap_button_opacity, 0, 100, mPrefs.getInt("opac_global", 75), " %", n -> {
+            opac_fija.setChecked(true); mPrefs.edit().putInt("opac_global", n).apply(); placeAll();
+        });
         panel.section(R.string.rmxp_edit_style);
         box.addView(chips(new String[] { mActivity.getString(R.string.rmxp_skin_modern),
             mActivity.getString(R.string.rmxp_skin_outline) }, mPrefs.getInt("skin", 0), i -> {
             mPrefs.edit().putInt("skin", i).apply(); placeAll();
         }));
-        panel.section(R.string.rmxp_color_buttons);
-        box.addView(swatches(COLORES, color -> {
-            for (Control c : mControls) c.color = color;
-            placeAndSave();
-        }));
-        box.addView(panel.button(mActivity.getString(R.string.rmxp_badge_own), () -> { panel.dismiss(); chooseColors(); }));
+        box.addView(panel.button(mActivity.getString(R.string.ap_color_opacity), () -> chooseColors(null)));
         box.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
             new AlertDialog.Builder(mActivity).setMessage(R.string.rmxp_reset_layout_confirm)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -565,97 +561,120 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         }));
     }
 
-    /**
-     * Colores: uno para todos los botones a la vez y, aparte, el de las letras pequeñas
-     * (insignias) con su propia transparencia, si se activa "Color y transparencia propios".
-     */
-    private void chooseColors()
+    private void chooseColors() { chooseColors(null); }
+
+    private void chooseColors(Control target)
     {
-        LinearLayout box = new LinearLayout(mActivity);
-        box.setOrientation(LinearLayout.VERTICAL);
-        int pad = Math.round(dp(20));
-        box.setPadding(pad, Math.round(dp(8)), pad, 0);
-
-        box.addView(label(R.string.rmxp_color_buttons));
-        box.addView(swatches(COLORES, color -> {
-            for (Control c : mControls)
-                c.color = color;
-            placeAndSave();
-        }));
-
-        box.addView(label(R.string.rmxp_color_badges));
-        Switch own = new Switch(mActivity);
-        own.setText(R.string.rmxp_badge_own);
-        own.setChecked(mPrefs.getBoolean("insig_propia", false));
-        box.addView(own);
-        LinearLayout extra = new LinearLayout(mActivity);
-        extra.setOrientation(LinearLayout.VERTICAL);
-        int[] badgeColors = new int[COLORES.length + 1];
-        badgeColors[0] = mAccent; // el ámbar de siempre
-        System.arraycopy(COLORES, 0, badgeColors, 1, COLORES.length);
-        extra.addView(swatches(badgeColors, color -> {
-            mPrefs.edit().putInt("insig_color", color & 0xFFFFFF).apply();
-            placeAll();
-        }));
-        extra.addView(chips(opacNames(), indexOf(Control.OPACIDADES, mPrefs.getInt("insig_opac", 100)), i -> {
-            mPrefs.edit().putInt("insig_opac", Control.OPACIDADES[i]).apply();
-            placeAll();
-        }));
-        extra.setVisibility(own.isChecked() ? View.VISIBLE : View.GONE);
-        own.setOnCheckedChangeListener((b, on) -> {
-            mPrefs.edit().putBoolean("insig_propia", on).apply();
-            extra.setVisibility(on ? View.VISIBLE : View.GONE);
-            placeAll();
-        });
-        box.addView(extra);
-        box.addView(hint(R.string.rmxp_badge_hint));
-
-        com.hatkid.mkxpz.PanelLateral panel = new com.hatkid.mkxpz.PanelLateral(mActivity, R.string.rmxp_edit_color);
-        box.setPadding(0, 0, 0, 0);
-        panel.content.addView(box);
-    }
-
-    private View swatches(int[] colors, IntSink sink)
-    {
-        GridLayout grid = new GridLayout(mActivity);
-        grid.setColumnCount(6);
-        for (int color : colors) {
-            View swatch = new View(mActivity);
-            GradientDrawable bg = new GradientDrawable();
-            bg.setColor(color); bg.setCornerRadius(dp(12));
-            bg.setStroke(Math.round(dp(2)), 0x66888888);
-            swatch.setBackground(bg);
-            swatch.setContentDescription(String.format("#%06X", color & 0xFFFFFF));
-            swatch.setOnClickListener(v -> sink.put(color));
-            GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-            lp.width = lp.height = Math.round(dp(44));
-            lp.setMargins(0, Math.round(dp(4)), Math.round(dp(4)), 0);
-            grid.addView(swatch, lp);
+        PanelLateral panel = new PanelLateral(mActivity, R.string.ap_color_opacity);
+        if (mControls.isEmpty()) {
+            panel.content.addView(panel.button(mActivity.getString(R.string.rmxp_edit_add), () -> { panel.dismiss(); addControl(); }));
+            return;
         }
-        return grid;
+        String[] names = new String[mControls.size() + 1];
+        names[0] = mActivity.getString(R.string.ap_all);
+        for (int i = 0; i < mControls.size(); i++) {
+            Control c = mControls.get(i);
+            names[i + 1] = c.cruceta ? mActivity.getString(R.string.rmxp_dpad) :
+                c.etiqueta.isEmpty() ? Teclas.nombre(c.tecla) : c.etiqueta;
+        }
+        Apariencia.choice(panel, panel.top, R.string.ap_apply_to, names,
+            target == null ? 0 : mControls.indexOf(target) + 1,
+            n -> chooseColors(n == 0 ? null : mControls.get(n - 1)));
+        TextView preview = panel.label(mActivity.getString(R.string.ap_preview) + "   Esc  ▲", 16);
+        preview.setContentDescription(mActivity.getString(R.string.ap_preview));
+        Runnable refresh = () -> {
+            placeAndSave();
+            Control c = target == null ? mControls.get(0) : target;
+            boolean own = c.labelOwn || mPrefs.getBoolean("label_own", false);
+            int color = c.labelOwn ? c.labelColor : mPrefs.getInt("label_color", mAccent);
+            float alpha = c.labelOwn ? c.labelOpacity : mPrefs.getInt("label_opacity", 100) / 100f;
+            preview.setTextColor(own ? (Math.round(alpha * 255) << 24) | (color & 0xFFFFFF) : 0xFFFFFFFF);
+            GradientDrawable bg = new GradientDrawable();
+            int base = c.systemColor ? mActivity.getColor(R.color.rmxp_pizarra) : c.color;
+            bg.setColor((Math.round(opacidad(c) * 192) << 24) | (base & 0xFFFFFF));
+            bg.setCornerRadius(dp(12)); preview.setBackground(bg);
+        };
+        LinearLayout buttons = Apariencia.card(panel, R.string.ap_buttons, true);
+        final boolean[] updatingSystem = {false};
+        Switch system = Apariencia.toggle(panel, buttons, R.string.ap_system_color,
+            (target == null ? mControls.get(0) : target).systemColor, on -> {
+                if (updatingSystem[0]) return;
+                if (target == null) for (Control c : mControls) { c.color = on ? 0xFFFFFFFF : mAccent; c.systemColor = on; }
+                else { target.color = on ? 0xFFFFFFFF : mAccent; target.systemColor = on; }
+                chooseColors(target); placeAndSave();
+            });
+        Control first = target == null ? mControls.get(0) : target;
+        Apariencia.color(panel, buttons, first.systemColor ? mActivity.getColor(R.color.rmxp_pizarra) : first.color, color -> {
+            if (target == null) for (Control c : mControls) { c.color = color; c.systemColor = false; }
+            else { target.color = color; target.systemColor = false; }
+            updatingSystem[0] = true; system.setChecked(false); updatingSystem[0] = false;
+            refresh.run();
+        });
+        Apariencia.slider(panel, buttons, R.string.ap_button_opacity, 0, 100, Math.round(opacidad(first)*100), " %", n -> {
+            if (target == null) mPrefs.edit().putBoolean("opac_fija", true).putInt("opac_global", n).apply();
+            else {
+                // Materialize the previous global value before switching to individual opacity.
+                if (mPrefs.getBoolean("opac_fija", true)) {
+                    for (Control c : mControls) c.opacidad = opacidad(c);
+                    mPrefs.edit().putBoolean("opac_fija", false).apply();
+                }
+                target.opacidad = n / 100f;
+            }
+            refresh.run();
+        });
+        LinearLayout labels = Apariencia.card(panel, R.string.ap_labels, true);
+        LinearLayout extra = Apariencia.column(mActivity);
+        boolean own = target == null ? mPrefs.getBoolean("label_own", false) : target.labelOwn;
+        Apariencia.toggle(panel, labels, R.string.ap_independent, own, on -> {
+            if (target == null) {
+                for (Control c : mControls) c.labelOwn = false;
+                mPrefs.edit().putBoolean("label_own", on).apply();
+            }
+            else target.labelOwn = on;
+            extra.setVisibility(on ? View.VISIBLE : View.GONE); refresh.run();
+        });
+        labels.addView(extra); extra.setVisibility(own ? View.VISIBLE : View.GONE);
+        Apariencia.color(panel, extra, target == null ? mPrefs.getInt("label_color", mAccent) : target.labelColor, color -> {
+            if (target == null) {
+                for (Control c : mControls) c.labelOwn = false;
+                mPrefs.edit().putInt("label_color", color).apply();
+            } else target.labelColor = color;
+            refresh.run();
+        });
+        Apariencia.slider(panel, extra, R.string.ap_label_opacity, 0, 100,
+            target == null ? mPrefs.getInt("label_opacity", 100) : Math.round(target.labelOpacity*100), " %", n -> {
+                if (target == null) {
+                    for (Control c : mControls) c.labelOwn = false;
+                    mPrefs.edit().putInt("label_opacity", n).apply();
+                } else target.labelOpacity = n/100f;
+                refresh.run();
+            });
+        // Keep the pre-existing small key-badge preferences available without renaming their meaning.
+        LinearLayout badges = Apariencia.card(panel, R.string.rmxp_color_badges, false);
+        Apariencia.toggle(panel, badges, R.string.ap_independent, mPrefs.getBoolean("insig_propia", false), on -> {
+            mPrefs.edit().putBoolean("insig_propia", on).apply(); refresh.run();
+        });
+        Apariencia.color(panel, badges, mPrefs.getInt("insig_color", mAccent), color -> {
+            mPrefs.edit().putInt("insig_color", color & 0xFFFFFF).apply(); refresh.run();
+        });
+        Apariencia.slider(panel, badges, R.string.ap_label_opacity, 0, 100, mPrefs.getInt("insig_opac",100), " %", n -> {
+            mPrefs.edit().putInt("insig_opac", n).apply(); refresh.run();
+        });
+        panel.top.addView(preview); refresh.run();
+        panel.content.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
+            if (target == null) {
+                for (Control c : mControls) { c.color = 0xFFFFFFFF; c.systemColor = true; c.labelOwn = false; c.opacidad = 1; }
+                mPrefs.edit().putBoolean("label_own", false).putBoolean("opac_fija",true).putInt("opac_global",75)
+                    .putBoolean("insig_propia",false).apply();
+            } else { target.color = 0xFFFFFFFF; target.systemColor = true; target.labelOwn = false; target.opacidad = 1; }
+            placeAndSave(); chooseColors(target);
+        }));
     }
 
     private String[] tallaNames()
     {
         return new String[] { mActivity.getString(R.string.rmxp_size_s), mActivity.getString(R.string.rmxp_size_m),
             mActivity.getString(R.string.rmxp_size_l) };
-    }
-
-    private static String[] opacNames()
-    {
-        String[] n = new String[Control.OPACIDADES.length];
-        for (int i = 0; i < n.length; i++)
-            n[i] = Control.OPACIDADES[i] + " %";
-        return n;
-    }
-
-    private static int indexOf(int[] a, int v)
-    {
-        int best = 0;
-        for (int i = 0; i < a.length; i++)
-            if (Math.abs(a[i] - v) < Math.abs(a[best] - v))
-                best = i;
-        return best;
     }
 
     /** Fila de opciones fijas (solo una elegida). */
@@ -745,15 +764,14 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         if (mPrefs.getBoolean("opac_fija", true))
             box.addView(hint(R.string.rmxp_edit_locked));
         else
-            box.addView(chips(opacNames(), indexOf(Control.OPACIDADES, Math.round(c.opacidad * 100)),
-                i -> { c.opacidad = Control.OPACIDADES[i] / 100f; placeAndSave(); }));
+            box.addView(hint(R.string.ap_color_opacity));
 
-        box.addView(label(R.string.rmxp_edit_color));
-        box.addView(swatches(COLORES, color -> { c.color = color; placeAndSave(); }));
+
 
         com.hatkid.mkxpz.PanelLateral panel = new com.hatkid.mkxpz.PanelLateral(mActivity, R.string.rmxp_pad_edit);
         box.setPadding(0, 0, 0, 0);
         panel.content.addView(box);
+        panel.content.addView(panel.button(mActivity.getString(R.string.ap_color_opacity), () -> chooseColors(c)));
         if (!c.cruceta || mControls.size() > 1)
             panel.content.addView(panel.button(mActivity.getString(R.string.rmxp_edit_delete), () -> {
                 mControls.remove(c); mElegido = null; save(); rebuild(); panel.dismiss();
