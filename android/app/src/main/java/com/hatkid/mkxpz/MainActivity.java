@@ -284,7 +284,7 @@ public class MainActivity extends SDLActivity
             File bundled = new File(getFilesDir(), EXTRACTED_DIR);
             if (GAME_PATH.equals(bundled.getAbsolutePath()) && hasBundledAssets()
                     && !restoreConfig(bundled)) {
-                Toast.makeText(this, R.string.rmxp_update_failed, Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.rmxp_config_failed, Toast.LENGTH_LONG).show();
                 finish();
                 return;
             }
@@ -516,6 +516,13 @@ public class MainActivity extends SDLActivity
     @Override
     protected void onDestroy()
     {
+        // A native error dialog can block SDL's quit handshake; this runtime must exit anyway.
+        Thread shutdown = new Thread(() -> {
+            android.os.SystemClock.sleep(2000);
+            android.os.Process.killProcess(android.os.Process.myPid());
+        }, "mkxp-shutdown");
+        shutdown.setDaemon(true);
+        shutdown.start();
         super.onDestroy();
 
         // HACK: Exiting the JVM (process) since Ruby does not likes when we

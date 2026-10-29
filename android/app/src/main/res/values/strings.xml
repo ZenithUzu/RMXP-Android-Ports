@@ -105,4 +105,5 @@
     <string name="rmxp_section_screen">Pantalla</string>
     <string name="rmxp_section_controls">Controles</string>
     <string name="rmxp_section_saves">Partidas</string>
+    <string name="rmxp_config_failed">No se pudo restaurar la configuración del juego. Vuelve a crear el APK. Tus partidas se conservan.</string>
 </resources>

@@ -104,4 +104,5 @@
     <string name="rmxp_section_screen">Display</string>
     <string name="rmxp_section_controls">Controls</string>
     <string name="rmxp_section_saves">Saves</string>
+    <string name="rmxp_config_failed">Game configuration could not be restored. Rebuild the APK. Your saves are preserved.</string>
 </resources>
