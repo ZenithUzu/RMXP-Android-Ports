@@ -65,6 +65,9 @@ public class PadMapperTest {
   assertTrue(restored.sources(false).contains(axis));assertEquals(KeyEvent.KEYCODE_C,restored.keyFor(axis));
   restored.reset();assertEquals(Control.MENU,restored.keyFor(keyboard));assertEquals(0,restored.keyFor(axis));
   restored.resetKeyboard();assertEquals(KeyEvent.KEYCODE_F11,restored.keyFor(keyboard));assertTrue(restored.sources(true).isEmpty());
+  p.setKey(KeyEvent.KEYCODE_BUTTON_B,Control.MENU);events.clear();
+  p.onSource(KeyEvent.KEYCODE_BUTTON_B,true);assertTrue(events.isEmpty());
+  p.onSource(KeyEvent.KEYCODE_BUTTON_B,false);assertEquals(Arrays.asList("a"+Control.MENU),events);
   try{p.setKey(PadMapper.KEYBOARD+KeyEvent.getMaxKeyCode()+1,Control.MENU);fail("Invalid input accepted");}
   catch(IllegalArgumentException expected){}
  }

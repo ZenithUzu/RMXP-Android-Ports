@@ -184,10 +184,12 @@ public class PadMapper {
         if(down && !active.containsKey(code)){
             int key=keyFor(code);active.put(code,key);
             if(key>0){int n=counts.containsKey(key)?counts.get(key):0;counts.put(key,n+1);if(n==0&&!keyboardHeld.contains(key))actions.keyDown(key);}
-            else if(key<0)actions.action(key);
+            else if(key<0 && key!=Control.MENU)actions.action(key);
         }else if(!down && active.containsKey(code)){
             int key=active.remove(code);
             if(key>0){int n=counts.get(key)-1;if(n==0){counts.remove(key);if(!keyboardHeld.contains(key))actions.keyUp(key);}else counts.put(key,n);}
+            // Open on release: mapping B/Back to Menu must not close it on that same release.
+            else if(key==Control.MENU)actions.action(key);
         }
     }
     private void axis(int code,float value){
