@@ -213,6 +213,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     public void keyboardVisible(boolean shown)
     {
         if (shown) releasePressed();
+        else mShown = true; // Closing the touch keyboard restores the touch input mode.
         mKeyboard = shown;
         updateVisibility();
     }

@@ -59,8 +59,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           script: |
-            android/gradlew -p android -PprebuiltLibs=/tmp/rmxp-ui-empty --no-daemon :uitest:connectedDebugAndroidTest
-            adb pull /sdcard/Android/data/com.zenithuzu.rmxpuitest/files/screenshots capturas-ui
+            bash .github/scripts/probar-interfaz.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

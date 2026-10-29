@@ -23,8 +23,12 @@ public class RuntimeUiTest {
     }
     private void screenshot(String name) throws Exception {
         android.graphics.Bitmap b=instrumentation.getUiAutomation().takeScreenshot();
-        java.io.File dir=new java.io.File(activity.getExternalFilesDir(null),"screenshots");dir.mkdirs();
-        try(java.io.FileOutputStream out=new java.io.FileOutputStream(new java.io.File(dir,name+".png"))) {
+        android.content.ContentValues values=new android.content.ContentValues();
+        values.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME,name+".png");
+        values.put(android.provider.MediaStore.Images.Media.MIME_TYPE,"image/png");
+        values.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH,"Pictures/rmxp-ui");
+        android.net.Uri uri=activity.getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,values);
+        try(java.io.OutputStream out=activity.getContentResolver().openOutputStream(uri)) {
             b.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);
         }
     }
@@ -75,7 +79,15 @@ public class RuntimeUiTest {
             View functions=text(activity.getWindow().getDecorView(),"F1–F12"); assertNotNull(functions);functions.performClick();
             assertNotNull(text(activity.getWindow().getDecorView(),"F12"));
             assertNotNull(text(activity.getWindow().getDecorView(),"↑"));
-            activity.menu.teclado.hide();assertTrue(org.libsdl.app.SDLActivity.held.isEmpty());
+            View ctrl=text(activity.getWindow().getDecorView(),"Ctrl");
+            long now=android.os.SystemClock.uptimeMillis();
+            ctrl.dispatchTouchEvent(MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,5,5,0));
+            ctrl.dispatchTouchEvent(MotionEvent.obtain(now,now,MotionEvent.ACTION_UP,5,5,0));
+            assertTrue(org.libsdl.app.SDLActivity.held.contains(KeyEvent.KEYCODE_CTRL_LEFT));
+            assertTrue(activity.menu.teclado.onOutsideTouch(MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,1,1,0)));
+            assertTrue(activity.menu.teclado.onOutsideTouch(MotionEvent.obtain(now,now,MotionEvent.ACTION_UP,1,1,0)));
+            assertFalse(activity.menu.teclado.shown());
+            assertTrue(org.libsdl.app.SDLActivity.held.isEmpty());
             View controls=activity.findViewById(android.R.id.content).findViewWithTag("rmxp_touch_controls");
             assertEquals(View.VISIBLE,controls.getVisibility());
             activity.menu.open();

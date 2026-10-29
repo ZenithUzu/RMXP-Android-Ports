@@ -278,9 +278,10 @@ public class Teclado implements SDLActivity.KeyboardHook
     @Override
     public void hide()
     {
+        boolean wasShown = shown();
         releaseKeys(true);
         if (mPanel != null) mPanel.setVisibility(View.GONE);
-        mVisibility.accept(false);
+        if (wasShown) mVisibility.accept(false);
     }
 
     @Override
