@@ -488,7 +488,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         tam_fijo.setOnCheckedChangeListener((b, on) -> { mPrefs.edit().putBoolean("tam_fijo", on).apply(); placeAll(); });
         box.addView(tam_fijo);
         box.addView(chips(tallaNames(), mPrefs.getInt("tam_global", 1), i -> {
-            mPrefs.edit().putBoolean("tam_fijo", true).putInt("tam_global", i).apply(); placeAll();
+            tam_fijo.setChecked(true); mPrefs.edit().putInt("tam_global", i).apply(); placeAll();
         }));
         panel.section(R.string.rmxp_edit_opacity_all);
         Switch opac_fija = new Switch(mActivity);
@@ -497,7 +497,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         opac_fija.setOnCheckedChangeListener((b, on) -> { mPrefs.edit().putBoolean("opac_fija", on).apply(); placeAll(); });
         box.addView(opac_fija);
         box.addView(chips(opacNames(), indexOf(Control.OPACIDADES, mPrefs.getInt("opac_global", 75)), i -> {
-            mPrefs.edit().putBoolean("opac_fija", true).putInt("opac_global", Control.OPACIDADES[i]).apply(); placeAll();
+            opac_fija.setChecked(true); mPrefs.edit().putInt("opac_global", Control.OPACIDADES[i]).apply(); placeAll();
         }));
         panel.section(R.string.rmxp_edit_style);
         box.addView(chips(new String[] { mActivity.getString(R.string.rmxp_skin_modern),
