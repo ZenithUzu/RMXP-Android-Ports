@@ -30,7 +30,7 @@ APK de Relict; actualizar solamente la herramienta no modifica un APK anterior.
 7. Comprueba que la cantidad y el dinero cambian correctamente y que puedes volver
    a hablar con Mesprit y salir de la tienda sin cierre.
 8. Pulsa **Detener** y **Guardar copia…** para compartir el TXT. El original también
-   queda en `%USERPROFILE%\\RMXP-Android-Ports\\registros\\`.
+   queda en `%USERPROFILE%\RMXP-Android-Ports\registros\`.
 9. Usa **Abrir y capturar** para repetir sin compilar otra vez. Si el juego se
    cierra, deja la captura activa y vuelve a abrirlo: el UID mantiene el filtro.
 

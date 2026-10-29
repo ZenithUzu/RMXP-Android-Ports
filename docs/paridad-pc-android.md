@@ -20,7 +20,8 @@ se mantienen según la plataforma.
 ## Motor y plantilla
 
 PC solicita `motor-v11`. El flujo Motor de Android compila y publica ese motor
-y genera `plantilla-ultima` con las mismas bibliotecas. El flujo del constructor
+y, al terminar, dispara **Plantilla para el teléfono**, que usa Java 17 y publica
+`plantilla-ultima` con las mismas bibliotecas. El flujo del constructor
 Android espera una plantilla cuya nota declare la versión solicitada por PC,
 y ejecuta pruebas y compilación antes de publicar su app en `ultima`.
 
