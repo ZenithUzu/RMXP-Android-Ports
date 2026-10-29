@@ -40,52 +40,61 @@ module RmxpPantallaLog
   rescue StandardError
   end
 
-  module Hooks
-    def update(*args)
-      result = super
-      RmxpPantallaLog.frame
-      result
+  # Guardar la llamada antes de que los scripts del juego creen sus propios alias.
+  def self.observe(operation, &observer)
+    original = Graphics.method(operation)
+    Graphics.define_singleton_method(operation) do |*args|
+      observer.call(original, *args)
     end
+  end
 
-    def brightness=(value)
-      before = brightness
-      result = super
-      RmxpPantallaLog.brightness_changed if brightness != before
-      result
-    end
+  observe(:update) do |original, *args|
+    result = original.call(*args)
+    frame
+    result
+  end
 
-    def freeze(*args)
-      RmxpPantallaLog.write("freeze inicio")
-      result = super
-      RmxpPantallaLog.frozen = true
-      RmxpPantallaLog.write("freeze fin")
-      result
-    end
+  observe(:brightness=) do |original, value|
+    before = Graphics.brightness
+    result = original.call(value)
+    brightness_changed if Graphics.brightness != before
+    result
+  end
 
-    def transition(*args)
-      RmxpPantallaLog.write("transition inicio", "duracion=#{args.first || 'predeterminada'}")
-      completed = false
-      result = super
-      RmxpPantallaLog.frozen = false
+  observe(:freeze) do |original, *args|
+    write("freeze inicio")
+    result = original.call(*args)
+    self.frozen = true
+    write("freeze fin")
+    result
+  end
+
+  observe(:transition) do |original, *args|
+    write("transition inicio", "duracion=#{args.first || 'predeterminada'}")
+    completed = false
+    begin
+      result = original.call(*args)
+      self.frozen = false
       completed = true
       result
     ensure
-      RmxpPantallaLog.write(completed ? "transition fin" : "transition interrumpida")
+      write(completed ? "transition fin" : "transition interrumpida")
     end
+  end
 
-    [:fadein, :fadeout].each do |operation|
-      define_method(operation) do |*args|
-        RmxpPantallaLog.write("#{operation} inicio", "duracion=#{args.first}")
-        completed = false
-        result = super(*args)
+  [:fadein, :fadeout].each do |operation|
+    observe(operation) do |original, *args|
+      write("#{operation} inicio", "duracion=#{args.first}")
+      completed = false
+      begin
+        result = original.call(*args)
         completed = true
         result
       ensure
-        RmxpPantallaLog.write(completed ? "#{operation} fin" : "#{operation} interrumpido")
+        write(completed ? "#{operation} fin" : "#{operation} interrumpido")
       end
     end
   end
 end
 
-Graphics.singleton_class.prepend(RmxpPantallaLog::Hooks)
-RmxpPantallaLog.write("diagnostico activo v1")
+RmxpPantallaLog.write("diagnostico activo v2")

@@ -32,14 +32,32 @@ module Graphics
 end
 load File.expand_path('../android/patches/rmxp-pantalla-log.rb', __dir__)
 def check(value); raise 'check failed' unless value; end
+# Essentials y Relict guardan un alias de Graphics.update y después lo redefinen.
+# Un prepend hace que ese alias vuelva a entrar en el observador indefinidamente.
+module Graphics
+  class << self
+    alias game_update update
+    def update
+      @calls << :game_update
+      game_update
+    end
+    alias game_transition transition
+    def transition(*args)
+      @calls << :game_transition
+      game_transition(*args)
+    end
+  end
+end
 check(Graphics.freeze == :frozen)
 check(Graphics.transition(12, 'mask.png', 30) == :transitioned)
-check(Graphics.calls == [:freeze, [12, 'mask.png', 30]])
+check(Graphics.calls == [:freeze, :game_transition, [12, 'mask.png', 30]])
 check(Graphics.fadeout(3) == 3 && Graphics.brightness == 0)
 check(Graphics.fadein(7) == 7 && Graphics.brightness == 255)
 Graphics.brightness = 0
 check(System.messages.any? { |s| s.include?('brightness=: brillo=0') })
 100.times { check(Graphics.update == :updated) }
+check(Graphics.frame_count == 100)
+check(Graphics.calls.count(:game_update) == 100)
 check(System.messages.count { |s| s.include?('estado:') } == 1)
 begin
   Graphics.fadeout(-1)
