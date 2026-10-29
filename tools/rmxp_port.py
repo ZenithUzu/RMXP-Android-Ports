@@ -455,25 +455,108 @@ def gradle_build(project, info, assets, res, motor, sdk, java_home, log):
     return final
 
 
-def adb_install(apk, project, sdk, log):
+def adb_device(sdk, log):
     adb = os.path.join(sdk, "platform-tools", "adb.exe" if WINDOWS else "adb")
     if not os.path.exists(adb):
         adb = shutil.which("adb") or adb
     code, out = run([adb, "devices"], log)
-    devices = [l for l in out.splitlines()[1:] if l.strip().endswith("device")]
+    devices = [l.split()[0] for l in out.splitlines() if len(l.split()) == 2 and l.split()[1] == "device"]
     if code != 0 or not devices:
         raise PortError("No hay teléfono conectado por adb. Conéctalo por USB con la depuración USB "
-                        "activada y acepta el aviso en el teléfono. El APK ya está listo en:\n" + apk)
+                        "activada y acepta el aviso en el teléfono.")
+    if len(devices) != 1:
+        raise PortError("Hay varios dispositivos conectados. Deja conectado solo el teléfono que quieres probar.")
+    return [adb, "-s", devices[0]]
+
+
+class ApkLog:
+    """Captura el UID del juego, incluso si el proceso se cierra o reinicia."""
+
+    def __init__(self, adb, package, on_line, log):
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+", package):
+            raise PortError("El identificador del juego no es un nombre de paquete Android válido.")
+        code, out = run(adb + ["shell", "cmd", "package", "list", "packages", "-U", package], log)
+        match = re.search(r"^package:" + re.escape(package) + r"\s+uid:(\d+)\s*$", out, re.M)
+        if code or not match:
+            raise PortError("No pude consultar el juego instalado para capturar su registro.")
+        code, clock = run(adb + ["shell", "date '+%m-%d %H:%M:%S.000'"], log)
+        clock = clock.strip()
+        # La hora del telefono evita perder el arranque si logcat tarda en conectarse.
+        since = clock if code == 0 and re.fullmatch(r"\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}", clock) else "2000"
+        folder = os.path.join(HOME, "registros")
+        os.makedirs(folder, exist_ok=True)
+        self.path = os.path.join(folder, "%s-%s-%s.txt" % (package, time.strftime("%Y%m%d-%H%M%S"), time.time_ns()))
+        self.output = open(self.path, "w", encoding="utf-8", buffering=1)
+        self.output.write("Juego: %s\nDispositivo: %s\n\n" % (package, adb[-1]))
+        self.on_line = on_line
+        try:
+            self.process = subprocess.Popen(
+                adb + ["logcat", "--uid=" + match[1], "-b", "main", "-b", "system", "-b", "crash",
+                       "-v", "threadtime", "-T", since],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except OSError:
+            self.output.close()
+            raise
+        self.thread = threading.Thread(target=self._read, daemon=True)
+        self.thread.start()
+
+    def _read(self):
+        try:
+            for line in self.process.stdout:
+                self.output.write(line)
+                self.on_line(line.rstrip("\r\n"))
+        except OSError as e:
+            self.on_line("Error al guardar el log: " + str(e))
+        finally:
+            self.process.stdout.close()
+            if self.process.poll() is None:
+                self.process.terminate()
+            try:
+                code = self.process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                code = self.process.wait()
+            try:
+                self.output.write("\nCaptura terminada (codigo %s).\n" % code)
+            except OSError:
+                pass
+            finally:
+                self.output.close()
+            self.on_line("Captura terminada. Registro guardado en: " + self.path)
+
+    def stop(self):
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+        self.thread.join(timeout=2)
+
+
+def adb_launch(adb, package, log, on_launch=None):
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+", package):
+        raise PortError("El identificador del juego no es un nombre de paquete Android válido.")
+    if on_launch:
+        on_launch(adb, package)  # antes de abrir: incluye los fallos durante el arranque
+    code, out = run(adb + ["shell", "monkey", "-p", package, "-c", "android.intent.category.LAUNCHER", "1"], log)
+    if code or "No activities found" in out or "monkey aborted" in out.lower():
+        raise PortError("El juego está instalado, pero Android no pudo abrirlo. Revisa el log del juego.")
+    log("Juego abierto en el teléfono.")
+
+
+def adb_install(apk, project, sdk, log, on_launch=None):
+    adb = adb_device(sdk, log)
     # -r = reinstalar conservando los datos (partidas). Nunca desinstalamos.
-    code, out = run([adb, "install", "-r", apk], log)
+    code, out = run(adb + ["install", "-r", apk], log)
     if "INSTALL_FAILED_UPDATE_INCOMPATIBLE" in out:
         raise PortError("El teléfono ya tiene este juego instalado con OTRA firma. Para no borrar tus "
                         "partidas no desinstalé nada. Copia tus partidas antes y desinstálalo tú, o "
                         "usa la carpeta de firma original en " + project["folder"])
     if code != 0 or "Success" not in out:
         raise PortError("adb no pudo instalar el APK. Revisa el registro de arriba.")
-    run([adb, "shell", "monkey", "-p", project["id"], "-c", "android.intent.category.LAUNCHER", "1"], log)
-    log("Instalado y abierto en el teléfono.")
+    adb_launch(adb, project["id"], log, on_launch)
 
 
 def limpiar(log=print):
@@ -515,7 +598,7 @@ def limpiar(log=print):
 
 
 def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
-         install=False, motor_dir=None, log=print, ligero=False, fondo="gris"):
+         install=False, motor_dir=None, log=print, ligero=False, fondo="gris", on_launch=None):
     """Proceso completo. Devuelve la ruta del APK."""
     if root.lower().endswith(".zip") and os.path.isfile(root):
         root = abrir_zip(root, log)
@@ -553,7 +636,7 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
         shutil.rmtree(largo(os.path.join(ANDROID, "app", "build")), ignore_errors=True)
     log("APK listo: " + apk)
     if install:
-        adb_install(apk, project, sdk, log)
+        adb_install(apk, project, sdk, log, on_launch)
     return apk
 
 
@@ -611,7 +694,7 @@ COLORS = {"tinta": "#0F2629", "pizarra": "#1A3A3E", "musgo": "#2E5B5F",
 
 def gui(initial=None):
     import tkinter as tk
-    from tkinter import filedialog, font as tkfont
+    from tkinter import filedialog, font as tkfont, ttk
     try:
         from tkinterdnd2 import DND_FILES, TkinterDnD
         win = TkinterDnD.Tk()
@@ -621,14 +704,16 @@ def gui(initial=None):
     C = COLORS
     win.title("RMXP-Android-Ports")
     win.configure(bg=C["tinta"])
-    win.geometry("700x760")
-    win.minsize(600, 640)
+    win.geometry("1120x800")
+    win.minsize(980, 740)
     base = tkfont.nametofont("TkDefaultFont").actual()["family"]
     f_title = (base, 20, "bold")
     f_body = (base, 11)
     f_small = (base, 10)
     events = queue.Queue()
-    state = {"root": None, "icon": None, "sf2": None, "busy": False}
+    apk_events = queue.Queue(maxsize=2000)  # la vista es limitada; el archivo conserva todas las lineas
+    state = {"root": None, "icon": None, "sf2": None, "busy": False,
+             "capture": None, "package": None, "closed": False}
 
     def label(parent, text, fg=C["niebla"], font=f_body, **kw):
         return tk.Label(parent, text=text, bg=parent["bg"], fg=fg, font=font, anchor="w", justify="left", **kw)
@@ -639,22 +724,31 @@ def gui(initial=None):
                          cursor="hand2", highlightthickness=0, bd=0)
 
     pad = dict(padx=24)
-    label(win, "Convierte un fangame de RPG Maker en una app de Android", font=f_title,
-          wraplength=640).pack(fill="x", pady=(20, 4), **pad)
-    label(win, "Tu carpeta original no se modifica. Las partidas del teléfono se conservan al actualizar.",
+    label(win, "RMXP / Android Ports", font=f_title).pack(fill="x", pady=(20, 4), **pad)
+    label(win, "Prepara el APK, ejecútalo en tu teléfono y revisa el juego desde aquí.",
           fg=C["liquen"], font=f_small).pack(fill="x", **pad)
 
-    drop = tk.Frame(win, bg=C["pizarra"], highlightbackground=C["musgo"], highlightthickness=2)
-    drop.pack(fill="x", pady=16, **pad)
+    workspace = tk.Frame(win, bg=C["tinta"])
+    workspace.pack(fill="both", expand=True, pady=16, **pad)
+    left = tk.Frame(workspace, bg=C["tinta"], width=390)
+    left.pack(side="left", fill="y", padx=(0, 20))
+    right = tk.Frame(workspace, bg=C["tinta"])
+    right.pack(side="right", fill="both", expand=True)
+    pad = dict(padx=0)
+    label(left, "1  /  PREPARAR EL JUEGO", fg=C["ambar"], font=f_small).pack(anchor="w", pady=(0, 10))
+
+    drop = tk.Frame(left, bg=C["pizarra"], highlightbackground=C["musgo"], highlightthickness=2)
+    drop.pack(fill="x", pady=(0, 14), **pad)
     drop_text = label(drop, "Arrastra aquí la carpeta del juego" if DND_FILES else
                       "Elige la carpeta del juego (o arrástrala sobre Portar.bat)", font=(base, 13))
-    drop_text.pack(side="left", padx=16, pady=18)
+    drop_text.config(wraplength=350)
+    drop_text.pack(fill="x", padx=12, pady=12)
     button(drop, "Elegir carpeta", lambda: choose(filedialog.askdirectory(title="Carpeta del juego"))
-           ).pack(side="right", padx=12)
+           ).pack(side="left", padx=8, pady=(0, 10))
     button(drop, "Elegir .zip", lambda: choose(filedialog.askopenfilename(title="Juego en .zip", filetypes=[("Zip", "*.zip")]))
-           ).pack(side="right")
+           ).pack(side="left", padx=8, pady=(0, 10))
 
-    form = tk.Frame(win, bg=C["tinta"])
+    form = tk.Frame(left, bg=C["tinta"])
     form.pack(fill="x", **pad)
     fields = {}
     for row, (key, text) in enumerate((("title", "Nombre de la app"), ("author", "Autor (para la firma)"),
@@ -666,10 +760,12 @@ def gui(initial=None):
         fields[key] = e
     form.columnconfigure(1, weight=1)
 
-    extras = tk.Frame(win, bg=C["tinta"])
+    extras = tk.Frame(left, bg=C["tinta"])
     extras.pack(fill="x", pady=(10, 0), **pad)
     icon_lbl = label(extras, "Icono: el de la app base", fg=C["liquen"], font=f_small)
     sf2_lbl = label(extras, "Música MIDI: sin SoundFont", fg=C["liquen"], font=f_small)
+    icon_lbl.config(wraplength=210)
+    sf2_lbl.config(wraplength=210)
 
     def pick(key, lbl, prefix, types):
         path = filedialog.askopenfilename(filetypes=types)
@@ -677,9 +773,9 @@ def gui(initial=None):
             state[key] = path
             lbl.config(text=prefix + os.path.basename(path), fg=C["niebla"])
 
-    button(extras, "Icono (PNG)…", lambda: pick("icon", icon_lbl, "Icono: ", [("PNG", "*.png")])).grid(row=0, column=0, sticky="w")
+    button(extras, "Icono (PNG)...", lambda: pick("icon", icon_lbl, "Icono: ", [("PNG", "*.png")])).grid(row=0, column=0, sticky="w")
     icon_lbl.grid(row=0, column=1, sticky="w", padx=12)
-    button(extras, "SoundFont (.sf2)…", lambda: pick("sf2", sf2_lbl, "Música MIDI: ", [("SoundFont", "*.sf2")])).grid(row=1, column=0, sticky="w", pady=6)
+    button(extras, "SoundFont (.sf2)...", lambda: pick("sf2", sf2_lbl, "Música MIDI: ", [("SoundFont", "*.sf2")])).grid(row=1, column=0, sticky="w", pady=6)
     sf2_lbl.grid(row=1, column=1, sticky="w", padx=12)
     fondo = tk.StringVar(value="gris")
     label(extras, "Fondo del icono", fg=C["liquen"], font=f_small).grid(row=2, column=0, sticky="w")
@@ -691,25 +787,129 @@ def gui(initial=None):
                        highlightthickness=0, bd=0).pack(side="left", padx=(0, 10))
 
     install = tk.BooleanVar(value=True)
-    tk.Checkbutton(win, text="Instalar en el teléfono con adb al terminar", variable=install,
+    tk.Checkbutton(left, text="Instalar y abrir al terminar (USB)", variable=install,
                    bg=C["tinta"], fg=C["niebla"], selectcolor=C["pizarra"], activebackground=C["tinta"],
                    activeforeground=C["niebla"], font=f_body, highlightthickness=0, bd=0
                    ).pack(anchor="w", pady=(12, 0), **pad)
     ligero = tk.BooleanVar(value=False)
-    tk.Checkbutton(win, text="Ahorrar espacio en el teléfono (experimental)", variable=ligero,
+    tk.Checkbutton(left, text="Ahorrar espacio (experimental)", variable=ligero,
                    bg=C["tinta"], fg=C["niebla"], selectcolor=C["pizarra"], activebackground=C["tinta"],
                    activeforeground=C["niebla"], font=f_body, highlightthickness=0, bd=0
                    ).pack(anchor="w", **pad)
 
-    go = button(win, "Crear APK", lambda: start(), bg=C["ambar"], fg=C["tinta"])
+    capture = tk.BooleanVar(value=True)
+    tk.Checkbutton(left, text="Capturar log del juego al abrirlo", variable=capture,
+                   bg=C["tinta"], fg=C["niebla"], selectcolor=C["pizarra"], activebackground=C["tinta"],
+                   font=f_body, highlightthickness=0, bd=0).pack(anchor="w", **pad)
+    go = button(left, "Crear APK", lambda: start(), bg=C["ambar"], fg=C["tinta"])
     go.config(font=(base, 13, "bold"), pady=10)
     go.pack(fill="x", pady=14, **pad)
 
-    logbox = tk.Text(win, bg="#0A1C1E", fg=C["liquen"], font=("Consolas", 9), relief="flat", height=12,
-                     wrap="word", highlightthickness=0, padx=10, pady=8)
-    logbox.pack(fill="both", expand=True, pady=(0, 20), **pad)
+    progress = ttk.Progressbar(left, mode="indeterminate")
+    progress.pack(fill="x")
+    status = label(left, "Listo para elegir un juego.", fg=C["liquen"], font=f_small, wraplength=380)
+    status.pack(fill="x", pady=10)
+    label(left, "La carpeta original y las partidas se conservan.", fg=C["liquen"],
+          font=f_small, wraplength=380).pack(anchor="w")
+
+    label(right, "2  /  COMPILAR Y PROBAR", fg=C["ambar"], font=f_small).pack(anchor="w", pady=(0, 10))
+    style = ttk.Style(win)
+    style.theme_use("clam")
+    style.configure("TNotebook", background=C["tinta"], borderwidth=0)
+    style.configure("TNotebook.Tab", background=C["pizarra"], foreground=C["niebla"], padding=(14, 9))
+    style.map("TNotebook.Tab", background=[("selected", C["musgo"])])
+    tabs = ttk.Notebook(right)
+    tabs.pack(fill="both", expand=True)
+    build_page = tk.Frame(tabs, bg=C["tinta"])
+    apk_page = tk.Frame(tabs, bg=C["tinta"])
+    tabs.add(build_page, text="Compilación")
+    tabs.add(apk_page, text="Log del juego")
+    controls = tk.Frame(apk_page, bg=C["tinta"])
+    controls.pack(fill="x", pady=8)
+    open_game = button(controls, "Abrir y capturar", lambda: launch(), bg=C["musgo"])
+    open_game.pack(side="left")
+    open_game.config(state="disabled")
+    stop_log = button(controls, "Detener", lambda: stop_capture())
+    stop_log.pack(side="left", padx=5)
+    button(controls, "Guardar copia…", lambda: save_log()).pack(side="left")
+    capture_status = label(apk_page, "Conecta un teléfono por USB y crea el APK con instalación activada.",
+                           fg=C["liquen"], font=f_small, wraplength=550)
+    capture_status.pack(fill="x", pady=(0, 8))
+
+    def text_area(parent):
+        frame = tk.Frame(parent, bg=C["tinta"])
+        frame.pack(fill="both", expand=True)
+        box = tk.Text(frame, bg="#0A1C1E", fg=C["liquen"], font=("Consolas", 9), relief="flat",
+                      wrap="word", highlightthickness=0, padx=10, pady=8)
+        scroll = ttk.Scrollbar(frame, command=box.yview)
+        scroll.pack(side="right", fill="y")
+        box.configure(yscrollcommand=scroll.set)
+        box.pack(fill="both", expand=True)
+        return box
+
+    logbox = text_area(build_page)
+    apkbox = text_area(apk_page)
     logbox.tag_config("ok", foreground=C["ambar"])
     logbox.tag_config("error", foreground=C["coral"])
+
+    def apk_line(line):
+        try:
+            apk_events.put_nowait(line)
+        except queue.Full:
+            pass  # solo se omiten lineas de la vista; ApkLog ya las guardo en el archivo
+
+    def capture_started(adb, package, enabled=True):
+        if state["closed"]:
+            return
+        events.put((package, "package"))
+        if state["capture"]:
+            state["capture"].stop()
+            state["capture"] = None
+        if enabled:
+            try:
+                session = ApkLog(adb, package, apk_line, lambda t: events.put((t, None)))
+                state["capture"] = session
+                if state["closed"]:
+                    session.stop()
+                else:
+                    events.put((session.path, "capture"))
+            except (OSError, PortError) as e:
+                events.put(("El APK está instalado, pero no se pudo capturar el log: " + str(e), "error"))
+
+    def launch():
+        if state["busy"] or not state["package"]:
+            return
+        state["busy"] = True
+        open_game.config(state="disabled")
+        def worker():
+            try:
+                log = lambda t: events.put((t, None))
+                adb_launch(adb_device(find_sdk(), log), state["package"], log, capture_started)
+            except (OSError, PortError) as e:
+                events.put((str(e), "error"))
+            finally:
+                events.put((None, "fin"))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def stop_capture():
+        session = state["capture"]
+        if session:
+            threading.Thread(target=session.stop, daemon=True).start()
+
+    def save_log():
+        session = state["capture"]
+        if not session:
+            capture_status.config(text="Todavía no hay un registro. Abre el juego con captura activada.")
+            return
+        path = filedialog.asksaveasfilename(defaultextension=".txt", initialfile=os.path.basename(session.path),
+                                          filetypes=[("Registro de texto", "*.txt")])
+        if path:
+            try:
+                if os.path.abspath(path) != os.path.abspath(session.path):
+                    shutil.copyfile(session.path, path)
+                capture_status.config(text="Copia guardada: " + path)
+            except OSError as e:
+                capture_status.config(text="No se pudo guardar: " + str(e))
 
     def choose(path):
         if not path or state["busy"]:
@@ -730,7 +930,8 @@ def gui(initial=None):
         for k in fields:
             fields[k].delete(0, "end")
             fields[k].insert(0, info[k])
-        drop_text.config(text=os.path.basename(path), fg=C["ambar"])
+        drop_text.config(text=info["title"], fg=C["ambar"])
+        status.config(text="Juego revisado. Comprueba sus datos y crea el APK.")
         state["sf2"] = None  # el del juego se usa solo (stage_game); el botón es para cambiarlo
         own = find_soundfont(path)
         sf2_lbl.config(text="Música MIDI: la del juego (%s)" % own if own else "Música MIDI: sin SoundFont",
@@ -757,7 +958,13 @@ def gui(initial=None):
             return
         state["busy"] = True
         go.config(text="Trabajando…", state="disabled")
+        open_game.config(state="disabled")
+        progress.start()
+        status.config(text="Creando el APK…")
+        tabs.select(build_page)
+        want_log = capture.get()
         args = dict(root=state["root"], icon=state["icon"], soundfont=state["sf2"], install=install.get(), ligero=ligero.get(), fondo=fondo.get(),
+                    on_launch=lambda a, p: capture_started(a, p, want_log),
                     **{k: e.get().strip() for k, e in fields.items()})
 
         def worker():
@@ -775,14 +982,39 @@ def gui(initial=None):
         threading.Thread(target=worker, daemon=True).start()
 
     def pump():
-        while not events.empty():
+        for _ in range(200):
+            if events.empty():
+                break
             text, tag = events.get()
             if tag == "fin":
                 state["busy"] = False
                 go.config(text="Crear APK", state="normal")
+                open_game.config(state="normal" if state["package"] else "disabled")
+                progress.stop()
+                status.config(text="Proceso terminado. Revisa el resultado en el registro.")
+            elif tag == "package":
+                state["package"] = text
+            elif tag == "capture":
+                apkbox.delete("1.0", "end")
+                capture_status.config(text="Guardando automáticamente en: " + text)
+                tabs.select(apk_page)
             else:
                 write(text, tag)
-        win.after(100, pump)
+        lines = []
+        for _ in range(500):
+            try:
+                lines.append(apk_events.get_nowait())
+            except queue.Empty:
+                break
+        if lines:
+            apkbox.insert("end", "\n".join(lines) + "\n")
+            count = int(apkbox.index("end-1c").split(".")[0])
+            if count > 10000:
+                apkbox.delete("1.0", "%d.0" % (count - 10000))
+            apkbox.see("end")
+        session = state["capture"]
+        stop_log.config(state="normal" if session and session.process.poll() is None else "disabled")
+        win.after(50, pump)
 
     def lote(paths):
         """Varios juegos a la vez: uno tras otro, con los datos que encuentre en cada uno."""
@@ -790,8 +1022,13 @@ def gui(initial=None):
             return
         state["busy"] = True
         go.config(text="Trabajando…", state="disabled")
+        open_game.config(state="disabled")
+        progress.start()
+        status.config(text="Creando los APK de la cola…")
         write("%d juegos en cola." % len(paths), "ok")
-        opts = dict(install=install.get(), ligero=ligero.get(), fondo=fondo.get())
+        want_log = capture.get()
+        opts = dict(install=install.get(), ligero=ligero.get(), fondo=fondo.get(),
+                    on_launch=lambda a, p: capture_started(a, p, want_log))
 
         def worker():
             for i, p in enumerate(paths, 1):
@@ -831,6 +1068,12 @@ def gui(initial=None):
     if initial:
         win.after(200, lambda: soltar(initial if isinstance(initial, list) else [initial]))
     threading.Thread(target=novedades, daemon=True).start()
+    def close():
+        state["closed"] = True
+        if state["capture"]:
+            state["capture"].stop()
+        win.destroy()
+    win.protocol("WM_DELETE_WINDOW", close)
     pump()
     win.mainloop()
 

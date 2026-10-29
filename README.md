@@ -61,6 +61,27 @@ El APK queda en `C:\Users\<tú>\RMXP-Android-Ports\apks\`. Las copias de trabajo
 
 **`Limpiar.bat`** borra los APK viejos (deja el más nuevo de cada juego), restos de compilación y motores anteriores. Úsalo después de actualizar la herramienta. Nunca toca las firmas.
 
+## Probar el juego y ver su log desde la PC
+
+La interfaz separa **Compilación** y **Log del juego**, con los datos del APK a la
+izquierda. Conecta un solo teléfono por USB, activa la depuración USB y acepta
+su aviso de autorización. Deja marcadas **Instalar y abrir al terminar (USB)** y
+**Capturar log del juego al abrirlo**.
+
+Al terminar, el juego se abre y su registro aparece en **Log del juego**. Se
+captura desde el arranque y continúa si la app se cierra o reinicia. El archivo
+se guarda automáticamente en `%USERPROFILE%\RMXP-Android-Ports\registros\`.
+**Abrir y capturar** permite repetir la prueba sin compilar; **Detener** termina
+la captura y **Guardar copia…** exporta el TXT mientras juegas o después del
+cierre. Se registra solo el UID del juego seleccionado; no se vacía el logcat
+del teléfono. Si hay muchas líneas, la vista se limita y el archivo conserva
+el registro completo de la captura.
+
+La PC necesita que el teléfono siga conectado para recibir líneas nuevas.
+El menú del juego mantiene su opción **Guardar registro (log)** sin cable.
+
+Consulta también la [comparación entre PC y Android](docs/paridad-pc-android.md).
+
 ## Cuando el fangame saca una versión nueva
 
 Pásale la carpeta nueva a `Portar.bat` igual que la primera vez. La
