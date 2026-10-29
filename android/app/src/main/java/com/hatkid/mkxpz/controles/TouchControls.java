@@ -793,7 +793,13 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
     /** Searchable key/action picker, shared by touch controls and physical input mappings. */
     public static void pickKey(Activity a, boolean withActions, KeySink sink)
     {
+        pickKey(a, withActions, null, sink);
+    }
+
+    public static void pickKey(Activity a, boolean withActions, String source, KeySink sink)
+    {
         PanelLateral panel = new PanelLateral(a, R.string.rmxp_edit_choose);
+        if (source != null) panel.top.addView(panel.label(a.getString(R.string.map_source) + ": " + source, 14));
         EditText search = new EditText(a);
         search.setSingleLine(); search.setHint(R.string.map_search);
         search.setTextColor(a.getColor(R.color.rmxp_niebla));

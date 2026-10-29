@@ -19,4 +19,5 @@
     <string name="map_all_keys">Todas las teclas</string>
     <string name="map_extra_axes">Otros ejes</string>
     <string name="map_reset_keyboard">¿Restablecer los atajos y asignaciones del teclado?</string>
+    <string name="map_source">Entrada</string>
 </resources>

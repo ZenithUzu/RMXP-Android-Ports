@@ -215,7 +215,7 @@ public class OptionsMenu implements TouchControls.Actions
     private void selectMapping(int source)
     {
         mLastMapped = source;
-        TouchControls.pickKey(mActivity, true, key -> {
+        TouchControls.pickKey(mActivity, true, pad.name(source), key -> {
             pad.setKey(source, key); controls.rebuild(); showInputMapping();
         });
     }
@@ -226,7 +226,7 @@ public class OptionsMenu implements TouchControls.Actions
         PanelLateral panel = new PanelLateral(mActivity, R.string.map_capture);
         mCaptureHint = panel.label(mActivity.getString(R.string.map_capture_hint), 16);
         panel.content.addView(mCaptureHint);
-        panel.content.addView(panel.button(mActivity.getString(android.R.string.cancel), panel::dismiss));
+        panel.content.addView(panel.button(mActivity.getString(android.R.string.cancel), () -> { panel.dismiss(); showInputMapping(); }));
         mCaptureSource = 0; mCaptureAxis = false; mCapturing = true;
         panel.content.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
             public void onViewAttachedToWindow(View v) {}

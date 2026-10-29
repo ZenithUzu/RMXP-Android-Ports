@@ -133,6 +133,7 @@ public class RuntimeUiTest {
         });
     }
     private View description(View v,String value) {
+        if(v==null)return null;
         if(value.equals(v.getContentDescription()))return v;
         if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++) {
             View found=description(((ViewGroup)v).getChildAt(i),value);if(found!=null)return found;
@@ -148,24 +149,24 @@ public class RuntimeUiTest {
         ui(()->{activity.menu.open();activity.findViewById(R.id.rmxp_input).performClick();click(R.string.map_add);});
         ui(()->activity.menu.captured(KeyEvent.KEYCODE_BUTTON_16));
         ui(()->{
-            View turbo=description(activity.getWindow().getDecorView(),com.hatkid.mkxpz.controles.Teclas.nombre(com.hatkid.mkxpz.controles.Control.TURBO));
-            assertNotNull(turbo);turbo.performClick();
+            View turbo=description(activity.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel"),com.hatkid.mkxpz.controles.Teclas.nombre(com.hatkid.mkxpz.controles.Control.TURBO));
+            assertNotNull(turbo);assertTrue(turbo instanceof Button);turbo.performClick();
             assertEquals(com.hatkid.mkxpz.controles.Control.TURBO,activity.menu.pad.keyFor(KeyEvent.KEYCODE_BUTTON_16));
         });
         screenshot("07-controller-binding");
         ui(()->click(R.string.map_add));
         ui(()->activity.menu.captured(com.hatkid.mkxpz.controles.PadMapper.KEYBOARD+KeyEvent.KEYCODE_F11));
         ui(()->{
-            EditText search=(EditText)description(activity.getWindow().getDecorView(),activity.getString(R.string.map_search));
+            EditText search=(EditText)description(activity.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel"),activity.getString(R.string.map_search));
             search.setText("F12");
-            View f12=description(activity.getWindow().getDecorView(),"F12");assertNotNull(f12);f12.performClick();
+            View f12=description(activity.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel"),"F12");assertNotNull(f12);f12.performClick();
             assertEquals(KeyEvent.KEYCODE_F12,activity.menu.pad.keyFor(com.hatkid.mkxpz.controles.PadMapper.KEYBOARD+KeyEvent.KEYCODE_F11));
         });
         screenshot("08-keyboard-binding");
         ui(()->{
             click(R.string.map_add);assertTrue(PanelLateral.dismissOpen(activity));
             activity.menu.captured(KeyEvent.KEYCODE_BUTTON_A);
-            assertNull(description(activity.getWindow().getDecorView(),activity.getString(R.string.map_search)));
+            assertNull(description(activity.findViewById(android.R.id.content).findViewWithTag("rmxp_side_panel"),activity.getString(R.string.map_search)));
             activity.finish();
         });
     }
