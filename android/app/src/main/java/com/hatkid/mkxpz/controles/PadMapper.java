@@ -85,7 +85,7 @@ public class PadMapper {
     }
     public void reset(){
         releaseAll();SharedPreferences.Editor e=prefs.edit();
-        for(int code:BOTONES.keySet()){e.remove("mando_"+layout+"_"+code);e.remove("mando_"+code);}
+        for(int code:BOTONES.keySet()){e.remove("mando_"+layout+"_"+code);if(layout==XBOX)e.remove("mando_"+code);}
         e.apply();
     }
     public static boolean isGamepad(InputDevice device){
