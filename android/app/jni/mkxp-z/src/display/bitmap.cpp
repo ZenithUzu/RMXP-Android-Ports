@@ -380,10 +380,20 @@ struct BitmapPrivate
     
     static void ensureFormat(SDL_Surface *&surf, Uint32 format)
     {
+        if (!surf)
+            throw Exception(Exception::SDLError, "%s", SDL_GetError());
+
         if (surf->format->format == format)
             return;
         
         SDL_Surface *surfConv = SDL_ConvertSurfaceFormat(surf, format, 0);
+        if (!surfConv)
+        {
+            std::string error(SDL_GetError());
+            SDL_FreeSurface(surf);
+            surf = 0;
+            throw Exception(Exception::SDLError, "%s", error.c_str());
+        }
         SDL_FreeSurface(surf);
         surf = surfConv;
     }
@@ -1436,6 +1446,8 @@ static void applyShadow(SDL_Surface *&in, const SDL_PixelFormat &fm, const SDL_C
 {
     SDL_Surface *out = SDL_CreateRGBSurface
     (0, in->w+1, in->h+1, fm.BitsPerPixel, fm.Rmask, fm.Gmask, fm.Bmask, fm.Amask);
+    if (!out)
+        throw Exception(Exception::SDLError, "%s", SDL_GetError());
     
     float fr = c.r / 255.0f;
     float fg = c.g / 255.0f;
@@ -1550,13 +1562,30 @@ void Bitmap::drawText(const IntRect &rect, const char *str, int align)
         txtSurf = TTF_RenderUTF8_Solid(font, str, c);
     else
         txtSurf = TTF_RenderUTF8_Blended(font, str, c);
+
+    if (!txtSurf)
+    {
+        std::string error(TTF_GetError());
+        int textWidth = 0, textHeight = 0;
+        // SDL_ttf cannot create a surface for a zero-width glyph.
+        if (TTF_SizeUTF8(font, str, &textWidth, &textHeight) == 0 && textWidth == 0)
+            return;
+        throw Exception(Exception::SDLError, "%s", error.c_str());
+    }
     
     p->ensureFormat(txtSurf, SDL_PIXELFORMAT_ABGR8888);
     
     int rawTxtSurfH = txtSurf->h;
     
     if (p->font->getShadow())
-        applyShadow(txtSurf, *p->format, c);
+    {
+        try {
+            applyShadow(txtSurf, *p->format, c);
+        } catch (...) {
+            SDL_FreeSurface(txtSurf);
+            throw;
+        }
+    }
     
     /* outline using TTF_Outline and blending it together with SDL_BlitSurface
      * FIXME: outline is forced to have the same opacity as the font color */
@@ -1571,16 +1600,20 @@ void Bitmap::drawText(const IntRect &rect, const char *str, int align)
             outline = TTF_RenderUTF8_Solid(font, str, co);
         else
             outline = TTF_RenderUTF8_Blended(font, str, co);
-        
-        p->ensureFormat(outline, SDL_PIXELFORMAT_ABGR8888);
+
+        TTF_SetFontOutline(font, 0);
+        try {
+            p->ensureFormat(outline, SDL_PIXELFORMAT_ABGR8888);
+        } catch (...) {
+            SDL_FreeSurface(txtSurf);
+            throw;
+        }
         SDL_Rect outRect = {OUTLINE_SIZE, OUTLINE_SIZE, txtSurf->w, txtSurf->h};
         
         SDL_SetSurfaceBlendMode(txtSurf, SDL_BLENDMODE_BLEND);
         SDL_BlitSurface(txtSurf, NULL, outline, &outRect);
         SDL_FreeSurface(txtSurf);
         txtSurf = outline;
-        /* reset outline to 0 */
-        TTF_SetFontOutline(font, 0);
     }
     
     int alignX = rect.x;
@@ -1793,8 +1826,9 @@ IntRect Bitmap::textSize(const char *str)
     std::string fixed = fixupString(str);
     str = fixed.c_str();
     
-    int w, h;
-    TTF_SizeUTF8(font, str, &w, &h);
+    int w = 0, h = 0;
+    if (TTF_SizeUTF8(font, str, &w, &h) != 0)
+        throw Exception(Exception::SDLError, "%s", TTF_GetError());
     
     /* If str is one character long, *endPtr == 0 */
     const char *endPtr;
