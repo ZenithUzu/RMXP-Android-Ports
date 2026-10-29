@@ -1,0 +1,22 @@
+<resources>
+    <string name="map_action">App action</string>
+    <string name="map_key">Game key</string>
+    <string name="map_capture">Detect input</string>
+    <string name="map_capture_hint">Press and release a key or button, or move a stick. Touchscreen Back cancels.</string>
+    <string name="map_release">Release to choose its function</string>
+    <string name="map_layout">Controller layout</string>
+    <string name="map_axes">Sticks / D-pad</string>
+    <string name="map_keyboard">Keyboard</string>
+    <string name="map_add">＋ Add binding</string>
+    <string name="map_hint">Tap a row to change its function. App actions are separate from keys sent to the game.</string>
+    <string name="map_keyboard_empty">Keyboard keys keep their original function. Add a binding to remap a key or assign an app shortcut.</string>
+    <string name="map_extra">More buttons</string>
+    <string name="map_reset_confirm">Reset all bindings in the active controller profile?</string>
+    <string name="map_search">Search key or action…</string>
+    <string name="map_destination">Bind to</string>
+    <string name="map_actions">Actions</string>
+    <string name="map_common">Common</string>
+    <string name="map_all_keys">All keys</string>
+    <string name="map_extra_axes">Other axes</string>
+    <string name="map_reset_keyboard">Reset keyboard shortcuts and bindings?</string>
+</resources>

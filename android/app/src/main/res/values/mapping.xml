@@ -1,0 +1,22 @@
+<resources>
+    <string name="map_action">Acción de la app</string>
+    <string name="map_key">Tecla del juego</string>
+    <string name="map_capture">Detectar entrada</string>
+    <string name="map_capture_hint">Presiona y suelta una tecla o botón, o mueve un stick. Atrás cancela en la pantalla táctil.</string>
+    <string name="map_release">Suelta para elegir su función</string>
+    <string name="map_layout">Distribución del mando</string>
+    <string name="map_axes">Sticks y cruceta</string>
+    <string name="map_keyboard">Teclado</string>
+    <string name="map_add">＋ Añadir asignación</string>
+    <string name="map_hint">Toca una fila para cambiar su función. Las acciones de la app se distinguen de las teclas que recibe el juego.</string>
+    <string name="map_keyboard_empty">El teclado usa sus teclas originales. Añade una asignación para cambiar una tecla o usar un atajo de la app.</string>
+    <string name="map_extra">Más botones</string>
+    <string name="map_reset_confirm">¿Restablecer todas las asignaciones del perfil de mando activo?</string>
+    <string name="map_search">Buscar tecla o acción…</string>
+    <string name="map_destination">Asignar a</string>
+    <string name="map_actions">Acciones</string>
+    <string name="map_common">Frecuentes</string>
+    <string name="map_all_keys">Todas las teclas</string>
+    <string name="map_extra_axes">Otros ejes</string>
+    <string name="map_reset_keyboard">¿Restablecer los atajos y asignaciones del teclado?</string>
+</resources>

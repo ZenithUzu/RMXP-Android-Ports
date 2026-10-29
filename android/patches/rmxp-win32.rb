@@ -3,10 +3,17 @@
 # etc. Aquí se responden las más comunes con lo equivalente; el resto devuelve 0.
 class RmxpWin32API
   def initialize(dll, func, *_)
+    @dll = File.basename(dll.to_s.tr("\\", "/")).downcase.delete(" _").sub(/\.dll\z/, "")
     @func = func.to_s.sub(/[AW]\z/, "") # GetPrivateProfileStringA -> GetPrivateProfileString
   end
 
   def call(*a)
+    # The Windows DLL is replaced by native Audio, as in JoiPlay's compatibility layer.
+    return 1 if @dll == "rgsslinker" && @func == "RGSSLinker_Initialize"
+    if @dll == "rgssfmodex" && @func == "Init_FmodEx"
+      RmxpRGSSLinker.install_fmodex
+      return 1
+    end
     case @func
     when "GetAsyncKeyState", "GetKeyState"
       Input.pressex?(a[0].to_i) ? 0x8000 : 0 # el motor entiende los códigos de tecla de Windows

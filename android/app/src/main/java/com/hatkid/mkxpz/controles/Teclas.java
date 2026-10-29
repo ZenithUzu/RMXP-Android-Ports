@@ -63,6 +63,12 @@ public final class Teclas
         put(KeyEvent.KEYCODE_NUMPAD_ADD, "Num +");
         put(KeyEvent.KEYCODE_NUMPAD_DOT, "Num .");
         put(KeyEvent.KEYCODE_NUMPAD_ENTER, "Num Enter");
+        put(KeyEvent.KEYCODE_NUMPAD_COMMA, "Num ,");put(KeyEvent.KEYCODE_NUMPAD_EQUALS,"Num =");
+        put(KeyEvent.KEYCODE_NUMPAD_LEFT_PAREN,"Num (");put(KeyEvent.KEYCODE_NUMPAD_RIGHT_PAREN,"Num )");
+        put(KeyEvent.KEYCODE_NUM_LOCK,"Num Lock");put(KeyEvent.KEYCODE_SCROLL_LOCK,"Scroll Lock");
+        put(KeyEvent.KEYCODE_BREAK,"Pause");put(KeyEvent.KEYCODE_SYSRQ,"Print Screen");
+        put(KeyEvent.KEYCODE_META_LEFT,"Meta L");put(KeyEvent.KEYCODE_META_RIGHT,"Meta R");
+        put(KeyEvent.KEYCODE_FUNCTION,"Fn");put(KeyEvent.KEYCODE_SYM,"Sym");
     }
 
     public static final int[] COMUNES = { KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_C,
@@ -97,7 +103,7 @@ public final class Teclas
     {
         switch (tecla) {
             case Control.TECLADO: return "Teclado";
-            case Control.TURBO: return "Turbo";
+            case Control.TURBO: return "Velocidad / Turbo";
             case Control.MENU: return "Menú";
             case Control.OCULTAR: return "Ocultar";
             case 0: return "";

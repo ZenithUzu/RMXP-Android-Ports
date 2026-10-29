@@ -184,3 +184,7 @@ The software is provided without warranty under its license terms. Back up saves
 ### Control appearance and performance overlay
 
 The shared Android runtime offers a side panel to edit all controls or one button: color picker, #RRGGBB input and continuous 0–100% opacity, with separate styles for button bodies, labels/symbols and key badges. The performance panel selects visible data, compact/list layout, text color and size, background opacity and position. Android 12+ wallpaper colors still theme the interface; manually chosen colors remain fixed. Existing profiles remain readable.
+
+### Insurgence and physical input mapping
+
+RGSS Linker/FmodEx startup compatibility and a flat-map H-mode7 fallback are included. The mapper captures buttons, keys and axes, searches target keys and assigns app actions. See [scope and limitations](docs/compatibilidad-insurgence.md). Fixing the bootstrap does not establish full compatibility with every Insurgence fork.

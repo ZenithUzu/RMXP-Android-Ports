@@ -202,3 +202,7 @@ El código de este proyecto se publica bajo [GPL-2.0-or-later](LICENSE). Los com
 Este es un proyecto independiente, sin afiliación ni respaldo de Nintendo, The Pokémon Company, Game Freak, los responsables de RPG Maker ni los autores de los fangames. Las marcas y recursos pertenecen a sus respectivos titulares.
 
 El software se ofrece sin garantía, según los términos de su licencia. Haz copias de tus partidas y firmas antes de probar actualizaciones.
+
+### Insurgence y mapeo físico
+
+Se añade compatibilidad con el arranque RGSS Linker/FmodEx y un respaldo de H-mode7 en mapas planos. El mapeador permite capturar botones, teclas y ejes, buscar la tecla de destino y asignar acciones de la app. Consulta [alcance y limitaciones](docs/compatibilidad-insurgence.md); el arreglo del arranque no garantiza compatibilidad completa con todos los forks de Insurgence.

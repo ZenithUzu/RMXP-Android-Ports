@@ -553,6 +553,8 @@ public class MainActivity extends SDLActivity
         if (mMenu == null)
             return super.dispatchKeyEvent(evt);
 
+        if (mMenu.captureKey(evt)) return true;
+
         // The phone's Back opens/closes the menu (a gamepad's Back is mapped like B)
         if (evt.getKeyCode() == KeyEvent.KEYCODE_BACK && !isFromGamepad(evt)) {
             if (evt.getAction() == KeyEvent.ACTION_UP && PanelLateral.dismissOpen(this))
@@ -564,14 +566,14 @@ public class MainActivity extends SDLActivity
             return true;
         }
 
-        if (mMenu.isOpen() && isFromGamepad(evt) &&
+        if ((mMenu.isOpen() || mMenu.controls.isEditing()) && isFromGamepad(evt) &&
                 (evt.getKeyCode() == mMenu.pad.cancelButton() || evt.getKeyCode() == KeyEvent.KEYCODE_BACK)) {
             if (evt.getAction() == KeyEvent.ACTION_UP && !PanelLateral.dismissOpen(this)) mMenu.close();
             return true;
         }
         // While the menu is open, the keys move around the menu instead of the game
         if (mMenu.isOpen() || mMenu.controls.isEditing())
-            return getWindow().superDispatchKeyEvent(evt);
+            return getWindow().superDispatchKeyEvent(mMenu.navigationKey(evt));
 
         InputDevice device = evt.getDevice();
         if (device != null && !device.isVirtual())
@@ -604,6 +606,7 @@ public class MainActivity extends SDLActivity
     {
         if (mMenu != null && com.hatkid.mkxpz.controles.PadMapper.isGamepad(evt.getDevice())) {
             if (mMenu.isOpen() || mMenu.controls.isEditing()) {
+                mMenu.menuMotion(evt);
                 return true; // Do not let SDL consume axes behind an overlay.
             }
             mMenu.controls.onPhysicalInput();

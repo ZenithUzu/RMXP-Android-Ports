@@ -8,7 +8,7 @@ import java.util.*;
 
 /** Physical controller inputs are tracked separately, then merged into game keys. */
 public class PadMapper {
-    public static final int XBOX=1, SWITCH=2;
+    public static final int XBOX=1, SWITCH=2, KEYBOARD=2000;
     public static final int LS_UP=1001, LS_DOWN=1002, LS_LEFT=1003, LS_RIGHT=1004;
     public static final int RS_UP=1011, RS_DOWN=1012, RS_LEFT=1013, RS_RIGHT=1014;
     public static final Map<Integer,String> BOTONES=new LinkedHashMap<>();
@@ -18,6 +18,10 @@ public class PadMapper {
         def(KeyEvent.KEYCODE_BUTTON_B,"B",KeyEvent.KEYCODE_X);
         def(KeyEvent.KEYCODE_BUTTON_X,"X",KeyEvent.KEYCODE_Z);
         def(KeyEvent.KEYCODE_BUTTON_Y,"Y",KeyEvent.KEYCODE_D);
+        def(KeyEvent.KEYCODE_BUTTON_C,"C",0);def(KeyEvent.KEYCODE_BUTTON_Z,"Z",0);
+        def(KeyEvent.KEYCODE_BUTTON_MODE,"Guide",Control.MENU);
+        def(KeyEvent.KEYCODE_BACK,"Back",Control.MENU);
+        for(int i=0;i<16;i++)def(KeyEvent.KEYCODE_BUTTON_1+i,"Button "+(i+1),0);
         def(KeyEvent.KEYCODE_BUTTON_L1,"LB",KeyEvent.KEYCODE_A);
         def(KeyEvent.KEYCODE_BUTTON_R1,"RB",KeyEvent.KEYCODE_S);
         def(KeyEvent.KEYCODE_BUTTON_L2,"LT",KeyEvent.KEYCODE_Q);
@@ -48,7 +52,9 @@ public class PadMapper {
     }
     public int profile(){return layout;}
     public String name(int code){
-        if(layout!=SWITCH)return BOTONES.get(code);
+        if(code>=KEYBOARD)return Teclas.nombre(code-KEYBOARD);
+        if(code>=1100 && code<1228)return MotionEvent.axisToString((code-1100)/2).replace("AXIS_","") + (code%2==0?" −":" +");
+        if(layout!=SWITCH)return BOTONES.getOrDefault(code,Teclas.nombre(code));
         if(code==KeyEvent.KEYCODE_BUTTON_A)return "B";
         if(code==KeyEvent.KEYCODE_BUTTON_B)return "A";
         if(code==KeyEvent.KEYCODE_BUTTON_X)return "Y";
@@ -59,7 +65,7 @@ public class PadMapper {
         if(code==KeyEvent.KEYCODE_BUTTON_R2)return "ZR";
         if(code==KeyEvent.KEYCODE_BUTTON_START)return "+";
         if(code==KeyEvent.KEYCODE_BUTTON_SELECT)return "−";
-        return BOTONES.get(code);
+        return BOTONES.getOrDefault(code,Teclas.nombre(code));
     }
     private int letterCode(int code){
         if(layout!=SWITCH)return code;
@@ -70,13 +76,51 @@ public class PadMapper {
         return code;
     }
     public int keyFor(int code){
+        if(code>=KEYBOARD)return prefs.getInt("teclado_mapa_"+(code-KEYBOARD),code-KEYBOARD);
         int fallback=DEFAULTS.containsKey(letterCode(code))?DEFAULTS.get(letterCode(code)):0;
         // Keep explicitly saved mappings from older versions; each new layout has its own overrides.
         return prefs.getInt("mando_"+layout+"_"+code,layout==XBOX?prefs.getInt("mando_"+code,fallback):fallback);
     }
     public int keyForScreen(int namedButton){return keyFor(letterCode(namedButton));}
     public void setScreenKey(int namedButton,int key){setKey(letterCode(namedButton),key);}
-    public void setKey(int code,int key){releaseAll();prefs.edit().putInt("mando_"+layout+"_"+code,key).apply();}
+    public void setKey(int code,int key){
+        if(!validSource(code) || key<Control.OCULTAR || key>KeyEvent.getMaxKeyCode())
+            throw new IllegalArgumentException("Invalid input mapping");
+        releaseAll();
+        prefs.edit().putInt(code>=KEYBOARD?"teclado_mapa_"+(code-KEYBOARD):"mando_"+layout+"_"+code,key).apply();
+    }
+    public static boolean validSource(int code){
+        int key=code>=KEYBOARD?code-KEYBOARD:code;
+        return BOTONES.containsKey(code)||(code>=1100 && code<1228)||(key>0 && key<=KeyEvent.getMaxKeyCode());
+    }
+    public List<Integer> sources(boolean keyboard){
+        Set<Integer> codes=new LinkedHashSet<>();
+        if(!keyboard)codes.addAll(BOTONES.keySet());
+        String prefix=keyboard?"teclado_mapa_":"mando_"+layout+"_";
+        for(String name:prefs.getAll().keySet())if(name.startsWith(prefix))try{
+            int code=Integer.parseInt(name.substring(prefix.length()))+(keyboard?KEYBOARD:0);
+            if(validSource(code))codes.add(code);
+        }catch(NumberFormatException ignored){}
+        return new ArrayList<>(codes);
+    }
+    public void resetKeyboard(){
+        releaseAll();SharedPreferences.Editor edit=prefs.edit();
+        for(String key:prefs.getAll().keySet())if(key.startsWith("teclado_mapa_"))edit.remove(key);
+        edit.apply();
+    }
+    public static boolean isKeyboard(InputDevice device){
+        return device!=null && !device.isVirtual() && !isGamepad(device) &&
+            (device.getSources()&InputDevice.SOURCE_KEYBOARD)==InputDevice.SOURCE_KEYBOARD;
+    }
+    public int sourceForKey(KeyEvent event){
+        if(isGamepad(event.getDevice()))return event.getKeyCode();
+        return isKeyboard(event.getDevice())?KEYBOARD+event.getKeyCode():0;
+    }
+    public void onSource(int code,boolean down){
+        if(!validSource(code))return;
+        if(down)digital.add(code);else digital.remove(code);
+        reconcile(code);
+    }
     public void selectProfile(int selected){
         releaseAll();layout=selected==SWITCH?SWITCH:XBOX;
         SharedPreferences.Editor e=prefs.edit().putInt("mando_layout",layout);
@@ -85,6 +129,7 @@ public class PadMapper {
     }
     public void reset(){
         releaseAll();SharedPreferences.Editor e=prefs.edit();
+        for(String key:prefs.getAll().keySet())if(key.startsWith("mando_"+layout+"_"))e.remove(key);
         for(int code:BOTONES.keySet()){e.remove("mando_"+layout+"_"+code);if(layout==XBOX)e.remove("mando_"+code);}
         e.apply();
     }
@@ -113,13 +158,18 @@ public class PadMapper {
     }
     public int cancelButton(){return layout==SWITCH?KeyEvent.KEYCODE_BUTTON_A:KeyEvent.KEYCODE_BUTTON_B;}
     public boolean onKey(KeyEvent event){
-        if(!isGamepad(event.getDevice()))return false;
-        if(!connected(event.getDevice()))return true;
-        int code=event.getKeyCode()==KeyEvent.KEYCODE_BACK?cancelButton():event.getKeyCode();
-        if(!BOTONES.containsKey(code))return false;
+        int code=sourceForKey(event);
+        if(code==0)return false;
+        if(code>=KEYBOARD){
+            if(!prefs.contains("teclado_mapa_"+(code-KEYBOARD)))return false;
+        }else{
+            if(!connected(event.getDevice()))return true;
+            if(!BOTONES.containsKey(code)&&!prefs.contains("mando_"+layout+"_"+code))return false;
+        }
         if(event.getRepeatCount()>0)return true;
-        if(event.getAction()==KeyEvent.ACTION_DOWN)digital.add(code);else digital.remove(code);
-        reconcile(code);return true;
+        if(event.getAction()==KeyEvent.ACTION_DOWN)onSource(code,true);
+        else if(event.getAction()==KeyEvent.ACTION_UP)onSource(code,false);
+        return true;
     }
     private void reconcile(int code){
         boolean down=digital.contains(code)||axes.contains(code);
@@ -157,6 +207,26 @@ public class PadMapper {
             return (v-range.getMin())/(range.getMax()-range.getMin());
         return v;
     }
+    public int sourceForMotion(MotionEvent e){
+        if(!isGamepad(e.getDevice())||e.getActionMasked()!=MotionEvent.ACTION_MOVE)return 0;
+        InputDevice d=e.getDevice();
+        int rx=d.getMotionRange(MotionEvent.AXIS_Z,e.getSource())!=null?MotionEvent.AXIS_Z:MotionEvent.AXIS_RX;
+        int ry=d.getMotionRange(MotionEvent.AXIS_RZ,e.getSource())!=null?MotionEvent.AXIS_RZ:MotionEvent.AXIS_RY;
+        float[] values={value(e,MotionEvent.AXIS_X),value(e,MotionEvent.AXIS_Y),value(e,rx),value(e,ry),
+            value(e,MotionEvent.AXIS_HAT_X),value(e,MotionEvent.AXIS_HAT_Y)};
+        int[] negative={LS_LEFT,LS_UP,RS_LEFT,RS_UP,KeyEvent.KEYCODE_DPAD_LEFT,KeyEvent.KEYCODE_DPAD_UP};
+        int[] positive={LS_RIGHT,LS_DOWN,RS_RIGHT,RS_DOWN,KeyEvent.KEYCODE_DPAD_RIGHT,KeyEvent.KEYCODE_DPAD_DOWN};
+        for(int i=0;i<values.length;i++)if(Math.abs(values[i])>.65f)return values[i]<0?negative[i]:positive[i];
+        if(Math.max(trigger(e,MotionEvent.AXIS_LTRIGGER),trigger(e,MotionEvent.AXIS_BRAKE))>.65f)return KeyEvent.KEYCODE_BUTTON_L2;
+        if(Math.max(trigger(e,MotionEvent.AXIS_RTRIGGER),trigger(e,MotionEvent.AXIS_GAS))>.65f)return KeyEvent.KEYCODE_BUTTON_R2;
+        for(InputDevice.MotionRange range:d.getMotionRanges()) {
+            int axis=range.getAxis();
+            if(axis<0 || axis>=64)continue;
+            float v=value(e,axis);
+            if(Math.abs(v)>.65f)return 1100+axis*2+(v>0?1:0);
+        }
+        return 0;
+    }
     public boolean onMotion(MotionEvent e){
         if(!isGamepad(e.getDevice())||e.getActionMasked()!=MotionEvent.ACTION_MOVE)return false;
         if(!connected(e.getDevice()))return true;
@@ -167,6 +237,10 @@ public class PadMapper {
             value(e,MotionEvent.AXIS_HAT_X),value(e,MotionEvent.AXIS_HAT_Y),
             Math.max(trigger(e,MotionEvent.AXIS_LTRIGGER),trigger(e,MotionEvent.AXIS_BRAKE)),
             Math.max(trigger(e,MotionEvent.AXIS_RTRIGGER),trigger(e,MotionEvent.AXIS_GAS)));
+        for(int source:sources(false))if(source>=1100 && source<1228){
+            float v=value(e,(source-1100)/2);
+            axis(source,source%2==0?-v:v);
+        }
         return true;
     }
     public void releaseAll(){

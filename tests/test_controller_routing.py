@@ -13,13 +13,13 @@ class com {static class hatkid {static class mkxpz {static class controles {stat
 class Check extends Base {
  static class Controls {boolean editing;int physical;boolean isEditing(){return editing;}void onPhysicalInput(){physical++;}}
  static class Pad {int motion;boolean onMotion(MotionEvent e){motion++;return true;}}
- static class Menu {boolean open;Controls controls=new Controls();Pad pad=new Pad();boolean isOpen(){return open;}}
+ static class Menu {int navigation;void menuMotion(MotionEvent e){navigation++;}boolean open;Controls controls=new Controls();Pad pad=new Pad();boolean isOpen(){return open;}}
  Menu mMenu=new Menu();
  public boolean dispatchGenericMotionEvent(MotionEvent evt) METHOD
  public static void main(String[] args){Check c=new Check();MotionEvent e=new MotionEvent();
   c.dispatchGenericMotionEvent(e);if(c.sdl!=0||c.mMenu.pad.motion!=1||c.mMenu.controls.physical!=1)throw new AssertionError("SDL intercepted controller");
   c.mMenu.open=true;c.dispatchGenericMotionEvent(e);c.mMenu.open=false;c.mMenu.controls.editing=true;c.dispatchGenericMotionEvent(e);
-  if(c.sdl!=0||c.mMenu.pad.motion!=1)throw new AssertionError("Axes leaked behind overlay");
+  if(c.sdl!=0||c.mMenu.pad.motion!=1||c.mMenu.navigation!=2)throw new AssertionError("Overlay navigation did not consume axes");
   e.gamepad=false;c.dispatchGenericMotionEvent(e);if(c.sdl!=1)throw new AssertionError("Non-controller input lost");
   c.mMenu=null;e.gamepad=true;c.dispatchGenericMotionEvent(e);if(c.sdl!=2)throw new AssertionError("Startup input lost");
  }

@@ -9,6 +9,8 @@ import android.os.Looper;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -187,63 +189,175 @@ public class OptionsMenu implements TouchControls.Actions
         row.addView(b, lp);
     }
 
-    private void mappingRows(PanelLateral panel, int[] codes)
+    private boolean mCapturing, mCaptureAxis;
+    private int mCaptureSource, mLastMapped = -1;
+    private TextView mCaptureHint;
+    private int mNavigationDirection;
+    private long mNavigationTime;
+
+    private void mappingRows(PanelLateral panel, LinearLayout box, java.util.List<Integer> codes)
     {
-        LinearLayout row = null;
-        for (int i = 0; i < codes.length; i++) {
-            int code = codes[i];
-            if (i % 2 == 0) { row = new LinearLayout(mActivity); panel.content.addView(row); }
+        for (int code : codes) {
             int key = pad.keyFor(code);
-            String role = Teclas.uso(mActivity, key);
-            Button b = panel.button(pad.name(code) + "  →  " + Teclas.nombre(key)
-                + (role.isEmpty() ? "" : "\n" + role), () -> TouchControls.pickKey(mActivity, true, k -> {
-                    pad.setKey(code, k); controls.rebuild(); showInputMapping();
-                }));
-            b.setTextSize(12); b.setPadding(panel.dp(4), 0, panel.dp(4), 0);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, panel.dp(60), 1);
-            lp.setMargins(panel.dp(2), panel.dp(3), panel.dp(2), panel.dp(3));
-            row.addView(b, lp);
+            String target = key == 0 ? mActivity.getString(R.string.rmxp_unassigned) : Teclas.nombre(key);
+            Button row = panel.button(pad.name(code) + "    →    " + target + "\n" +
+                mActivity.getString(key < 0 ? R.string.map_action : R.string.map_key), () -> selectMapping(code));
+            row.setTextSize(14); row.setGravity(android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
+            row.setContentDescription(pad.name(code) + " → " + target);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, panel.dp(60));
+            lp.setMargins(0, panel.dp(3), 0, panel.dp(3)); box.addView(row, lp);
+            if (code == mLastMapped) row.post(() -> {
+                row.requestFocus(); row.requestRectangleOnScreen(new android.graphics.Rect(0,0,row.getWidth(),row.getHeight()),false);
+            });
         }
+    }
+
+    private void selectMapping(int source)
+    {
+        mLastMapped = source;
+        TouchControls.pickKey(mActivity, true, key -> {
+            pad.setKey(source, key); controls.rebuild(); showInputMapping();
+        });
+    }
+
+    private void captureMapping()
+    {
+        pad.releaseAll(); controls.releasePressed();
+        PanelLateral panel = new PanelLateral(mActivity, R.string.map_capture);
+        mCaptureHint = panel.label(mActivity.getString(R.string.map_capture_hint), 16);
+        panel.content.addView(mCaptureHint);
+        panel.content.addView(panel.button(mActivity.getString(android.R.string.cancel), panel::dismiss));
+        mCaptureSource = 0; mCaptureAxis = false; mCapturing = true;
+        panel.content.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            public void onViewAttachedToWindow(View v) {}
+            public void onViewDetachedFromWindow(View v) { mCapturing = false; mCaptureSource = 0; }
+        });
+    }
+
+    public boolean captureKey(KeyEvent event)
+    {
+        if (!mCapturing) return false;
+        int source = pad.sourceForKey(event);
+        if (!PadMapper.validSource(source)) return false;
+        if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0 && mCaptureSource == 0) {
+            mCaptureSource = source;
+            mCaptureHint.setText(pad.name(source) + "\n" + mActivity.getString(R.string.map_release));
+        } else if (event.getAction() == KeyEvent.ACTION_UP && source == mCaptureSource && !mCaptureAxis) {
+            captured(source);
+        }
+        return true;
+    }
+
+    void captured(int source)
+    {
+        if (!mCapturing || !PadMapper.validSource(source)) return;
+        mCapturing = false; mCaptureSource = 0;
+        mMappingTab = source >= PadMapper.KEYBOARD ? 2 : source >= 1000 ? 1 : 0;
+        selectMapping(source);
+    }
+
+    public KeyEvent navigationKey(KeyEvent event)
+    {
+        if (!PadMapper.isGamepad(event.getDevice())) return event;
+        int confirm = pad.profile() == PadMapper.SWITCH ? KeyEvent.KEYCODE_BUTTON_B : KeyEvent.KEYCODE_BUTTON_A;
+        if (event.getKeyCode() != confirm) return event;
+        return new KeyEvent(event.getDownTime(), event.getEventTime(), event.getAction(),
+            KeyEvent.KEYCODE_DPAD_CENTER, event.getRepeatCount(), event.getMetaState(),
+            event.getDeviceId(), event.getScanCode(), event.getFlags(), event.getSource());
+    }
+
+    public void menuMotion(MotionEvent event)
+    {
+        int source = pad.sourceForMotion(event);
+        if (mCapturing) {
+            if (source != 0 && mCaptureSource == 0) {
+                mCaptureSource = source; mCaptureAxis = true;
+                mCaptureHint.setText(pad.name(source) + "\n" + mActivity.getString(R.string.map_release));
+            } else if (source == 0 && mCaptureAxis && mCaptureSource != 0) captured(mCaptureSource);
+            return;
+        }
+        int direction = 0;
+        switch (source) {
+            case PadMapper.LS_UP: case PadMapper.RS_UP: case KeyEvent.KEYCODE_DPAD_UP: direction = KeyEvent.KEYCODE_DPAD_UP; break;
+            case PadMapper.LS_DOWN: case PadMapper.RS_DOWN: case KeyEvent.KEYCODE_DPAD_DOWN: direction = KeyEvent.KEYCODE_DPAD_DOWN; break;
+            case PadMapper.LS_LEFT: case PadMapper.RS_LEFT: case KeyEvent.KEYCODE_DPAD_LEFT: direction = KeyEvent.KEYCODE_DPAD_LEFT; break;
+            case PadMapper.LS_RIGHT: case PadMapper.RS_RIGHT: case KeyEvent.KEYCODE_DPAD_RIGHT: direction = KeyEvent.KEYCODE_DPAD_RIGHT; break;
+        }
+        long now = SystemClock.uptimeMillis();
+        if (direction != 0 && (direction != mNavigationDirection || now - mNavigationTime > 220)) {
+            mActivity.getWindow().superDispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, direction));
+            mActivity.getWindow().superDispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, direction));
+            mNavigationTime = now;
+        }
+        mNavigationDirection = direction;
     }
 
     private void showInputMapping()
     {
         PanelLateral panel = new PanelLateral(mActivity, R.string.rmxp_input);
-        LinearLayout profiles = new LinearLayout(mActivity);
-        mappingChoice(panel, profiles, "Xbox", pad.profile() == PadMapper.XBOX, () -> {
-            pad.selectProfile(PadMapper.XBOX); controls.rebuild(); showInputMapping();
+        LinearLayout toolbar = new LinearLayout(mActivity);
+        android.widget.Spinner profile = new android.widget.Spinner(mActivity);
+        profile.setContentDescription(mActivity.getString(R.string.map_layout));
+        profile.setAdapter(new android.widget.ArrayAdapter<String>(mActivity,
+            android.R.layout.simple_spinner_dropdown_item,new String[]{"Xbox","Switch"}));
+        profile.setSelection(pad.profile() == PadMapper.SWITCH ? 1 : 0);
+        profile.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+            public void onItemSelected(android.widget.AdapterView<?> parent,View view,int index,long id) {
+                if (view instanceof TextView) ((TextView)view).setTextColor(mActivity.getColor(R.color.rmxp_niebla));
+                int selected = index == 0 ? PadMapper.XBOX : PadMapper.SWITCH;
+                if (selected != pad.profile()) { pad.selectProfile(selected); controls.rebuild(); showInputMapping(); }
+            }
         });
-        mappingChoice(panel, profiles, "Switch", pad.profile() == PadMapper.SWITCH, () -> {
-            pad.selectProfile(PadMapper.SWITCH); controls.rebuild(); showInputMapping();
-        });
-        panel.top.addView(profiles);
+        toolbar.addView(profile,new LinearLayout.LayoutParams(0,panel.dp(48),1));
+        toolbar.addView(panel.button(mActivity.getString(R.string.map_add),this::captureMapping),
+            new LinearLayout.LayoutParams(0,panel.dp(48),1));
+        panel.top.addView(toolbar);
         LinearLayout tabs = new LinearLayout(mActivity);
         mappingChoice(panel, tabs, mActivity.getString(R.string.rmxp_pad_buttons), mMappingTab == 0,
             () -> { mMappingTab = 0; showInputMapping(); });
-        mappingChoice(panel, tabs, mActivity.getString(R.string.rmxp_pad_directions), mMappingTab == 1,
+        mappingChoice(panel, tabs, mActivity.getString(R.string.map_axes), mMappingTab == 1,
             () -> { mMappingTab = 1; showInputMapping(); });
+        mappingChoice(panel, tabs, mActivity.getString(R.string.map_keyboard), mMappingTab == 2,
+            () -> { mMappingTab = 2; showInputMapping(); });
         panel.top.addView(tabs);
-        TextView hint = panel.label(mActivity.getString(R.string.rmxp_mapping_hint), 12);
-        panel.content.addView(hint);
-        if (mMappingTab == 0) {
-            int[] codes = { KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_BUTTON_B,
-                KeyEvent.KEYCODE_BUTTON_X, KeyEvent.KEYCODE_BUTTON_Y,
-                KeyEvent.KEYCODE_BUTTON_L1, KeyEvent.KEYCODE_BUTTON_R1,
-                KeyEvent.KEYCODE_BUTTON_L2, KeyEvent.KEYCODE_BUTTON_R2,
-                KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_SELECT,
-                KeyEvent.KEYCODE_BUTTON_THUMBL, KeyEvent.KEYCODE_BUTTON_THUMBR };
-            mappingRows(panel, codes);
+        panel.content.addView(panel.label(mActivity.getString(R.string.map_hint), 12));
+        java.util.List<Integer> sources = pad.sources(mMappingTab == 2);
+        if (mMappingTab == 2) {
+            if (sources.isEmpty()) panel.content.addView(panel.label(mActivity.getString(R.string.map_keyboard_empty), 14));
+            mappingRows(panel, panel.content, sources);
+        } else if (mMappingTab == 1) {
+            int[][] groups = {{KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT},
+                {PadMapper.LS_UP, PadMapper.LS_DOWN, PadMapper.LS_LEFT, PadMapper.LS_RIGHT},
+                {PadMapper.RS_UP, PadMapper.RS_DOWN, PadMapper.RS_LEFT, PadMapper.RS_RIGHT}};
+            int[] titles = {R.string.rmxp_dpad, R.string.rmxp_left_stick, R.string.rmxp_right_stick};
+            for (int i = 0; i < groups.length; i++) {
+                LinearLayout body = Apariencia.card(panel, titles[i], i == 0 || java.util.Arrays.stream(groups[i]).anyMatch(n -> n == mLastMapped));
+                java.util.List<Integer> group = new java.util.ArrayList<>();
+                for (int source : groups[i]) group.add(source);
+                mappingRows(panel, body, group);
+            }
+            java.util.List<Integer> extraAxes = new java.util.ArrayList<>();
+            for (int code : sources) if (code >= 1100 && code < 1228) extraAxes.add(code);
+            if (!extraAxes.isEmpty()) mappingRows(panel, Apariencia.card(panel, R.string.map_extra_axes, true), extraAxes);
         } else {
-            panel.section(R.string.rmxp_dpad);
-            mappingRows(panel, new int[] { KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT });
-            panel.section(R.string.rmxp_left_stick);
-            mappingRows(panel, new int[] { PadMapper.LS_UP, PadMapper.LS_DOWN, PadMapper.LS_LEFT, PadMapper.LS_RIGHT });
-            panel.section(R.string.rmxp_right_stick);
-            mappingRows(panel, new int[] { PadMapper.RS_UP, PadMapper.RS_DOWN, PadMapper.RS_LEFT, PadMapper.RS_RIGHT });
+            java.util.List<Integer> common = java.util.Arrays.asList(KeyEvent.KEYCODE_BUTTON_A,KeyEvent.KEYCODE_BUTTON_B,
+                KeyEvent.KEYCODE_BUTTON_X,KeyEvent.KEYCODE_BUTTON_Y,KeyEvent.KEYCODE_BUTTON_L1,KeyEvent.KEYCODE_BUTTON_R1,
+                KeyEvent.KEYCODE_BUTTON_L2,KeyEvent.KEYCODE_BUTTON_R2,KeyEvent.KEYCODE_BUTTON_START,KeyEvent.KEYCODE_BUTTON_SELECT,
+                KeyEvent.KEYCODE_BUTTON_THUMBL,KeyEvent.KEYCODE_BUTTON_THUMBR);
+            mappingRows(panel, panel.content, common);
+            java.util.List<Integer> extra = new java.util.ArrayList<>();
+            for (int code : sources) if (!common.contains(code) && code < 1000 &&
+                (code < KeyEvent.KEYCODE_DPAD_UP || code > KeyEvent.KEYCODE_DPAD_RIGHT)) extra.add(code);
+            mappingRows(panel, Apariencia.card(panel, R.string.map_extra, extra.contains(mLastMapped)), extra);
         }
         panel.content.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
-            pad.reset(); controls.rebuild(); showInputMapping();
+            new AlertDialog.Builder(mActivity).setMessage(mMappingTab == 2 ? R.string.map_reset_keyboard : R.string.map_reset_confirm)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.rmxp_edit_reset, (d,w) -> {
+                    if (mMappingTab == 2) pad.resetKeyboard(); else pad.reset();
+                    controls.rebuild(); showInputMapping();
+                }).show();
         }));
     }
 

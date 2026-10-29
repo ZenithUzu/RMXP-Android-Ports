@@ -790,55 +790,55 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
 
     public interface KeySink { void put(int keycode); }
 
-    /** Cuadrícula con acciones arriba y todas las teclas abajo, como en Kirin. */
+    /** Searchable key/action picker, shared by touch controls and physical input mappings. */
     public static void pickKey(Activity a, boolean withActions, KeySink sink)
     {
-        float dp = a.getResources().getDisplayMetrics().density;
-        LinearLayout box = new LinearLayout(a);
-        box.setOrientation(LinearLayout.VERTICAL);
+        PanelLateral panel = new PanelLateral(a, R.string.rmxp_edit_choose);
+        EditText search = new EditText(a);
+        search.setSingleLine(); search.setHint(R.string.map_search);
+        search.setTextColor(a.getColor(R.color.rmxp_niebla));
+        search.setContentDescription(a.getString(R.string.map_search));
+        panel.top.addView(search);
         GridLayout grid = new GridLayout(a);
-        grid.setColumnCount(4);
-        com.hatkid.mkxpz.PanelLateral panel = new com.hatkid.mkxpz.PanelLateral(a, R.string.rmxp_edit_choose);
-
-        if (withActions) {
-            LinearLayout actions = new LinearLayout(a);
-            actions.setGravity(Gravity.CENTER);
-            for (int act : new int[] { Control.TECLADO, Control.TURBO, Control.MENU, Control.OCULTAR })
-                actions.addView(keyCell(a, dp, Teclas.nombre(act), () -> { sink.put(act); panel.dismiss(); }));
-            box.addView(actions);
-        }
-        java.util.LinkedHashMap<Integer, String> keys = new java.util.LinkedHashMap<>();
-        keys.put(0, a.getString(R.string.rmxp_unassigned));
-        for (int code : Teclas.COMUNES) keys.put(code, Teclas.nombre(code));
-        keys.putAll(Teclas.TODAS);
-        for (Map.Entry<Integer, String> k : keys.entrySet()) {
-            String role = Teclas.uso(a, k.getKey());
-            grid.addView(keyCell(a, dp, k.getValue() + (role.isEmpty() ? "" : "\n" + role),
-                () -> { sink.put(k.getKey()); panel.dismiss(); }));
-        }
-        box.addView(grid);
-
-        panel.content.addView(box);
-    }
-
-    private static Button keyCell(Activity a, float dp, String text, Runnable click)
-    {
-        Button b = new Button(a);
-        b.setText(text);
-        b.setAllCaps(false);
-        b.setTextSize(12);
-        b.setPadding(0, 0, 0, 0);
-        b.setMinWidth(0);
-        b.setMinimumWidth(0);
-        b.setTextColor(a.getColor(R.color.rmxp_niebla));
-        GradientDrawable bg = new GradientDrawable(); bg.setColor(a.getColor(R.color.rmxp_pizarra)); bg.setCornerRadius(10 * dp);
-        b.setBackground(bg);
-        b.setOnClickListener(v -> click.run());
-        GridLayout.LayoutParams p = new GridLayout.LayoutParams();
-        p.width = Math.round((Math.min(360, a.getResources().getDisplayMetrics().widthPixels / dp) - 40) / 4 * dp) - Math.round(6 * dp);
-        p.height = Math.round(52 * dp);
-        p.setMargins(Math.round(3 * dp), Math.round(3 * dp), Math.round(3 * dp), Math.round(3 * dp));
-        b.setLayoutParams(p);
-        return b;
+        panel.content.addView(grid);
+        final int[] category = {0};
+        Runnable render = () -> {
+            String query = search.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+            java.util.LinkedHashMap<Integer,String> keys = new java.util.LinkedHashMap<>();
+            keys.put(0,a.getString(R.string.rmxp_unassigned));
+            if (withActions && (category[0] == 0 || !query.isEmpty()))
+                for (int action : new int[]{Control.MENU,Control.TURBO,Control.TECLADO,Control.OCULTAR})
+                    keys.put(action,Teclas.nombre(action));
+            if (!query.isEmpty() || category[0] == (withActions ? 2 : 1)) keys.putAll(Teclas.TODAS);
+            else if (!withActions || category[0] == 1)
+                for (int code : Teclas.COMUNES) keys.put(code,Teclas.nombre(code));
+            grid.removeAllViews();
+            int columns = withActions && category[0] == 0 && query.isEmpty() ? 2 : 3;
+            grid.setColumnCount(columns);
+            for (Map.Entry<Integer,String> entry : keys.entrySet()) {
+                int code = entry.getKey();
+                String role = code < 0 ? a.getString(R.string.map_action) : Teclas.uso(a,code);
+                String text = entry.getValue() + (role.isEmpty() ? "" : "\n" + role);
+                if (!query.isEmpty() && !text.toLowerCase(java.util.Locale.ROOT).contains(query)) continue;
+                Button key = panel.button(text, () -> { panel.dismiss(); sink.put(code); });
+                key.setTextSize(12); key.setPadding(0,0,0,0);
+                key.setContentDescription(entry.getValue());
+                GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+                lp.width = panel.dp((Math.min(360,a.getResources().getDisplayMetrics().widthPixels /
+                    a.getResources().getDisplayMetrics().density)-40)/columns)-panel.dp(6);
+                lp.height = panel.dp(56); lp.setMargins(panel.dp(3),panel.dp(3),panel.dp(3),panel.dp(3));
+                grid.addView(key,lp);
+            }
+        };
+        com.hatkid.mkxpz.Apariencia.choice(panel,panel.top,R.string.map_destination,
+            withActions ? new String[]{a.getString(R.string.map_actions),a.getString(R.string.map_common),a.getString(R.string.map_all_keys)} :
+                new String[]{a.getString(R.string.map_common),a.getString(R.string.map_all_keys)},
+            0,n -> { category[0]=n;render.run(); });
+        search.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            public void onTextChanged(CharSequence s,int start,int before,int count){}
+            public void afterTextChanged(Editable s){render.run();}
+        });
+        render.run();
     }
 }

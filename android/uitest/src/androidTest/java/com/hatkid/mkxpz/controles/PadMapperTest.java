@@ -41,4 +41,32 @@ public class PadMapperTest {
   p.reset();p.selectProfile(PadMapper.XBOX);
   assertEquals(KeyEvent.KEYCODE_F8,p.keyFor(KeyEvent.KEYCODE_BUTTON_A));
  }
+ @Test public void extraButtonsKeyboardShortcutsAndCustomAxesPersist(){
+  SharedPreferences prefs=InstrumentationRegistry.getInstrumentation().getTargetContext().getSharedPreferences("pad-extra-test",0);prefs.edit().clear().commit();
+  List<String> events=new ArrayList<>();
+  TouchControls.Actions sink=new TouchControls.Actions(){
+   public void keyDown(int k){events.add("d"+k);}public void keyUp(int k){events.add("u"+k);}
+   public void action(int k){events.add("a"+k);}public boolean turboOn(){return false;}
+   public void controllerConnected(InputDevice d){}
+  };
+  PadMapper p=new PadMapper(prefs,sink);
+  p.setKey(KeyEvent.KEYCODE_BUTTON_16,Control.TURBO);
+  p.onSource(KeyEvent.KEYCODE_BUTTON_16,true);p.onSource(KeyEvent.KEYCODE_BUTTON_16,true);
+  assertEquals(Arrays.asList("a"+Control.TURBO),events);
+  p.onSource(KeyEvent.KEYCODE_BUTTON_16,false);p.onSource(KeyEvent.KEYCODE_BUTTON_16,true);
+  assertEquals(2,events.size());p.releaseAll();events.clear();
+  int keyboard=PadMapper.KEYBOARD+KeyEvent.KEYCODE_F11;
+  int axis=1100+MotionEvent.AXIS_RUDDER*2+1;
+  p.setKey(keyboard,Control.MENU);p.setKey(axis,KeyEvent.KEYCODE_C);
+  p.onSource(keyboard,true);p.onSource(keyboard,false);p.onSource(axis,true);p.onSource(axis,false);
+  assertEquals(Arrays.asList("a"+Control.MENU,"d"+KeyEvent.KEYCODE_C,"u"+KeyEvent.KEYCODE_C),events);
+  PadMapper restored=new PadMapper(prefs,sink);
+  assertEquals(Control.MENU,restored.keyFor(keyboard));assertTrue(restored.sources(true).contains(keyboard));
+  assertTrue(restored.sources(false).contains(axis));assertEquals(KeyEvent.KEYCODE_C,restored.keyFor(axis));
+  restored.reset();assertEquals(Control.MENU,restored.keyFor(keyboard));assertEquals(0,restored.keyFor(axis));
+  restored.resetKeyboard();assertEquals(KeyEvent.KEYCODE_F11,restored.keyFor(keyboard));assertTrue(restored.sources(true).isEmpty());
+  try{p.setKey(PadMapper.KEYBOARD+KeyEvent.getMaxKeyCode()+1,Control.MENU);fail("Invalid input accepted");}
+  catch(IllegalArgumentException expected){}
+ }
+
 }

@@ -22,7 +22,11 @@ public class PanelLateral {
         ViewGroup host = activity.findViewById(android.R.id.content);
         View old = host.findViewWithTag("rmxp_side_panel");
         if (old != null) host.removeView(old);
-        root = new FrameLayout(activity);
+        root = new FrameLayout(activity) {
+            @Override public View focusSearch(View focused, int direction) {
+                return android.view.FocusFinder.getInstance().findNextFocus(this, focused, direction);
+            }
+        };
         root.setTag("rmxp_side_panel");
         root.setBackgroundColor(activity.getColor(R.color.rmxp_velo));
         root.setOnClickListener(v -> dismiss());
@@ -76,7 +80,14 @@ public class PanelLateral {
         b.setTextColor(activity.getColor(R.color.rmxp_niebla));
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(activity.getColor(R.color.rmxp_pizarra)); bg.setCornerRadius(dp(12));
-        b.setBackground(bg); b.setPadding(dp(12), 0, dp(12), 0);
+        android.graphics.drawable.StateListDrawable states = new android.graphics.drawable.StateListDrawable();
+        GradientDrawable focused = new GradientDrawable();
+        focused.setColor(activity.getColor(R.color.rmxp_pizarra)); focused.setCornerRadius(dp(12));
+        focused.setStroke(dp(2), activity.getColor(R.color.rmxp_ambar));
+        states.addState(new int[]{android.R.attr.state_focused}, focused);
+        states.addState(new int[]{android.R.attr.state_pressed}, focused);
+        states.addState(new int[]{}, bg);
+        b.setBackground(states); b.setPadding(dp(12), 0, dp(12), 0);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(48));
         lp.setMargins(0, dp(4), 0, dp(4)); b.setLayoutParams(lp);
         b.setOnClickListener(v -> action.run());
