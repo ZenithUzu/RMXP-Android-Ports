@@ -809,11 +809,11 @@ def gui(initial=None):
 
     style = ttk.Style(win)
     style.theme_use("clam")
-    style.configure("TNotebook", background=C["tinta"], borderwidth=0)
-    style.configure("TNotebook.Tab", background=C["pizarra"], foreground=C["liquen"], padding=(18, 11))
+    style.configure("TNotebook", background=C["tinta"], borderwidth=0, bordercolor=C["tinta"], lightcolor=C["tinta"], darkcolor=C["tinta"])
+    style.configure("TNotebook.Tab", background=C["pizarra"], foreground=C["liquen"], padding=(18, 11), borderwidth=0, bordercolor=C["pizarra"], lightcolor=C["pizarra"], darkcolor=C["pizarra"])
     style.map("TNotebook.Tab", background=[("selected", C["musgo"])], foreground=[("selected", C["niebla"])])
-    style.configure("TProgressbar", background=C["ambar"], troughcolor=C["pizarra"], borderwidth=0)
-    style.configure("Vertical.TScrollbar", background=C["musgo"], troughcolor=C["tinta"], borderwidth=0, arrowsize=10)
+    style.configure("TProgressbar", background=C["ambar"], troughcolor=C["pizarra"], borderwidth=0, bordercolor=C["pizarra"], lightcolor=C["pizarra"], darkcolor=C["pizarra"])
+    style.configure("Vertical.TScrollbar", background=C["musgo"], troughcolor=C["tinta"], borderwidth=0, arrowsize=10, arrowcolor=C["liquen"], bordercolor=C["tinta"], lightcolor=C["musgo"], darkcolor=C["musgo"])
 
     viewport = tk.Frame(left, bg=C["tinta"])
     viewport.pack(fill="both", expand=True)
