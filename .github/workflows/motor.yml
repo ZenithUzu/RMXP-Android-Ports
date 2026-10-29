@@ -9,7 +9,6 @@ on:
     paths:
       - android/app/jni/**
       - android/tools/**
-      - .github/workflows/motor.yml
   workflow_dispatch:
     inputs:
       version:
@@ -67,17 +66,4 @@ jobs:
             --notes "Librerías del motor compiladas desde el commit ${{ github.sha }} por GitHub Actions. La herramienta (Portar.bat) las descarga sola; no hace falta bajarlas a mano. Código fuente: este mismo repositorio (GPL-2.0-or-later)." \
             || gh release upload "$MOTOR_RELEASE" build/motor-android.zip --clobber
 
-      # La plantilla para la app del teléfono (RPGMK-AndroidPort-Apk) con este mismo motor.
-      # Se publica como "plantilla-ultima"; la app la toma en su próxima compilación.
-      - name: Plantilla para el teléfono
-        working-directory: .
-        env:
-          GH_TOKEN: ${{ github.token }}
-          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
-        run: |
-          mkdir -p /tmp/motor && unzip -q android/build/motor-android.zip -d /tmp/motor
-          python3 tools/rmxp_port.py --plantilla --motor /tmp/motor/lib
-          cp "$HOME/RMXP-Android-Ports/apks/Plantilla v1.apk" plantilla.apk
-          gh release delete plantilla-ultima --yes --cleanup-tag || true
-          gh release create plantilla-ultima plantilla.apk --title "plantilla-ultima" \
-            --notes "Motor $MOTOR_RELEASE sin juego, para RPGMK-AndroidPort-Apk. Hecho de ${GITHUB_SHA::7}."
+      # La Action Plantilla para el teléfono publica plantilla-ultima al completar este flujo.

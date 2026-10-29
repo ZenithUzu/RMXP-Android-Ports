@@ -3,18 +3,29 @@
 name: Plantilla para el teléfono
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - android/app/src/**
+      - android/app/build.gradle
+      - android/patches/**
+      - .github/workflows/plantilla.yml
+  workflow_run:
+    workflows: [Motor de Android]
+    types: [completed]
   workflow_dispatch:
     inputs:
       version:
         description: "Nombre de la versión (la app del teléfono la pide por este nombre)"
         required: true
-        default: "plantilla-v1"
+        default: "plantilla-ultima"
 
 permissions:
   contents: write
 
 jobs:
   plantilla:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,10 +38,19 @@ jobs:
           chmod +x android/gradlew
           python3 tools/rmxp_port.py --plantilla
           cp "$HOME/RMXP-Android-Ports/apks/Plantilla v1.apk" plantilla.apk
+          python3 - <<'PY'
+          import ast, os
+          tree = ast.parse(open('tools/rmxp_port.py', encoding='utf-8').read())
+          motor = next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign)
+                       and any(isinstance(t, ast.Name) and t.id == 'MOTOR_VERSION' for t in n.targets))
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write('MOTOR_RELEASE=' + motor + '\n')
+          PY
       - name: Publicar
         env:
           GH_TOKEN: ${{ github.token }}
+          PLANTILLA_RELEASE: ${{ inputs.version || 'plantilla-ultima' }}
         run: |
-          gh release delete "${{ inputs.version }}" --yes --cleanup-tag || true
-          gh release create "${{ inputs.version }}" plantilla.apk --title "${{ inputs.version }}" \
-            --notes "APK del motor sin juego, para RPGMK-AndroidPort-Apk. Hecho de ${GITHUB_SHA::7}."
+          gh release delete "$PLANTILLA_RELEASE" --yes --cleanup-tag || true
+          gh release create "$PLANTILLA_RELEASE" plantilla.apk --title "$PLANTILLA_RELEASE" \
+            --notes "Motor $MOTOR_RELEASE sin juego, para RPGMK-AndroidPort-Apk. Hecho de ${GITHUB_SHA::7}."
