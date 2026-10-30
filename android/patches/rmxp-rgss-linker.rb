@@ -126,9 +126,10 @@ module RmxpRGSSLinker
 end
 
 # Insurgence's H-mode7 uses a Windows-only renderer. JoiPlay falls back to flat maps.
-# Only enable this reader override for packs that actually refer to that DLL.
+# Enable for the explicit legacy profile or packs that actually refer to that DLL.
 if defined?($RGSS_SCRIPTS) && $RGSS_SCRIPTS.is_a?(Array) &&
-    $RGSS_SCRIPTS.any? { |entry| entry.is_a?(Array) && entry[3].to_s.b.match?(/MGC[_ ]Hmode7/i) }
+    ((defined?(RmxpInsurgence) && RmxpInsurgence::ENABLED) ||
+     $RGSS_SCRIPTS.any? { |entry| entry.is_a?(Array) && entry[3].to_s.b.match?(/MGC[_ ]Hmode7/i) })
   module RmxpFlatHM7
     def hm7; false; end
   end

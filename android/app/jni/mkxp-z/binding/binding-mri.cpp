@@ -67,6 +67,25 @@ extern const char module_rpg1[];
 extern const char module_rpg2[];
 extern const char module_rpg3[];
 
+// Cooperative Ruby 1.8 critical sections for the opt-in Essentials profile.
+// Modern MRI cannot disable its scheduler globally; callers share this rooted mutex.
+static VALUE legacyCriticalMutex = Qnil;
+RB_METHOD(mkxpLegacyCritical) {
+    RB_UNUSED_PARAM;
+    rb_check_argc(argc, 0);
+    return rb_funcall(legacyCriticalMutex, rb_intern("owned?"), 0);
+}
+RB_METHOD(mkxpSetLegacyCritical) {
+    RB_UNUSED_PARAM;
+    rb_check_argc(argc, 1);
+    bool owned = RTEST(rb_funcall(legacyCriticalMutex, rb_intern("owned?"), 0));
+    if (RTEST(argv[0]) && !owned)
+        rb_funcall(legacyCriticalMutex, rb_intern("lock"), 0);
+    else if (!RTEST(argv[0]) && owned)
+        rb_funcall(legacyCriticalMutex, rb_intern("unlock"), 0);
+    return argv[0];
+}
+
 static void mriBindingExecute();
 static void mriBindingTerminate();
 static void mriBindingReset();
@@ -223,6 +242,10 @@ static void mriBindingInit()
 		assert(!"unreachable");
 
 	VALUE mod = rb_define_module("System");
+    legacyCriticalMutex = rb_funcall(rb_const_get(rb_cObject, rb_intern("Mutex")), rb_intern("new"), 0);
+    rb_global_variable(&legacyCriticalMutex);
+    _rb_define_module_function(mod, "legacy_critical", mkxpLegacyCritical);
+    _rb_define_module_function(mod, "legacy_critical=", mkxpSetLegacyCritical);
 
 	_rb_define_module_function(mod, "delta", mkxpDelta);
 	_rb_define_module_function(mod, "uptime", mkxpDelta);

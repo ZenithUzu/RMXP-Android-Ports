@@ -83,3 +83,57 @@ Las entradas adicionales se muestran solo si Android las anuncia o ya tienen una
 asignación guardada. Si Home/Guía/Captura está reservado por el sistema, la app no
 puede capturarlo. Los perfiles existentes se conservan hasta restablecerlos o aceptar
 la asignación automática. No se ejecutaron tests ni APKs/emuladores para esta entrega.
+
+## Motor-v15 y perfil experimental Insurgence (Portémon 0.12)
+
+Este perfil se activa al crear el APK. En PC está en Recursos, **Insurgence y
+derivados (experimental)**, o por CLI con `--insurgence`. En Android está en el paso
+**Datos**, con el mismo nombre. Es optativo, se guarda en el estado de la pantalla
+y se incluye en el registro de construcción. Se escribe `rmxp_insurgence.txt` con
+1 o 0 incluso al desactivarlo, para que una reconstrucción no herede una bandera
+antigua. Conserva firma y partidas; requiere reconstruir el APK del juego.
+
+### Cambios incluidos
+
+- Motor-v15: un mutex registrado con el GC permite secciones críticas cooperativas
+  usadas por `Thread.critical` y `Thread.exclusive`. La lectura es por propietario
+  para restaurar correctamente secciones anidadas. No se deshabilita globalmente
+  el planificador de MRI ni se simula el método con un no-op.
+- `BitmapCache`: la implementación reconocida de `WeakRef` de Ruby 1.8, con
+  `@@id_rev_map` y finalizadores `Thread.critical`, se sustituye en memoria por
+  `weakref` de la biblioteca de Ruby actual. Se conserva el número de líneas.
+  Así no se adquiere un mutex desde esos finalizadores, algo prohibido en MRI moderno.
+- APIs retiradas de Ruby: `Array#nitems`, `indexes/indices`, `Hash#index`,
+  `Object#type`, `String#each/to_a` y `File/FileTest/Dir.exists?`, solo si faltan.
+- `GifBitmap`: para scripts reconocidos con `GifLibrary`, un adaptador usa el
+  decodificador libnsgif del motor, incluyendo animación, copias, fotogramas,
+  parada y liberación de bitmaps. No carga `gif.dll` ni extrae PNG temporales.
+  El motor actual usa una tasa de animación uniforme: no se promete reproducir
+  exactamente cada retardo variable de los GIF originales.
+- El perfil fuerza el respaldo plano de H-mode7 mediante el lector de
+  `Game_System`, conservando la partida sin sobrescribir su valor guardado.
+- Mantiene las adaptaciones existentes de Linker/FMOD, TEMP, JSON de
+  PSystem_Utilities, BGM Memory, internet y controles de Essentials.
+
+### Qué se pudo trasladar de las referencias
+
+[JoiPlay 1.00.69](https://www.patreon.com/joiplay/posts/joiplay-1-01-52-35594656)
+documenta valores correctos de RGSS Linker, métodos Graphics y ajustes de GC.
+[JoiPlay 1.20.00](https://www.patreon.com/joiplay/posts/joiplay-1-11-006-69419140)
+documenta H-mode7 desactivado, prioridad de recursos locales y tilemap/atlas de
+mkxp-z (el motor de Portémon ya se basa en mkxp-z). El soporte de FMOD se basa en
+el contrato público de [joiplay-mkxp](https://github.com/enumag/joiplay-mkxp).
+
+La [ayuda de Kirin](https://www.playkirin.com/help.html) explica perfiles de Ruby
+1.8/3 y sustituciones de DLL, pero no publica un conjunto de parches de Insurgence
+que se pueda incorporar íntegramente. Portémon sigue usando MRI 3.1 con este perfil
+de compatibilidad: **no incluye un intérprete Ruby 1.8 adicional ni código privado de Kirin**.
+El [BitmapCache público](https://github.com/griest024/essentials-sample-project/blob/master/export/scripts/BitmapCache.rb)
+permite verificar la implementación obsoleta y su uso de `Thread.critical`.
+
+Las notas de JoiPlay también mencionan correcciones de Challenge Run sin publicar
+su implementación. No se inventa un reemplazo para ese código ni se afirma haberlo
+incorporado. Tampoco se ocultan recursos ausentes o dañados: el perfil sigue siendo
+experimental, no una garantía de que Insurgence y todos sus forks completen el juego.
+Las partidas online, todos los canales FMOD y bucles arbitrarios conservan las
+limitaciones documentadas arriba. No se ejecutaron pruebas, APKs ni emuladores.

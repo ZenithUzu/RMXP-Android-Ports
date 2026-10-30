@@ -34,7 +34,7 @@ jobs:
   plantilla:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -52,9 +52,9 @@ jobs:
                      and any(isinstance(t, ast.Name) and t.id == 'MOTOR_VERSION' for t in n.targets)))
           PYTHON
           )
-          for intento in $(seq 1 180); do
+          for intento in $(seq 1 720); do
             if gh release view "$motor" --json assets --jq '.assets[].name' | grep -qx motor-android.zip; then exit 0; fi
-            echo "Esperando $motor ($intento/180)..."
+            echo "Esperando $motor ($intento/720)..."
             sleep 10
           done
           echo "El motor no se publicó a tiempo"; exit 1

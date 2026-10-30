@@ -206,3 +206,13 @@ El software se ofrece sin garantía, según los términos de su licencia. Haz co
 ### Insurgence y mapeo físico
 
 Se añade compatibilidad con el arranque RGSS Linker/FmodEx y un respaldo de H-mode7 en mapas planos. El mapeador permite capturar botones, teclas y ejes, buscar la tecla de destino y asignar acciones de la app. Consulta [alcance y limitaciones](docs/compatibilidad-insurgence.md); el arreglo del arranque no garantiza compatibilidad completa con todos los forks de Insurgence.
+
+### Insurgence y derivados: perfil experimental (0.12)
+
+En la ventana de PC, marca **Insurgence y derivados (experimental)** en Recursos. Por línea de comandos añade `--insurgence`.
+Requiere motor-v15 y reconstruir el APK conservando la misma firma. Adapta la caché
+WeakRef y APIs de Ruby antiguo, usa GIF nativos sin gif.dll y mapas planos en lugar
+de H-mode7, además de los reemplazos existentes de RGSS Linker y audio. No garantiza
+todos los forks, plugins ni funciones online; no incluye el runtime privado de Kirin.
+
+[Alcance y fuentes](https://github.com/ZenithUzu/portemon-pc/blob/main/docs/compatibilidad-insurgence.md).

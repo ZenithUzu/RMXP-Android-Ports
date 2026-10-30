@@ -45,7 +45,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = os.path.join(REPO, "android")
 HOME = os.path.join(os.path.expanduser("~"), "RMXP-Android-Ports")
 # Motor ya compilado (librerías .so). Se publica con .github/workflows/motor.yml.
-MOTOR_VERSION = "motor-v14"
+MOTOR_VERSION = "motor-v15"
 MOTOR_URL = "https://github.com/ZenithUzu/portemon-pc/releases/download/%s/motor-android.zip" % MOTOR_VERSION
 WINDOWS = os.name == "nt"
 
@@ -330,7 +330,7 @@ def largo(path):
     return path
 
 
-def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False):
+def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False, insurgence=False):
     """Copia el juego a work/assets/game, sin .exe/.dll, con los parches y mkxp.json."""
     assets = os.path.join(work, "assets")
     game = os.path.join(assets, "game")
@@ -343,6 +343,15 @@ def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False):
     patches = sorted(f for f in os.listdir(os.path.join(ANDROID, "patches")) if f.endswith(".rb"))
     for f in patches:
         shutil.copy2(os.path.join(ANDROID, "patches", f), game)
+
+    # Never inherit this opt-in flag from an earlier generated game directory.
+    marker = os.path.join(game, "rmxp_insurgence.txt")
+    if os.path.isfile(marker):
+        os.remove(marker)
+    with open(marker, "w", encoding="ascii") as flag:
+        flag.write("1\n" if insurgence else "0\n")
+    if insurgence:
+        log("Compatibilidad Insurgence y derivados: experimental (Ruby antiguo, caché, GIF y mapas planos).")
 
     conf = {}
     existing = rmxp_analyze.find(game, "mkxp.json")
@@ -665,7 +674,7 @@ def limpiar(log=print, confirm=None, include_build=False):
 @workspace_operation
 
 def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
-         install=False, motor_dir=None, log=print, ligero=False, fondo="gris", on_launch=None):
+         install=False, motor_dir=None, log=print, ligero=False, fondo="gris", on_launch=None, insurgence=False):
     """Proceso completo. Devuelve la ruta del APK."""
     if root.lower().endswith(".zip") and os.path.isfile(root):
         root = abrir_zip(root, log)
@@ -693,7 +702,7 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     motor = get_motor(log, motor_dir)
     work = os.path.join(HOME, "trabajo", slug(info["title"], "juego"))
     try:
-        assets = stage_game(root, work, info, soundfont, log, os.path.join(os.path.dirname(motor), "ruby"), ligero)
+        assets = stage_game(root, work, info, soundfont, log, os.path.join(os.path.dirname(motor), "ruby"), ligero, insurgence)
         res = make_icon_res(icon, work, fondo)
         apk = gradle_build(project, info, assets, res, motor, sdk, java_home, log)
     finally:
@@ -887,6 +896,13 @@ def gui(initial=None):
                        selectcolor=C["tinta"], activebackground=C["pizarra"], font=f_small,
                        highlightthickness=0, bd=0).pack(side="left", padx=(0, 12))
 
+    insurgence = tk.BooleanVar(value=False)
+    tk.Checkbutton(extras, text="Insurgence y derivados (experimental)", variable=insurgence,
+                   bg=C["pizarra"], fg=C["niebla"], selectcolor=C["tinta"], activebackground=C["pizarra"],
+                   activeforeground=C["niebla"], font=f_small, highlightthickness=0, bd=0).pack(anchor="w", pady=(14, 4))
+    label(extras, "Para Insurgence/Detergent: adapta Ruby antiguo, caché y GIF; H-mode7 usa mapas planos. No garantiza todos los mods.",
+          fg=C["liquen"], font=f_small, wraplength=340).pack(fill="x")
+
     options = section("04  /  AL TERMINAR", "La carpeta original, las firmas y las partidas se conservan.")
     install, ligero, capture = tk.BooleanVar(value=True), tk.BooleanVar(value=False), tk.BooleanVar(value=True)
     for text, variable in (("Instalar y abrir por USB", install), ("Capturar log del juego al abrirlo", capture),
@@ -1062,7 +1078,7 @@ def gui(initial=None):
         status.config(text="Creando el APK…")
         tabs.select(build_page)
         want_log = capture.get()
-        args = dict(root=state["root"], icon=state["icon"], soundfont=state["sf2"], install=install.get(), ligero=ligero.get(), fondo=fondo.get(),
+        args = dict(root=state["root"], icon=state["icon"], soundfont=state["sf2"], install=install.get(), ligero=ligero.get(), fondo=fondo.get(), insurgence=insurgence.get(),
                     on_launch=lambda a, p: capture_started(a, p, want_log),
                     **{k: e.get().strip() for k, e in fields.items()})
 
@@ -1128,7 +1144,7 @@ def gui(initial=None):
         status.config(text="Creando los APK de la cola…")
         write("%d juegos en cola." % len(paths), "ok")
         want_log = capture.get()
-        opts = dict(install=install.get(), ligero=ligero.get(), fondo=fondo.get(),
+        opts = dict(install=install.get(), ligero=ligero.get(), fondo=fondo.get(), insurgence=insurgence.get(),
                     on_launch=lambda a, p: capture_started(a, p, want_log))
 
         def worker():
@@ -1189,6 +1205,7 @@ def main():
     ap.add_argument("--autor"), ap.add_argument("--version"), ap.add_argument("--nombre")
     ap.add_argument("--icono", help="PNG para el icono"), ap.add_argument("--soundfont", help=".sf2 para MIDI")
     ap.add_argument("--motor", help="carpeta lib/ con el motor compilado (en vez de descargarlo)")
+    ap.add_argument("--insurgence", action="store_true", help="perfil experimental para Insurgence/Detergent y Ruby antiguo")
     ap.add_argument("--ligero", action="store_true", help="ahorrar espacio: Graphics/Audio se leen del APK")
     ap.add_argument("--fondo-icono", choices=sorted(FONDOS_ICONO), default="gris", help="color detrás del icono")
     ap.add_argument("--plantilla", action="store_true", help="APK sin juego para la app del teléfono")
@@ -1214,7 +1231,7 @@ def main():
     fallos = 0
     for carpeta in a.carpeta:
         try:
-            port(carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor, ligero=a.ligero, fondo=a.fondo_icono)
+            port(carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor, ligero=a.ligero, fondo=a.fondo_icono, insurgence=a.insurgence)
         except PortError as e:
             print("ERROR: " + str(e))
             fallos += 1
