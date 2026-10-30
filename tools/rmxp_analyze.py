@@ -116,39 +116,68 @@ def read_scripts(data):
 
 
 def rgssad_find(path, wanted):
-    with open(path, "rb") as f:
-        data = f.read()
-    if data[:7] != b"RGSSAD\0":
-        return None
-    if data[7] != 1:
-        raise ValueError("Archivo RGSSAD version %d (VX Ace) no soportado por el analizador" % data[7])
-    key, i = 0xDEADCAFE, 8
+    """Read just the requested entry from RGSSAD v1/v3; leave the archive untouched."""
+    total = os.path.getsize(path)
+    with open(path, "rb") as stream:
+        def read(count):
+            if count < 0 or count > total - stream.tell():
+                raise ValueError("Archivo RGSSAD truncado")
+            value = stream.read(count)
+            if len(value) != count:
+                raise ValueError("Archivo RGSSAD truncado")
+            return value
 
-    def nxt(k):
-        return (k * 7 + 3) & 0xFFFFFFFF
+        def uint():
+            return struct.unpack("<I", read(4))[0]
 
-    while i < len(data):
-        n = struct.unpack_from("<I", data, i)[0] ^ key
-        key = nxt(key)
-        i += 4
-        name = bytearray()
-        for b in data[i:i + n]:
-            name.append(b ^ (key & 0xFF))
-            key = nxt(key)
-        i += n
-        size = struct.unpack_from("<I", data, i)[0] ^ key
-        key = nxt(key)
-        i += 4
-        if name.decode("latin-1").replace("\\", "/").lower() == wanted.lower():
-            chunk, tk, out = data[i:i + size], key, bytearray()
-            for j in range(0, len(chunk), 4):
-                word = chunk[j:j + 4]
-                mask = struct.pack("<I", tk)
-                out += bytes(a ^ b for a, b in zip(word, mask))
-                tk = nxt(tk)
+        def advance(key):
+            return (key * 7 + 3) & 0xFFFFFFFF
+
+        def content(offset, size, key):
+            if offset > total or size > total - offset or size > 256 * 1024 * 1024:
+                raise ValueError("Entrada de scripts RGSSAD inválida o demasiado grande")
+            stream.seek(offset)
+            chunk = read(size)
+            out = bytearray()
+            for pos in range(0, size, 4):
+                out.extend(a ^ b for a, b in zip(chunk[pos:pos + 4], struct.pack("<I", key)))
+                key = advance(key)
             return bytes(out)
-        i += size
-    return None
+
+        header = read(8)
+        if header[:7] != b"RGSSAD\0" or header[7] not in (1, 3):
+            raise ValueError("Cabecera o versión RGSSAD inválida")
+        version = header[7]
+        key = ((uint() * 9 + 3) & 0xFFFFFFFF) if version == 3 else 0xDEADCAFE
+        while stream.tell() < total:
+            if version == 3:
+                offset = uint() ^ key
+                if offset == 0:
+                    return None
+                size, filekey, length = uint() ^ key, uint() ^ key, uint() ^ key
+                if length > 65536:
+                    raise ValueError("Nombre RGSSAD demasiado largo")
+                mask = struct.pack("<I", key)
+                name = bytes(value ^ mask[i % 4] for i, value in enumerate(read(length)))
+            else:
+                length = uint() ^ key
+                key = advance(key)
+                if length > 65536:
+                    raise ValueError("Nombre RGSSAD demasiado largo")
+                name = bytearray()
+                for value in read(length):
+                    name.append(value ^ (key & 0xFF))
+                    key = advance(key)
+                size = uint() ^ key
+                key = advance(key)
+                offset, filekey = stream.tell(), key
+            if offset > total or size > total - offset:
+                raise ValueError("Entrada RGSSAD fuera del archivo")
+            if name.decode("utf-8", "replace").replace("\\", "/").lower() == wanted.lower():
+                return content(offset, size, filekey)
+            if version == 1:
+                stream.seek(offset + size)
+        return None
 
 
 # --------------------------------------------------------------------------
@@ -179,7 +208,74 @@ def find(root, rel):
     return cur
 
 
-def analyze(root):
+ENGINES = {"xp": (1, "RPG Maker XP", "rxdata", "Game.rgssad"),
+           "vx": (2, "RPG Maker VX", "rvdata", "Game.rgss2a"),
+           "ace": (3, "RPG Maker VX Ace", "rvdata2", "Game.rgss3a")}
+
+
+def engine_info(root, choice="auto"):
+    """Resolve one supported RGSS runtime and a usable script source, without changing files."""
+    if choice != "auto" and choice not in ENGINES:
+        raise ValueError("Motor desconocido: " + str(choice))
+    ini = find(root, "Game.ini")
+    if not ini:
+        raise ValueError("Falta Game.ini. Se admiten RPG Maker XP, VX y VX Ace.")
+    cp = configparser.ConfigParser(strict=False, interpolation=None)
+    try:
+        with open(ini, "rb") as stream:
+            cp.read_string(stream.read().decode("utf-8", "replace").lstrip("\ufeff"))
+    except configparser.Error as error:
+        raise ValueError("Game.ini inválido: " + str(error)) from error
+    section = next((name for name in cp.sections() if name.lower() == "game"), None)
+    game = cp[section] if section else {}
+    declared = game.get("scripts", "").strip().strip('"').replace("\\", "/")
+    while declared.startswith("./"):
+        declared = declared[2:]
+    if declared.startswith("/") or ":" in declared or ".." in declared.split("/"):
+        raise ValueError("Game.ini contiene una ruta Scripts fuera de la carpeta del juego.")
+    script_kind = next((key for key, value in ENGINES.items() if declared.lower().endswith("." + value[2])), None)
+    library = game.get("library", "").strip().strip('"').replace("\\", "/").rsplit("/", 1)[-1].lower()
+    library_kind = "ace" if library.startswith("rgss3") else "vx" if library.startswith("rgss2") else "xp" if library.startswith("rgss1") else None
+    present = {key for key, value in ENGINES.items()
+               if find(root, "Data/Scripts." + value[2]) or find(root, value[3])}
+    if declared and find(root, declared):
+        if script_kind:
+            present.add(script_kind)
+        elif library_kind:
+            present.add(library_kind)
+    selected = choice
+    if selected == "auto":
+        if script_kind in present:
+            selected = script_kind
+        elif len(present) == 1:
+            selected = next(iter(present))
+        elif library_kind in present:
+            selected = library_kind
+        elif present:
+            raise ValueError("Hay datos de varios motores. Elige XP, VX o VX Ace en Motor del juego.")
+        else:
+            raise ValueError("No se encontraron scripts ni archivos RGSS de XP, VX o VX Ace.")
+    version, name, extension, archive = ENGINES[selected]
+    scripts = declared if declared and (script_kind is None or script_kind == selected) else "Data/Scripts." + extension
+    loose = find(root, scripts)
+    if not loose:
+        standard = find(root, "Data/Scripts." + extension)
+        if standard:
+            loose = standard
+    packed = find(root, archive)
+    if loose and not os.path.isfile(loose):
+        raise ValueError("La ruta de scripts es una carpeta, no un archivo: " + scripts)
+    if packed and not os.path.isfile(packed):
+        raise ValueError("El archivo cifrado es una carpeta: " + archive)
+    if not loose and not packed:
+        raise ValueError("%s necesita %s o %s; no se encontraron." % (name, scripts, archive))
+    if loose:
+        scripts = os.path.relpath(loose, root).replace(os.sep, "/")
+    return {"id": selected, "nombre": name, "rgssVersion": version, "scripts": scripts,
+            "archivo": archive if packed else None}
+
+
+def analyze(root, game_engine="auto"):
     r = {"carpeta": os.path.abspath(root), "problemas": [], "avisos": [], "info": {}}
     P, A, I = r["problemas"].append, r["avisos"].append, r["info"]
 
@@ -188,32 +284,35 @@ def analyze(root):
         P("No hay Game.ini: esta no parece la carpeta raiz del juego.")
         return r
     cp = configparser.ConfigParser(strict=False, interpolation=None)
-    with open(ini, "rb") as f:
-        cp.read_string(f.read().decode("utf-8", "replace").lstrip("\ufeff"))
-    game = cp["Game"] if cp.has_section("Game") else {}
+    try:
+        with open(ini, "rb") as f:
+            cp.read_string(f.read().decode("utf-8", "replace").lstrip("\ufeff"))
+    except (configparser.Error, OSError) as error:
+        P("Game.ini inválido: " + str(error))
+        r["veredicto"] = "No se pudo analizar el juego"
+        return r
+    section = next((name for name in cp.sections() if name.lower() == "game"), None)
+    game = cp[section] if section else {}
     I["titulo"] = game.get("Title", "?")
     I["libreria_rgss"] = game.get("Library", "?")
 
-    # Version de RGSS: miramos que archivos de datos existen.
     scripts, origin = None, None
-    for ext, (version, archive) in RGSS.items():
-        loose = find(root, "Data/Scripts." + ext)
-        packed = find(root, archive)
-        if loose or packed:
-            I["rgss"] = version
-            if loose:
-                with open(loose, "rb") as f:
-                    scripts, origin = f.read(), "Data/Scripts." + ext
-            elif packed:
-                I["archivo_cifrado"] = archive
-                try:
-                    scripts = rgssad_find(packed, "Data/Scripts." + ext)
-                    origin = archive
-                except ValueError as e:
-                    A(str(e))
-            break
-    else:
-        P("No se encontro Data/Scripts ni un archivo Game.rgssad/.rgss2a/.rgss3a.")
+    try:
+        engine = engine_info(root, game_engine)
+        I["rgss"] = "RGSS%d (%s)" % (engine["rgssVersion"], engine["nombre"])
+        I["motor"] = engine["id"]
+        loose = find(root, engine["scripts"])
+        if loose:
+            with open(loose, "rb") as stream:
+                scripts, origin = stream.read(), engine["scripts"]
+        elif engine["archivo"]:
+            I["archivo_cifrado"] = engine["archivo"]
+            origin = engine["archivo"]
+            scripts = rgssad_find(find(root, origin), engine["scripts"])
+            if scripts is None:
+                P("No se encontró %s dentro de %s." % (engine["scripts"], origin))
+    except (ValueError, OSError, configparser.Error) as error:
+        P(str(error))
 
     # Scripts: Win32API, version de Essentials, etc.
     if scripts:

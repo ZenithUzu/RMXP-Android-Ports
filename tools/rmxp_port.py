@@ -330,8 +330,14 @@ def largo(path):
     return path
 
 
-def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False, insurgence=False):
+def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False, insurgence=False, game_engine="auto"):
     """Copia el juego a work/assets/game, sin .exe/.dll, con los parches y mkxp.json."""
+    try:
+        engine = rmxp_analyze.engine_info(root, game_engine)
+    except (ValueError, OSError) as error:
+        raise PortError(str(error)) from error
+    if insurgence and engine["rgssVersion"] != 1:
+        raise PortError("El perfil Insurgence es solo para RPG Maker XP.")
     assets = os.path.join(work, "assets")
     game = os.path.join(assets, "game")
     if os.path.exists(assets):
@@ -353,6 +359,29 @@ def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False, in
     if insurgence:
         log("Compatibilidad Insurgence y derivados: experimental (Ruby antiguo, caché, GIF y mapas planos).")
 
+    with open(os.path.join(game, "rmxp_motor.txt"), "w", encoding="ascii") as marker:
+        marker.write(str(engine["rgssVersion"]) + "\n")
+    ini_path = rmxp_analyze.find(game, "Game.ini")
+    import configparser
+    ini = configparser.ConfigParser(strict=False, interpolation=None)
+    ini.optionxform = str
+    ini.read_string(read_text(ini_path).lstrip("\ufeff"))
+    section = next((name for name in ini.sections() if name.lower() == "game"), None)
+    values = dict(ini[section]) if section else {}
+    original_title = next((value for key,value in values.items() if key.lower()=="title"), info["title"])
+    if section:
+        ini.remove_section(section)
+    values = {key: value for key, value in values.items() if key.lower() not in ("scripts", "library", "title")}
+    values.update(Title=original_title, Scripts=engine["scripts"],
+                  Library={1:"RGSS102E.dll",2:"RGSS202E.dll",3:"RGSS301.dll"}[engine["rgssVersion"]])
+    ini["Game"] = values
+    canonical_ini = os.path.join(game, "Game.ini")
+    if ini_path != canonical_ini:
+        os.replace(ini_path, canonical_ini)
+    with open(canonical_ini, "w", encoding="utf-8") as stream:
+        ini.write(stream)
+    log("Motor: %s · RGSS%d · mkxp-z" % (engine["nombre"], engine["rgssVersion"]))
+
     conf = {}
     existing = rmxp_analyze.find(game, "mkxp.json")
     if existing:
@@ -361,6 +390,7 @@ def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False, in
         except ValueError:
             log("Aviso: el mkxp.json del juego tiene errores; se usa uno nuevo.")
         os.remove(existing)
+    conf["rgssVersion"] = engine["rgssVersion"]
     conf.setdefault("windowTitle", info["title"])
     conf.setdefault("subImageFix", True)
     conf.update({
@@ -674,13 +704,17 @@ def limpiar(log=print, confirm=None, include_build=False):
 @workspace_operation
 
 def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
-         install=False, motor_dir=None, log=print, ligero=False, fondo="gris", on_launch=None, insurgence=False):
+         install=False, motor_dir=None, log=print, ligero=False, fondo="gris", on_launch=None, insurgence=False, game_engine="auto"):
     """Proceso completo. Devuelve la ruta del APK."""
     if root.lower().endswith(".zip") and os.path.isfile(root):
         root = abrir_zip(root, log)
     if not rmxp_analyze.find(root, "Game.ini"):
         raise PortError("Esa carpeta no tiene Game.ini. Elige la carpeta principal del juego.")
-    report = rmxp_analyze.analyze(root)
+    try:
+        rmxp_analyze.engine_info(root, game_engine)
+    except (ValueError, OSError) as error:
+        raise PortError(str(error)) from error
+    report = rmxp_analyze.analyze(root, game_engine)
     log("Revisión: " + report.get("veredicto", "?"))
     for p in report["problemas"]:
         log("  Problema: " + p)
@@ -702,7 +736,7 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     motor = get_motor(log, motor_dir)
     work = os.path.join(HOME, "trabajo", slug(info["title"], "juego"))
     try:
-        assets = stage_game(root, work, info, soundfont, log, os.path.join(os.path.dirname(motor), "ruby"), ligero, insurgence)
+        assets = stage_game(root, work, info, soundfont, log, os.path.join(os.path.dirname(motor), "ruby"), ligero, insurgence, game_engine)
         res = make_icon_res(icon, work, fondo)
         apk = gradle_build(project, info, assets, res, motor, sdk, java_home, log)
     finally:
@@ -874,6 +908,13 @@ def gui(initial=None):
         fields[key] = entry
 
     extras = section("03  /  RECURSOS", "Icono y música MIDI opcionales.")
+    engine_names = {"Automático": "auto", "RPG Maker XP": "xp", "RPG Maker VX": "vx", "RPG Maker VX Ace": "ace"}
+    engine_choice = tk.StringVar(value="Automático")
+    label(extras, "Motor del juego", fg=C["liquen"], font=f_small).pack(fill="x")
+    engine_picker = ttk.Combobox(extras, textvariable=engine_choice, values=list(engine_names), state="readonly")
+    engine_picker.pack(fill="x", pady=(4, 4))
+    engine_hint = label(extras, "Se detecta al elegir el juego.", fg=C["liquen"], font=f_small, wraplength=340)
+    engine_hint.pack(fill="x", pady=(0, 12))
     icon_lbl = label(extras, "Icono de la plantilla", fg=C["liquen"], font=f_small, wraplength=340)
     sf2_lbl = label(extras, "Sin SoundFont externo", fg=C["liquen"], font=f_small, wraplength=340)
 
@@ -897,11 +938,27 @@ def gui(initial=None):
                        highlightthickness=0, bd=0).pack(side="left", padx=(0, 12))
 
     insurgence = tk.BooleanVar(value=False)
-    tk.Checkbutton(extras, text="Insurgence y derivados (experimental)", variable=insurgence,
+    insurgence_toggle = tk.Checkbutton(extras, text="Insurgence y derivados (experimental)", variable=insurgence,
                    bg=C["pizarra"], fg=C["niebla"], selectcolor=C["tinta"], activebackground=C["pizarra"],
-                   activeforeground=C["niebla"], font=f_small, highlightthickness=0, bd=0).pack(anchor="w", pady=(14, 4))
+                   activeforeground=C["niebla"], font=f_small, highlightthickness=0, bd=0)
+    insurgence_toggle.pack(anchor="w", pady=(14, 4))
     label(extras, "Para Insurgence/Detergent: adapta Ruby antiguo, caché y GIF; H-mode7 usa mapas planos. No garantiza todos los mods.",
           fg=C["liquen"], font=f_small, wraplength=340).pack(fill="x")
+
+    def refresh_engine(*_):
+        if not state["root"]:
+            return
+        try:
+            detected = rmxp_analyze.engine_info(state["root"], engine_names[engine_choice.get()])
+            engine_hint.config(text="%s · RGSS%d · mkxp-z" % (detected["nombre"], detected["rgssVersion"]), fg=C["liquen"])
+            insurgence_toggle.config(state="normal" if detected["rgssVersion"] == 1 else "disabled")
+            if detected["rgssVersion"] != 1:
+                insurgence.set(False)
+        except (ValueError, OSError) as error:
+            engine_hint.config(text=str(error), fg=C["coral"])
+            insurgence_toggle.config(state="disabled")
+            insurgence.set(False)
+    engine_picker.bind("<<ComboboxSelected>>", refresh_engine)
 
     options = section("04  /  AL TERMINAR", "La carpeta original, las firmas y las partidas se conservan.")
     install, ligero, capture = tk.BooleanVar(value=True), tk.BooleanVar(value=False), tk.BooleanVar(value=True)
@@ -1052,7 +1109,8 @@ def gui(initial=None):
         sf2_lbl.config(text="Música MIDI: la del juego (%s)" % own if own else "Música MIDI: sin SoundFont",
                        fg=C["niebla"] if own else C["liquen"])
         logbox.delete("1.0", "end")
-        report = rmxp_analyze.analyze(path)
+        refresh_engine()
+        report = rmxp_analyze.analyze(path, engine_names[engine_choice.get()])
         write("Revisión: %s" % report.get("veredicto", "?"), "ok" if not report["problemas"] else "error")
         for p in report["problemas"]:
             write("Problema: " + p, "error")
@@ -1078,7 +1136,7 @@ def gui(initial=None):
         status.config(text="Creando el APK…")
         tabs.select(build_page)
         want_log = capture.get()
-        args = dict(root=state["root"], icon=state["icon"], soundfont=state["sf2"], install=install.get(), ligero=ligero.get(), fondo=fondo.get(), insurgence=insurgence.get(),
+        args = dict(root=state["root"], icon=state["icon"], soundfont=state["sf2"], install=install.get(), ligero=ligero.get(), fondo=fondo.get(), insurgence=insurgence.get(), game_engine=engine_names[engine_choice.get()],
                     on_launch=lambda a, p: capture_started(a, p, want_log),
                     **{k: e.get().strip() for k, e in fields.items()})
 
@@ -1144,7 +1202,7 @@ def gui(initial=None):
         status.config(text="Creando los APK de la cola…")
         write("%d juegos en cola." % len(paths), "ok")
         want_log = capture.get()
-        opts = dict(install=install.get(), ligero=ligero.get(), fondo=fondo.get(), insurgence=insurgence.get(),
+        opts = dict(install=install.get(), ligero=ligero.get(), fondo=fondo.get(), insurgence=insurgence.get(), game_engine=engine_names[engine_choice.get()],
                     on_launch=lambda a, p: capture_started(a, p, want_log))
 
         def worker():
@@ -1205,6 +1263,7 @@ def main():
     ap.add_argument("--autor"), ap.add_argument("--version"), ap.add_argument("--nombre")
     ap.add_argument("--icono", help="PNG para el icono"), ap.add_argument("--soundfont", help=".sf2 para MIDI")
     ap.add_argument("--motor", help="carpeta lib/ con el motor compilado (en vez de descargarlo)")
+    ap.add_argument("--motor-juego", choices=["auto", "xp", "vx", "ace"], default="auto", help="motor del juego (detección automática por defecto)")
     ap.add_argument("--insurgence", action="store_true", help="perfil experimental para Insurgence/Detergent y Ruby antiguo")
     ap.add_argument("--ligero", action="store_true", help="ahorrar espacio: Graphics/Audio se leen del APK")
     ap.add_argument("--fondo-icono", choices=sorted(FONDOS_ICONO), default="gris", help="color detrás del icono")
@@ -1231,7 +1290,7 @@ def main():
     fallos = 0
     for carpeta in a.carpeta:
         try:
-            port(carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor, ligero=a.ligero, fondo=a.fondo_icono, insurgence=a.insurgence)
+            port(carpeta, a.autor, a.version, a.nombre, a.icono, a.soundfont, a.instalar, a.motor, ligero=a.ligero, fondo=a.fondo_icono, insurgence=a.insurgence, game_engine=a.motor_juego)
         except PortError as e:
             print("ERROR: " + str(e))
             fallos += 1

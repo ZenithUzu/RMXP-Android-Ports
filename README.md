@@ -216,3 +216,12 @@ de H-mode7, además de los reemplazos existentes de RGSS Linker y audio. No gara
 todos los forks, plugins ni funciones online; no incluye el runtime privado de Kirin.
 
 [Alcance y fuentes](https://github.com/ZenithUzu/portemon-pc/blob/main/docs/compatibilidad-insurgence.md).
+
+### Selección de motor (0.13)
+
+Se puede elegir **Automático, RPG Maker XP, VX o VX Ace** en la creación del APK,
+con la misma interfaz de controles y partidas. Se valida el tipo de datos y se
+configura RGSS1/2/3 explícitamente. El perfil experimental Insurgence es solo para XP.
+EasyRPG, OpenGMK y MV/MZ son integraciones pendientes y no se incluyen en esta versión.
+
+[Soporte, selección y límites de los motores](https://github.com/ZenithUzu/portemon-pc/blob/main/docs/motores.md).

@@ -43,12 +43,15 @@ public class PadMapper {
     private final SharedPreferences prefs;
     private final TouchControls.Actions actions;
     private int layout, deviceId=-1;
+    private final int rgssVersion;
     private String deviceKey;
     private final Set<Integer> digital=new HashSet<>(), axes=new HashSet<>(), keyboardHeld=new HashSet<>();
     private final Map<Integer,Integer> active=new HashMap<>(), counts=new HashMap<>();
 
-    public PadMapper(SharedPreferences prefs,TouchControls.Actions actions){
-        this.prefs=prefs;this.actions=actions;layout=prefs.getInt("mando_layout",XBOX);
+    public PadMapper(SharedPreferences prefs,TouchControls.Actions actions){this(prefs,actions,1);}
+    public PadMapper(SharedPreferences prefs,TouchControls.Actions actions,int rgssVersion){
+        this.prefs=prefs;this.actions=actions;this.rgssVersion=rgssVersion;
+        layout=prefs.getInt("mando_layout",XBOX);
     }
     public int profile(){return layout;}
     public int captureButton(){return prefs.getInt("capture_button_"+layout,0);}
@@ -90,7 +93,17 @@ public class PadMapper {
     }
     public int keyFor(int code){
         if(code>=KEYBOARD)return prefs.getInt("teclado_mapa_"+(code-KEYBOARD),code-KEYBOARD);
-        int fallback=DEFAULTS.containsKey(letterCode(code))?DEFAULTS.get(letterCode(code)):0;
+        int named=letterCode(code);
+        int fallback=DEFAULTS.containsKey(named)?DEFAULTS.get(named):0;
+        // VX/Ace bind Z to Confirm, unlike older Essentials. Keep user overrides intact.
+        if(rgssVersion>1)switch(named){
+            case KeyEvent.KEYCODE_BUTTON_X: fallback=KeyEvent.KEYCODE_SHIFT_LEFT;break;
+            case KeyEvent.KEYCODE_BUTTON_Y: fallback=KeyEvent.KEYCODE_A;break;
+            case KeyEvent.KEYCODE_BUTTON_L1: fallback=KeyEvent.KEYCODE_Q;break;
+            case KeyEvent.KEYCODE_BUTTON_R1: fallback=KeyEvent.KEYCODE_W;break;
+            case KeyEvent.KEYCODE_BUTTON_L2: fallback=KeyEvent.KEYCODE_S;break;
+            case KeyEvent.KEYCODE_BUTTON_R2: fallback=KeyEvent.KEYCODE_D;break;
+        }
         // Keep explicitly saved mappings from older versions; each new layout has its own overrides.
         return prefs.getInt("mando_"+layout+"_"+code,layout==XBOX?prefs.getInt("mando_"+code,fallback):fallback);
     }

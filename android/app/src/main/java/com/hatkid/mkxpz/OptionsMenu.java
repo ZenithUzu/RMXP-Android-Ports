@@ -62,7 +62,12 @@ public class OptionsMenu implements TouchControls.Actions
         mActivity = activity;
         mGamePath = gamePath;
         mPrefs = activity.getSharedPreferences("rmxp_opciones", Activity.MODE_PRIVATE);
-        pad = new PadMapper(mPrefs, this);
+        int rgss=1;
+        try(java.io.BufferedReader reader=new java.io.BufferedReader(new java.io.FileReader(new File(gamePath,"rmxp_motor.txt")))) {
+            int detected=Integer.parseInt(reader.readLine());
+            if(detected>=1 && detected<=3)rgss=detected;
+        } catch(java.io.IOException | NumberFormatException ignored) { /* Older APKs use the XP preset. */ }
+        pad = new PadMapper(mPrefs, this, rgss);
         partidas = new Partidas(activity, new File(gamePath));
         registro = new Registro(activity, new File(gamePath));
         perfil = new Perfil(activity, mPrefs, this::recargarControles);
