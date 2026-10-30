@@ -32,4 +32,6 @@
     <string name="ap_move_hint">Arrastra el medidor para moverlo. Su posición se guarda automáticamente.</string>
     <string name="ap_system_color">Usar color del sistema</string>
     <string name="ap_precise">Ajuste preciso</string>
+    <string name="ap_android_color">Android</string>
+    <string name="ap_one_line">Una línea</string>
 </resources>

@@ -45,7 +45,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID = os.path.join(REPO, "android")
 HOME = os.path.join(os.path.expanduser("~"), "RMXP-Android-Ports")
 # Motor ya compilado (librerías .so). Se publica con .github/workflows/motor.yml.
-MOTOR_VERSION = "motor-v13"
+MOTOR_VERSION = "motor-v14"
 MOTOR_URL = "https://github.com/ZenithUzu/portemon-pc/releases/download/%s/motor-android.zip" % MOTOR_VERSION
 WINDOWS = os.name == "nt"
 
@@ -358,6 +358,7 @@ def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False):
         "fullscreen": True,
         # En RPG Maker, más fps = juego más rápido. Nunca seguir los Hz de la pantalla.
         "syncToRefreshrate": False,
+        "vsync": False,  # Android's runtime FPS control owns the clock.
         "preloadScript": patches + [p for p in conf.get("preloadScript", []) if p not in patches],
     })
     if ruby_lib and os.path.isdir(ruby_lib):

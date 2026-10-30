@@ -837,6 +837,7 @@ struct GraphicsPrivate {
     int frameRate;
 #ifdef __ANDROID__
     int gameFrameRate = DEF_FRAMERATE;
+    int androidSwapInterval = -2;
 #endif
     int ffSpeed = 1;      /* fast forward multiplier in use */
     unsigned ffCount = 0; /* frames seen while fast forwarding */
@@ -1255,6 +1256,7 @@ void Graphics::update(bool checkForShutdown) {
             p->checkSyncLock();
         }
         SDL_GL_MakeCurrent(p->threadData->window, p->threadData->glContext);
+        p->androidSwapInterval = -2;
         rmxpSetAudioPaused(rmxpSpeed == 0);
     }
     
@@ -1267,6 +1269,14 @@ void Graphics::update(bool checkForShutdown) {
     
     int speed = std::max(1, (int)rmxpSpeed);
     const Config &config = p->threadData->config;
+    // Explicit FPS targets use our clock, not a second wait on a 60 Hz EGL surface.
+    int swapInterval = forcedFps > 0 ? 0 : (config.vsync || config.syncToRefreshrate ? 1 : 0);
+    if (p->androidSwapInterval != swapInterval) {
+        int result = SDL_GL_SetSwapInterval(swapInterval);
+        p->androidSwapInterval = swapInterval;
+        Debug() << "RMXP-FPS target=" << forcedFps << " game=" << p->gameFrameRate
+                << " swap=" << SDL_GL_GetSwapInterval() << " result=" << result;
+    }
     bool disabled = forcedFps == 0 && (config.syncToRefreshrate || config.fixedFramerate < 0);
     int baseRate = forcedFps == 0 && config.fixedFramerate > 0 ? config.fixedFramerate : fps;
     int targetRate = baseRate * speed;

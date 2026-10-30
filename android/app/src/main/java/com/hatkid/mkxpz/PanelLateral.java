@@ -13,7 +13,7 @@ import android.widget.TextView;
 
 /** Shared appearance for editor and controller settings; no floating system dialogs. */
 public class PanelLateral {
-    public final LinearLayout content, top;
+    public final LinearLayout content, top, footer;
     public final Activity activity;
     private final FrameLayout root;
 
@@ -33,17 +33,19 @@ public class PanelLateral {
         LinearLayout panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setBackgroundResource(R.drawable.rmxp_panel);
-        panel.setPadding(dp(20), dp(12), dp(20), dp(12));
+        panel.setPadding(dp(16), dp(8), dp(16), dp(8));
         panel.setOnClickListener(v -> {});
-        int width = Math.min(dp(360), activity.getResources().getDisplayMetrics().widthPixels);
+        int width = Math.min(dp(400), activity.getResources().getDisplayMetrics().widthPixels);
         root.addView(panel, new FrameLayout.LayoutParams(width, -1, Gravity.END));
         LinearLayout header = new LinearLayout(activity);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setBaselineAligned(false);
-        TextView text = label(activity.getString(title), 20);
-        header.addView(text, new LinearLayout.LayoutParams(0, dp(48), 1));
+        TextView text = label(activity.getString(title), 18);
+        header.addView(text, new LinearLayout.LayoutParams(0, dp(44), 1));
         Button close = button(activity.getString(R.string.rmxp_edit_done), this::dismiss);
-        header.addView(close, new LinearLayout.LayoutParams(dp(80), dp(48)));
+        close.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activity.getColor(R.color.rmxp_ambar)));
+        close.setTextColor(activity.getColor(R.color.rmxp_tinta));
+        header.addView(close, new LinearLayout.LayoutParams(dp(76), dp(40)));
         panel.addView(header);
         top = new LinearLayout(activity);
         top.setOrientation(LinearLayout.VERTICAL);
@@ -52,7 +54,11 @@ public class PanelLateral {
         content = new LinearLayout(activity);
         content.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(content);
+        scroll.setClipToPadding(false);
         panel.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        footer = new LinearLayout(activity);
+        footer.setOrientation(LinearLayout.VERTICAL);
+        panel.addView(footer);
         host.addView(root, new ViewGroup.LayoutParams(-1, -1));
         close.requestFocus();
     }

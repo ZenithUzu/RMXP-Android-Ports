@@ -32,4 +32,6 @@
     <string name="ap_move_hint">Drag the meter to move it. Its position is saved automatically.</string>
     <string name="ap_system_color">Use system color</string>
     <string name="ap_precise">Precise adjustment</string>
+    <string name="ap_android_color">Android</string>
+    <string name="ap_one_line">One line</string>
 </resources>

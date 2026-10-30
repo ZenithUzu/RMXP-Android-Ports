@@ -1,12 +1,5 @@
 name: Probar herramienta de PC
 on:
-  push:
-    branches: [main]
-    paths:
-      - tools/**
-      - tests/**
-      - '*.bat'
-      - .github/workflows/herramientas.yml
   workflow_dispatch:
 permissions:
   contents: read

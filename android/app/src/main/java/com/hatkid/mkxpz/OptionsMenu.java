@@ -178,18 +178,6 @@ public class OptionsMenu implements TouchControls.Actions
         });
     }
 
-    private void mappingChoice(PanelLateral panel, LinearLayout row, String text, boolean selected, Runnable action)
-    {
-        Button b = panel.button(text, action);
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(mActivity.getColor(
-            selected ? R.color.rmxp_ambar : R.color.rmxp_pizarra)));
-        b.setTextSize(13); b.setMaxLines(2);
-        b.setTextColor(mActivity.getColor(selected ? R.color.rmxp_tinta : R.color.rmxp_niebla));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, panel.dp(48), 1);
-        lp.setMargins(panel.dp(2), panel.dp(2), panel.dp(2), panel.dp(2));
-        row.addView(b, lp);
-    }
-
     private boolean mCapturing, mCaptureAxis;
     private int mCaptureSource, mLastMapped = -1;
     private TextView mCaptureHint;
@@ -315,15 +303,9 @@ public class OptionsMenu implements TouchControls.Actions
         toolbar.addView(panel.button(mActivity.getString(R.string.map_add),this::captureMapping),
             new LinearLayout.LayoutParams(0,panel.dp(48),1));
         panel.top.addView(toolbar);
-        LinearLayout tabs = new LinearLayout(mActivity);
-        tabs.setBaselineAligned(false);
-        mappingChoice(panel, tabs, mActivity.getString(R.string.rmxp_pad_buttons), mMappingTab == 0,
-            () -> { mMappingTab = 0; showInputMapping(); });
-        mappingChoice(panel, tabs, mActivity.getString(R.string.map_axes), mMappingTab == 1,
-            () -> { mMappingTab = 1; showInputMapping(); });
-        mappingChoice(panel, tabs, mActivity.getString(R.string.map_keyboard), mMappingTab == 2,
-            () -> { mMappingTab = 2; showInputMapping(); });
-        panel.top.addView(tabs);
+        panel.top.addView(Apariencia.segmented(panel,new String[]{
+            mActivity.getString(R.string.rmxp_pad_buttons),mActivity.getString(R.string.map_axes),
+            mActivity.getString(R.string.map_keyboard)},mMappingTab,index->{mMappingTab=index;showInputMapping();}));
         panel.content.addView(panel.label(mActivity.getString(R.string.map_hint), 12));
         java.util.List<Integer> sources = pad.sources(mMappingTab == 2);
         if (mMappingTab == 2) {
@@ -477,10 +459,17 @@ public class OptionsMenu implements TouchControls.Actions
         android.view.Surface surface = SDLActivity.getNativeSurface();
         if (surface != null && surface.isValid()) {
             if (Build.VERSION.SDK_INT >= 31)
-                surface.setFrameRate(mHz, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
+                surface.setFrameRate(mHz, android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT,
                     android.view.Surface.CHANGE_FRAME_RATE_ALWAYS);
             else if (Build.VERSION.SDK_INT >= 30)
-                surface.setFrameRate(mHz, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
+                surface.setFrameRate(mHz, android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT);
+        }
+        if (Build.VERSION.SDK_INT >= 35) {
+            try {
+                View.class.getMethod("setRequestedFrameRate", float.class).invoke(mActivity.getWindow().getDecorView(), (float)mHz);
+            } catch (ReflectiveOperationException e) {
+                android.util.Log.w("RMXP-Pantalla", "View frame-rate request unavailable", e);
+            }
         }
         mHzHint.setText(mActivity.getString(R.string.rmxp_hz_hint, mHz,
             Math.round(display.getRefreshRate())));

@@ -577,34 +577,39 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             names[i + 1] = c.cruceta ? mActivity.getString(R.string.rmxp_dpad) :
                 c.etiqueta.isEmpty() ? Teclas.nombre(c.tecla) : c.etiqueta;
         }
-        android.widget.Spinner scope = Apariencia.choice(panel, panel.top, R.string.ap_apply_to, names,
+        Apariencia.choice(panel, panel.top, R.string.ap_apply_to, names,
             target == null ? 0 : mControls.indexOf(target) + 1,
             n -> chooseColors(n == 0 ? null : mControls.get(n - 1)));
         LinearLayout previewRow = new LinearLayout(mActivity);
-        previewRow.setGravity(Gravity.CENTER_VERTICAL);
-        previewRow.setBaselineAligned(false);
-        panel.top.removeAllViews();
-        previewRow.addView(scope, new LinearLayout.LayoutParams(0, Math.round(dp(48)), 1));
-        Control sample = target == null ? mControls.stream().filter(c -> !c.cruceta && c.tecla > 0).findFirst().orElse(mControls.get(0)) : target;
-        ControlView preview = new ControlView(mActivity, sample, mAccent, new ControlView.Listener() {
-            public void press(int key) {} public void release(int key) {}
-            public boolean editTouch(ControlView v, MotionEvent e) { return true; }
-        });
-        preview.setContentDescription(mActivity.getString(R.string.ap_preview));
-        previewRow.addView(preview, new LinearLayout.LayoutParams(Math.round(dp(sample.pastilla ? 88 : 64)), Math.round(dp(56))));
-        Runnable refresh = () -> {
+        previewRow.setGravity(Gravity.CENTER_VERTICAL); previewRow.setBaselineAligned(false);
+        TextView caption=panel.label(mActivity.getString(R.string.ap_preview),12);
+        previewRow.addView(caption,new LinearLayout.LayoutParams(-2,Math.round(dp(44))));
+        java.util.List<Control> samples=new java.util.ArrayList<>();
+        if(target!=null)samples.add(target);
+        else {
+            for(Control c:mControls)if(c.id.equals("esc")||c.id.equals("shift"))samples.add(c);
+            if(samples.isEmpty())for(Control c:mControls)if(!c.cruceta && c.tecla>0 && samples.size()<2)samples.add(c);
+        }
+        java.util.List<ControlView> previews=new java.util.ArrayList<>();
+        for(Control sample:samples){
+            ControlView preview=new ControlView(mActivity,sample,mAccent,new ControlView.Listener(){
+                public void press(int key){}public void release(int key){}
+                public boolean editTouch(ControlView v,MotionEvent e){return true;}
+            });
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,Math.round(dp(40)),1);
+            lp.setMargins(Math.round(dp(6)),0,0,0);previewRow.addView(preview,lp);previews.add(preview);
+        }
+        Runnable refresh=()->{
             placeAndSave();
-            preview.badge = dp(10); preview.pad = dp(8);
-            preview.skin = mPrefs.getInt("skin", 0);
-            preview.bodyAlpha = opacidad(sample);
-            preview.showBadge = mPrefs.getBoolean("insig_mostrar", true);
-            boolean ownBadge = mPrefs.getBoolean("insig_propia", false);
-            preview.badgeAlpha = ownBadge ? mPrefs.getInt("insig_opac", 100)/100f : preview.bodyAlpha;
-            preview.badgeColor = ownBadge ? mPrefs.getInt("insig_color", mAccent) : 0;
-            preview.labelOwn = sample.labelOwn || mPrefs.getBoolean("label_own", false);
-            preview.labelColor = sample.labelOwn ? sample.labelColor : mPrefs.getInt("label_color", mAccent);
-            preview.labelAlpha = sample.labelOwn ? sample.labelOpacity : mPrefs.getInt("label_opacity", 100)/100f;
-            preview.invalidate();
+            for(ControlView preview:previews){
+                Control sample=preview.control;
+                preview.badge=0;preview.pad=dp(2);preview.showBadge=false;
+                preview.skin=mPrefs.getInt("skin",0);preview.bodyAlpha=opacidad(sample);
+                preview.labelOwn=sample.labelOwn||mPrefs.getBoolean("label_own",false);
+                preview.labelColor=sample.labelOwn?sample.labelColor:mPrefs.getInt("label_color",mAccent);
+                preview.labelAlpha=sample.labelOwn?sample.labelOpacity:mPrefs.getInt("label_opacity",100)/100f;
+                preview.invalidate();
+            }
         };
         LinearLayout buttons = Apariencia.card(panel, R.string.ap_buttons, true);
         final boolean[] updatingSystem = {false};
@@ -615,6 +620,9 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
                 else { target.color = on ? 0xFFFFFFFF : mAccent; target.systemColor = on; }
                 chooseColors(target); placeAndSave();
             });
+        system.setText(R.string.ap_android_color);
+        View systemRow=(View)system.getParent(); buttons.removeView(systemRow);
+        Apariencia.headerControl(panel,buttons,system,112);
         Control first = target == null ? mControls.get(0) : target;
         Apariencia.color(panel, buttons, first.systemColor ? mActivity.getColor(R.color.rmxp_pizarra) : first.color, color -> {
             if (target == null) for (Control c : mControls) { c.color = color; c.systemColor = false; }
@@ -634,7 +642,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             }
             refresh.run();
         });
-        LinearLayout labels = Apariencia.card(panel, R.string.ap_labels, false);
+        LinearLayout labels = Apariencia.card(panel, R.string.ap_labels, true);
         LinearLayout extra = Apariencia.column(mActivity);
         boolean own = target == null ? mPrefs.getBoolean("label_own", false) : target.labelOwn;
         Apariencia.toggle(panel, labels, R.string.ap_independent, own, on -> {
@@ -672,15 +680,15 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
         Apariencia.slider(panel, badges, R.string.ap_label_opacity, 0, 100, mPrefs.getInt("insig_opac",100), " %", n -> {
             mPrefs.edit().putInt("insig_opac", n).apply(); refresh.run();
         });
-        panel.top.addView(previewRow); refresh.run();
-        panel.content.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
+        panel.footer.addView(previewRow); refresh.run();
+        previewRow.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
             if (target == null) {
                 for (Control c : mControls) { c.color = 0xFFFFFFFF; c.systemColor = true; c.labelOwn = false; c.opacidad = 1; }
                 mPrefs.edit().putBoolean("label_own", false).putBoolean("opac_fija",true).putInt("opac_global",75)
                     .putBoolean("insig_propia",false).apply();
             } else { target.color = 0xFFFFFFFF; target.systemColor = true; target.labelOwn = false; target.opacidad = 1; }
             placeAndSave(); chooseColors(target);
-        }));
+        }),new LinearLayout.LayoutParams(Math.round(dp(88)),Math.round(dp(40))));
     }
 
     private String[] tallaNames()
