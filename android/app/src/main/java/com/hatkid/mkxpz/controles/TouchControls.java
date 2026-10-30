@@ -841,6 +841,7 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
             grid.removeAllViews();
             int columns = withActions && category[0] == 0 && query.isEmpty() ? 2 : 3;
             grid.setColumnCount(columns);
+            int visible=0;
             for (Map.Entry<Integer,String> entry : keys.entrySet()) {
                 int code = entry.getKey();
                 String role = code < 0 ? a.getString(R.string.map_action) : Teclas.uso(a,code);
@@ -850,9 +851,12 @@ public class TouchControls implements ControlView.Listener, InputManager.InputDe
                 key.setTextSize(12); key.setPadding(0,0,0,0);
                 key.setContentDescription(entry.getValue());
                 GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-                lp.width = panel.dp((Math.min(360,a.getResources().getDisplayMetrics().widthPixels /
-                    a.getResources().getDisplayMetrics().density)-40)/columns)-panel.dp(6);
-                lp.height = panel.dp(56); lp.setMargins(panel.dp(3),panel.dp(3),panel.dp(3),panel.dp(3));
+                lp.width=0; lp.columnSpec=GridLayout.spec(visible%columns,1f);
+                lp.rowSpec=GridLayout.spec(visible/columns);
+                lp.height=GridLayout.LayoutParams.WRAP_CONTENT;
+                key.setMinimumHeight(panel.dp(56));key.setPadding(panel.dp(4),panel.dp(8),panel.dp(4),panel.dp(8));
+                lp.setMargins(panel.dp(3),panel.dp(3),panel.dp(3),panel.dp(3));
+                visible++;
                 grid.addView(key,lp);
             }
         };

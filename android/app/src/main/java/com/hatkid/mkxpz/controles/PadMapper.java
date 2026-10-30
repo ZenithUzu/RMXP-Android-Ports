@@ -51,9 +51,22 @@ public class PadMapper {
         this.prefs=prefs;this.actions=actions;layout=prefs.getInt("mando_layout",XBOX);
     }
     public int profile(){return layout;}
+    public int captureButton(){return prefs.getInt("capture_button_"+layout,0);}
+    public void setCaptureButton(int code){prefs.edit().putInt("capture_button_"+layout,code).apply();}
+    public boolean available(int code){
+        if(prefs.contains("mando_"+layout+"_"+code))return true;
+        for(int id:InputDevice.getDeviceIds()) {
+            InputDevice device=InputDevice.getDevice(id);
+            if(isGamepad(device) && device.hasKeys(code)[0])return true;
+        }
+        return false;
+    }
     public String name(int code){
+        if(code==captureButton() && code!=0)return "Captura";
         if(code>=KEYBOARD)return Teclas.nombre(code-KEYBOARD);
         if(code>=1100 && code<1228)return MotionEvent.axisToString((code-1100)/2).replace("AXIS_","") + (code%2==0?" −":" +");
+        if(code==KeyEvent.KEYCODE_BUTTON_MODE)return layout==SWITCH?"Home":"Guía";
+        if(code==KeyEvent.KEYCODE_BACK)return "Back";
         if(layout!=SWITCH)return BOTONES.getOrDefault(code,Teclas.nombre(code));
         if(code==KeyEvent.KEYCODE_BUTTON_A)return "B";
         if(code==KeyEvent.KEYCODE_BUTTON_B)return "A";
@@ -231,7 +244,10 @@ public class PadMapper {
         if(Math.max(trigger(e,MotionEvent.AXIS_RTRIGGER),trigger(e,MotionEvent.AXIS_GAS))>.65f)return KeyEvent.KEYCODE_BUTTON_R2;
         for(InputDevice.MotionRange range:d.getMotionRanges()) {
             int axis=range.getAxis();
-            if(axis<0 || axis>=64)continue;
+            if(axis<0 || axis>=64 || axis==MotionEvent.AXIS_X || axis==MotionEvent.AXIS_Y ||
+                axis==rx || axis==ry || axis==MotionEvent.AXIS_HAT_X || axis==MotionEvent.AXIS_HAT_Y ||
+                axis==MotionEvent.AXIS_LTRIGGER || axis==MotionEvent.AXIS_RTRIGGER ||
+                axis==MotionEvent.AXIS_BRAKE || axis==MotionEvent.AXIS_GAS)continue;
             float v=value(e,axis);
             if(Math.abs(v)>.65f)return 1100+axis*2+(v>0?1:0);
         }

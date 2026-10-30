@@ -20,4 +20,13 @@
     <string name="map_extra_axes">Otros ejes</string>
     <string name="map_reset_keyboard">¿Restablecer los atajos y asignaciones del teclado?</string>
     <string name="map_source">Entrada</string>
+    <string name="map_auto">Asignar automáticamente</string>
+    <string name="map_auto_confirm">Se reemplazarán las asignaciones del perfil detectado por las estándar. Las del otro perfil y las del teclado se conservan. ¿Continuar?</string>
+    <string name="map_auto_prompt">Pulsa el botón de la derecha en tu mando</string>
+    <string name="map_auto_hint">Detectaremos su distribución y aplicaremos las asignaciones estándar.</string>
+    <string name="map_grid_hint">Toca una asignación para cambiar su tecla o acción.</string>
+    <string name="map_reserved_hint">Guía / Home y Captura solo se pueden asignar si Android entrega su entrada.</string>
+    <string name="map_detect_input">Detectar otra entrada</string>
+    <string name="map_capture_button">Captura</string>
+    <string name="map_capture_screenshot">Pulsa y suelta Captura en tu mando. Si Android reserva ese botón, no llegará a la app. Puedes cancelar abajo.</string>
 </resources>

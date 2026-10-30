@@ -348,6 +348,13 @@ public class MainActivity extends SDLActivity
             try { android.system.Os.setenv(v[0], v[1], false); } catch (Exception ignored) { }
         }
 
+        // Essentials' GifBitmap uses ENV["TEMP"] (Windows); Android does not define it.
+        // Set it before SDL/Ruby starts, to this application's writable private cache.
+        for (String name : new String[]{"TEMP", "TMP", "TMPDIR"}) {
+            try { android.system.Os.setenv(name, getCacheDir().getAbsolutePath(), true); }
+            catch (android.system.ErrnoException e) { Log.e(TAG, "Cannot set " + name, e); }
+        }
+
         mVirtual = readVirtual();
         if (mVirtual != null) {
             try { android.system.Os.setenv("RMXP_APK", getApplicationInfo().sourceDir, true); } catch (Exception ignored) { }

@@ -178,26 +178,111 @@ public class OptionsMenu implements TouchControls.Actions
         });
     }
 
-    private boolean mCapturing, mCaptureAxis;
+    private boolean mCapturing, mCaptureAxis, mCaptureScreenshot;
     private int mCaptureSource, mLastMapped = -1;
     private TextView mCaptureHint;
     private int mNavigationDirection;
     private long mNavigationTime;
 
+    private View mAutoMapSheet;
+
     private void mappingRows(PanelLateral panel, LinearLayout box, java.util.List<Integer> codes)
     {
-        for (int code : codes) {
-            int key = pad.keyFor(code);
-            String target = key == 0 ? mActivity.getString(R.string.rmxp_unassigned) : Teclas.nombre(key);
-            Button row = panel.button(pad.name(code) + "    →    " + target + (key < 0 ? "  ·  " + mActivity.getString(R.string.map_action) : ""), () -> selectMapping(code));
-            row.setTextSize(14); row.setGravity(android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
-            row.setContentDescription(pad.name(code) + " → " + target);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, panel.dp(52));
-            lp.setMargins(0, panel.dp(3), 0, panel.dp(3)); box.addView(row, lp);
-            if (code == mLastMapped) row.post(() -> {
-                row.requestFocus(); row.requestRectangleOnScreen(new android.graphics.Rect(0,0,row.getWidth(),row.getHeight()),false);
-            });
+        int columns=codes.size()==1 || mActivity.getResources().getConfiguration().fontScale>1.3f ||
+            mActivity.getResources().getDisplayMetrics().widthPixels / mActivity.getResources().getDisplayMetrics().density<340?1:2;
+        for (int i=0; i<codes.size(); i+=columns) {
+            LinearLayout row = new LinearLayout(mActivity);
+            row.setBaselineAligned(false);
+            for (int column=0; column<columns; column++) {
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,-1,1);
+                lp.setMargins(column==0?0:panel.dp(4),panel.dp(3),column==columns-1?0:panel.dp(4),panel.dp(3));
+                if (i+column>=codes.size()) { row.addView(new View(mActivity),lp); continue; }
+                int code=codes.get(i+column), key=pad.keyFor(code);
+                String name=code==0?mActivity.getString(R.string.map_capture_button):pad.name(code);
+                String target=key==0?mActivity.getString(R.string.rmxp_unassigned):Teclas.nombre(key);
+                LinearLayout cell=new LinearLayout(mActivity);
+                cell.setGravity(android.view.Gravity.CENTER_VERTICAL); cell.setBaselineAligned(false);
+                cell.setMinimumHeight(panel.dp(48)); cell.setPadding(panel.dp(8),panel.dp(6),panel.dp(8),panel.dp(6));
+                // Reuse the panel's focused/pressed background without nested clickable buttons.
+                cell.setBackground(panel.button("",()->{}).getBackground());
+                cell.setFocusable(true); cell.setClickable(true);
+                cell.setOnClickListener(v->{
+                    if(code==0){captureMapping();mCaptureScreenshot=true;mCaptureHint.setText(R.string.map_capture_screenshot);}
+                    else selectMapping(code);
+                });
+                cell.setContentDescription(name+" → "+target+(key<0?", "+mActivity.getString(R.string.map_action):""));
+                TextView badge=panel.label(name,12);
+                badge.setGravity(android.view.Gravity.CENTER); badge.setPadding(0,0,0,0);
+                badge.setMaxLines(1); badge.setIncludeFontPadding(false);
+                android.graphics.drawable.GradientDrawable outline=new android.graphics.drawable.GradientDrawable();
+                outline.setColor(android.graphics.Color.TRANSPARENT);
+                outline.setCornerRadius(panel.dp(name.length()==1 || name.equals("L3") || name.equals("R3")?16:6));
+                int color=mActivity.getColor(R.color.rmxp_niebla);
+                if (name.equals("A")) color=0xFF66BB6A;
+                else if (name.equals("B")) color=0xFFEF5350;
+                else if (name.equals("X")) color=0xFF42A5F5;
+                else if (name.equals("Y")) color=0xFFFFCA28;
+                outline.setStroke(panel.dp(1),color); badge.setTextColor(color); badge.setBackground(outline);
+                cell.addView(badge,new LinearLayout.LayoutParams(panel.dp(name.length()>4?62:32),panel.dp(32)));
+                TextView arrow=panel.label("→",12); arrow.setGravity(android.view.Gravity.CENTER); arrow.setPadding(0,0,0,0);
+                cell.addView(arrow,new LinearLayout.LayoutParams(panel.dp(18),-2));
+                TextView value=panel.label(target,12); value.setGravity(android.view.Gravity.CENTER);
+                value.setPadding(panel.dp(2),panel.dp(4),panel.dp(2),panel.dp(4));
+                value.setMaxLines(3);
+                cell.addView(value,new LinearLayout.LayoutParams(0,-2,1)); row.addView(cell,lp);
+                if(code==mLastMapped) cell.post(()->{
+                    cell.requestFocus();cell.requestRectangleOnScreen(new android.graphics.Rect(0,0,cell.getWidth(),cell.getHeight()),false);
+                });
+            }
+            box.addView(row,new LinearLayout.LayoutParams(-1,-2));
         }
+    }
+
+    private void autoMap(PanelLateral panel)
+    {
+        new AlertDialog.Builder(mActivity).setMessage(R.string.map_auto_confirm)
+            .setNegativeButton(android.R.string.cancel,null)
+            .setPositiveButton(android.R.string.ok,(d,w)->{
+                pad.releaseAll(); controls.releasePressed();
+                LinearLayout body=Apariencia.column(mActivity);
+                TextView title=panel.label(mActivity.getString(R.string.map_auto),18);
+                title.setGravity(android.view.Gravity.CENTER); body.addView(title);
+                View diagram=new View(mActivity) {
+                    final android.graphics.Paint paint=new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                    @Override protected void onDraw(android.graphics.Canvas canvas) {
+                        float cx=getWidth()/2f,cy=getHeight()/2f,offset=panel.dp(30),radius=panel.dp(19);
+                        String[] labels=pad.profile()==PadMapper.SWITCH?new String[]{"X","Y","A","B"}:new String[]{"Y","X","B","A"};
+                        float[] dx={0,-offset,offset,0},dy={-offset,0,0,offset};
+                        for(int i=0;i<4;i++) {
+                            paint.setColor(mActivity.getColor(i==2?R.color.rmxp_ambar:R.color.rmxp_musgo));
+                            paint.setStyle(android.graphics.Paint.Style.FILL);canvas.drawCircle(cx+dx[i],cy+dy[i],radius,paint);
+                            paint.setColor(mActivity.getColor(i==2?R.color.rmxp_tinta:R.color.rmxp_niebla));
+                            paint.setTextSize(panel.dp(17));paint.setTextAlign(android.graphics.Paint.Align.CENTER);
+                            canvas.drawText(labels[i],cx+dx[i],cy+dy[i]-(paint.ascent()+paint.descent())/2,paint);
+                        }
+                    }
+                };
+                diagram.setContentDescription(mActivity.getString(R.string.map_auto_prompt));
+                body.addView(diagram,new LinearLayout.LayoutParams(-1,panel.dp(116)));
+                TextView prompt=panel.label(mActivity.getString(R.string.map_auto_prompt),15);
+                prompt.setGravity(android.view.Gravity.CENTER);body.addView(prompt);
+                TextView hint=panel.label(mActivity.getString(R.string.map_auto_hint),12);
+                hint.setGravity(android.view.Gravity.CENTER);body.addView(hint);
+                Button cancel=panel.button(mActivity.getString(android.R.string.cancel),this::dismissAutoMap);
+                body.addView(cancel);
+                mAutoMapSheet=panel.showSheet(body);
+                mAutoMapSheet.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener(){
+                    public void onViewAttachedToWindow(View v){}
+                    public void onViewDetachedFromWindow(View v){if(mAutoMapSheet==v)mAutoMapSheet=null;}
+                });
+                cancel.requestFocus();
+            }).show();
+    }
+
+    private void dismissAutoMap()
+    {
+        View sheet=mAutoMapSheet; mAutoMapSheet=null;
+        if(sheet!=null && sheet.getParent()!=null)((ViewGroup)sheet.getParent()).removeView(sheet);
     }
 
     private void selectMapping(int source)
@@ -215,7 +300,7 @@ public class OptionsMenu implements TouchControls.Actions
         mCaptureHint = panel.label(mActivity.getString(R.string.map_capture_hint), 16);
         panel.content.addView(mCaptureHint);
         panel.content.addView(panel.button(mActivity.getString(android.R.string.cancel), () -> { panel.dismiss(); showInputMapping(); }));
-        mCaptureSource = 0; mCaptureAxis = false; mCapturing = true;
+        mCaptureSource = 0; mCaptureAxis = false; mCapturing = true; mCaptureScreenshot=false;
         panel.content.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
             public void onViewAttachedToWindow(View v) {}
             public void onViewDetachedFromWindow(View v) { mCapturing = false; mCaptureSource = 0; }
@@ -224,8 +309,30 @@ public class OptionsMenu implements TouchControls.Actions
 
     public boolean captureKey(KeyEvent event)
     {
+        if (mAutoMapSheet != null) {
+            if (event.getKeyCode()==KeyEvent.KEYCODE_BACK) {
+                if(event.getAction()==KeyEvent.ACTION_UP)dismissAutoMap();
+                return true;
+            }
+            if (!PadMapper.isGamepad(event.getDevice())) return true;
+            int code=event.getKeyCode();
+            if(event.getAction()==KeyEvent.ACTION_UP &&
+                    (code==KeyEvent.KEYCODE_BUTTON_A || code==KeyEvent.KEYCODE_BUTTON_B)) {
+                pad.connected(event.getDevice());
+                pad.selectProfile(code==KeyEvent.KEYCODE_BUTTON_A?PadMapper.SWITCH:PadMapper.XBOX);
+                pad.reset(); dismissAutoMap(); controls.rebuild(); showInputMapping();
+            }
+            return true;
+        }
         if (!mCapturing) return false;
         int source = pad.sourceForKey(event);
+        if(mCaptureScreenshot && event.getKeyCode()==KeyEvent.KEYCODE_BACK && !PadMapper.isGamepad(event.getDevice())) return false;
+        if (mCaptureScreenshot && (source>=PadMapper.KEYBOARD || !PadMapper.isGamepad(event.getDevice()) ||
+            source==KeyEvent.KEYCODE_BUTTON_A || source==KeyEvent.KEYCODE_BUTTON_B ||
+            source==KeyEvent.KEYCODE_BUTTON_X || source==KeyEvent.KEYCODE_BUTTON_Y ||
+            source==KeyEvent.KEYCODE_BUTTON_MODE || source==KeyEvent.KEYCODE_BACK ||
+            (source>=KeyEvent.KEYCODE_BUTTON_L1 && source<=KeyEvent.KEYCODE_BUTTON_SELECT) ||
+            (source>=KeyEvent.KEYCODE_DPAD_UP && source<=KeyEvent.KEYCODE_DPAD_RIGHT))) return true;
         if (!PadMapper.validSource(source)) return false;
         if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0 && mCaptureSource == 0) {
             mCaptureSource = source;
@@ -240,6 +347,7 @@ public class OptionsMenu implements TouchControls.Actions
     {
         if (!mCapturing || !PadMapper.validSource(source)) return;
         mCapturing = false; mCaptureSource = 0;
+        if(mCaptureScreenshot){pad.setCaptureButton(source);mCaptureScreenshot=false;}
         mMappingTab = source >= PadMapper.KEYBOARD ? 2 : source >= 1000 ? 1 : 0;
         selectMapping(source);
     }
@@ -256,8 +364,10 @@ public class OptionsMenu implements TouchControls.Actions
 
     public void menuMotion(MotionEvent event)
     {
+        if (mAutoMapSheet != null) return;
         int source = pad.sourceForMotion(event);
         if (mCapturing) {
+            if (mCaptureScreenshot) return;
             if (source != 0 && mCaptureSource == 0) {
                 mCaptureSource = source; mCaptureAxis = true;
                 mCaptureHint.setText(pad.name(source) + "\n" + mActivity.getString(R.string.map_release));
@@ -283,9 +393,6 @@ public class OptionsMenu implements TouchControls.Actions
     private void showInputMapping()
     {
         PanelLateral panel = new PanelLateral(mActivity, R.string.rmxp_input);
-        LinearLayout toolbar = new LinearLayout(mActivity);
-        toolbar.setBaselineAligned(false);
-        toolbar.setGravity(android.view.Gravity.CENTER_VERTICAL);
         android.widget.Spinner profile = new android.widget.Spinner(mActivity);
         profile.setContentDescription(mActivity.getString(R.string.map_layout));
         profile.setAdapter(new android.widget.ArrayAdapter<String>(mActivity,
@@ -299,14 +406,26 @@ public class OptionsMenu implements TouchControls.Actions
                 if (selected != pad.profile()) { pad.selectProfile(selected); controls.rebuild(); showInputMapping(); }
             }
         });
-        toolbar.addView(profile,new LinearLayout.LayoutParams(0,panel.dp(48),1));
-        toolbar.addView(panel.button(mActivity.getString(R.string.map_add),this::captureMapping),
-            new LinearLayout.LayoutParams(0,panel.dp(48),1));
-        panel.top.addView(toolbar);
-        panel.top.addView(Apariencia.segmented(panel,new String[]{
-            mActivity.getString(R.string.rmxp_pad_buttons),mActivity.getString(R.string.map_axes),
-            mActivity.getString(R.string.map_keyboard)},mMappingTab,index->{mMappingTab=index;showInputMapping();}));
-        panel.content.addView(panel.label(mActivity.getString(R.string.map_hint), 12));
+        // Only the title is pinned: controls can scroll on short screens or large font sizes.
+        panel.content.addView(profile,new LinearLayout.LayoutParams(-1,panel.dp(48)));
+        panel.content.addView(panel.button(mActivity.getString(R.string.map_auto),()->autoMap(panel)));
+        LinearLayout tabs=new LinearLayout(mActivity); tabs.setBaselineAligned(false);tabs.setMinimumHeight(panel.dp(48));
+        String[] labels={mActivity.getString(R.string.rmxp_pad_buttons),mActivity.getString(R.string.map_axes),mActivity.getString(R.string.map_keyboard)};
+        for(int i=0;i<labels.length;i++) {
+            final int tab=i;
+            Button button=panel.button(labels[i],()->{mMappingTab=tab;mLastMapped=-1;showInputMapping();});
+            button.setTextSize(12);button.setMaxLines(2);button.setPadding(panel.dp(5),panel.dp(8),panel.dp(5),panel.dp(8));
+            button.setMinimumHeight(panel.dp(48));button.setSelected(i==mMappingTab);
+            if(i==mMappingTab) {
+                button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(mActivity.getColor(R.color.rmxp_ambar)));
+                button.setTextColor(mActivity.getColor(R.color.rmxp_tinta));
+            }
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-1,1);
+            lp.setMargins(i==0?0:panel.dp(4),panel.dp(6),i==2?0:panel.dp(4),panel.dp(6));
+            tabs.addView(button,lp);
+        }
+        panel.content.addView(tabs);
+        panel.content.addView(panel.label(mActivity.getString(R.string.map_grid_hint),12));
         java.util.List<Integer> sources = pad.sources(mMappingTab == 2);
         if (mMappingTab == 2) {
             if (sources.isEmpty()) panel.content.addView(panel.label(mActivity.getString(R.string.map_keyboard_empty), 14));
@@ -326,16 +445,24 @@ public class OptionsMenu implements TouchControls.Actions
             for (int code : sources) if (code >= 1100 && code < 1228) extraAxes.add(code);
             if (!extraAxes.isEmpty()) mappingRows(panel, Apariencia.card(panel, R.string.map_extra_axes, true), extraAxes);
         } else {
-            java.util.List<Integer> common = java.util.Arrays.asList(KeyEvent.KEYCODE_BUTTON_A,KeyEvent.KEYCODE_BUTTON_B,
-                KeyEvent.KEYCODE_BUTTON_X,KeyEvent.KEYCODE_BUTTON_Y,KeyEvent.KEYCODE_BUTTON_L1,KeyEvent.KEYCODE_BUTTON_R1,
+            boolean nintendo=pad.profile()==PadMapper.SWITCH;
+            java.util.List<Integer> common = java.util.Arrays.asList(
+                nintendo?KeyEvent.KEYCODE_BUTTON_B:KeyEvent.KEYCODE_BUTTON_A,nintendo?KeyEvent.KEYCODE_BUTTON_A:KeyEvent.KEYCODE_BUTTON_B,
+                nintendo?KeyEvent.KEYCODE_BUTTON_Y:KeyEvent.KEYCODE_BUTTON_X,nintendo?KeyEvent.KEYCODE_BUTTON_X:KeyEvent.KEYCODE_BUTTON_Y,
+                KeyEvent.KEYCODE_BUTTON_L1,KeyEvent.KEYCODE_BUTTON_R1,
                 KeyEvent.KEYCODE_BUTTON_L2,KeyEvent.KEYCODE_BUTTON_R2,KeyEvent.KEYCODE_BUTTON_START,KeyEvent.KEYCODE_BUTTON_SELECT,
                 KeyEvent.KEYCODE_BUTTON_THUMBL,KeyEvent.KEYCODE_BUTTON_THUMBR);
             mappingRows(panel, panel.content, common);
+            mappingRows(panel,panel.content,java.util.Arrays.asList(KeyEvent.KEYCODE_BUTTON_MODE));
+            mappingRows(panel,panel.content,pad.profile()==PadMapper.SWITCH?
+                java.util.Arrays.asList(KeyEvent.KEYCODE_BACK,pad.captureButton()):java.util.Arrays.asList(KeyEvent.KEYCODE_BACK));
+            panel.content.addView(panel.label(mActivity.getString(R.string.map_reserved_hint),12));
             java.util.List<Integer> extra = new java.util.ArrayList<>();
-            for (int code : sources) if (!common.contains(code) && code < 1000 &&
-                (code < KeyEvent.KEYCODE_DPAD_UP || code > KeyEvent.KEYCODE_DPAD_RIGHT)) extra.add(code);
-            mappingRows(panel, Apariencia.card(panel, R.string.map_extra, extra.contains(mLastMapped)), extra);
+            for (int code : sources) if (!common.contains(code) && code != KeyEvent.KEYCODE_BUTTON_MODE && code != KeyEvent.KEYCODE_BACK && code != pad.captureButton() && code < 1000 &&
+                (code < KeyEvent.KEYCODE_DPAD_UP || code > KeyEvent.KEYCODE_DPAD_RIGHT) && pad.available(code)) extra.add(code);
+            if(!extra.isEmpty()) mappingRows(panel,panel.content,extra);
         }
+        panel.content.addView(panel.button(mActivity.getString(mMappingTab==2?R.string.map_add:R.string.map_detect_input),this::captureMapping));
         panel.content.addView(panel.button(mActivity.getString(R.string.rmxp_edit_reset), () -> {
             new AlertDialog.Builder(mActivity).setMessage(mMappingTab == 2 ? R.string.map_reset_keyboard : R.string.map_reset_confirm)
                 .setNegativeButton(android.R.string.cancel, null)

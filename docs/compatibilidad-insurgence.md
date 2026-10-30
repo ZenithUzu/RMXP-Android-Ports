@@ -45,3 +45,41 @@ El log de Detergent del 30 de octubre llega hasta `BGM Memory:18`. La compatibil
 El nuevo log de Relict sí registra `targetFps=120` y una pantalla que pasa de 120 a 60 Hz. El motor-v14 desactiva la espera adicional de VSync en el hilo OpenGL cuando se elige un objetivo explícito y la restaura al volver a Original. La superficie usa una petición de refresco apropiada para juegos y Android 15+ también recibe la petición en la jerarquía de vistas. Se registra el intervalo de intercambio real. Las políticas de HyperOS/Game Turbo pueden seguir imponiendo un límite externo.
 
 Los cambios de interfaz de 0.10 se entregan para compilación sin pruebas de APK ni ejecución en emulador, a petición del usuario.
+
+## SpriteWindow_sprites:216 — TEMP en Android (0.11)
+
+La captura nueva de Detergent muestra `no implicit conversion of nil into String` en
+`SpriteWindow_sprites:216`. El [script público de Essentials de la misma generación](https://github.com/Dordevic/Pokemon-Open-Sky/blob/ad20f2cdd1be8dc1f3d793a04018e23114fd4d0e/Pokemon%20Open%20Sky/Scripts/SpriteWindow_sprites.rb#L216)
+contiene exactamente `Dir.chdir(ENV["TEMP"])` en esa línea, dentro de `GifBitmap`.
+Android no define esa variable de Windows. Antes de arrancar SDL/Ruby, el lanzador
+establece `TEMP`, `TMP` y `TMPDIR` en `Activity.getCacheDir()`: una carpeta existente,
+escribible y privada del APK. No se sustituye nil globalmente ni se ocultan errores
+de imágenes. Falta confirmar esta ruta con el paquete concreto de Detergent.
+
+La [FAQ oficial de Insurgence](https://p-insurgence.com/FAQ/bugs.html) también documenta
+un error distinto de SpriteWindow, `filename is nil`, causado por Graphics/Icons
+incompleto. No se confunden ambos fallos ni se eliminan partidas. Las adaptaciones
+JoiPlay de Linker, FMOD y mapas planos ya están incluidas; no se encontró un parche
+público de Kirin para este nuevo caso.
+
+## Mapeo visual 0.11
+
+La pantalla usa dos columnas con insignia de entrada, flecha y destino. Tiene
+pestañas separadas, filas con altura mínima de 48 dp y desplazamiento; con fuentes
+ampliadas o pantallas estrechas pasa a una columna para conservar las etiquetas.
+Guía/Home ocupa una fila completa. Sticks y cruceta agrupa las cuatro direcciones
+de cada control; L3/R3 son pulsaciones separadas de sus ejes. Todas las entradas
+pueden recibir teclas del catálogo de PC o acciones de la app (menú, turbo, teclado,
+ocultar controles), y el menú sigue recibiendo navegación del mando sin enviarla al juego.
+
+Asignar automáticamente usa una pulsación en la posición derecha del grupo ABXY,
+como [Azahar Android](https://github.com/azahar-emu/azahar/blob/master/src/android/app/src/main/java/org/citra/citra_emu/fragments/AutoMapDialogFragment.kt),
+para detectar Xbox/Nintendo y aplicar valores estándar tras confirmación de reemplazo.
+La hoja se limita al panel lateral y bloquea el foco del fondo. No es una secuencia
+de doce pasos. No se copia código de los emuladores.
+
+En Switch, Captura permite detectar su código real en vez de asumir uno universal.
+Las entradas adicionales se muestran solo si Android las anuncia o ya tienen una
+asignación guardada. Si Home/Guía/Captura está reservado por el sistema, la app no
+puede capturarlo. Los perfiles existentes se conservan hasta restablecerlos o aceptar
+la asignación automática. No se ejecutaron tests ni APKs/emuladores para esta entrega.

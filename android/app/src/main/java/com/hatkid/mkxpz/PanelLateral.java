@@ -15,7 +15,8 @@ import android.widget.TextView;
 public class PanelLateral {
     public final LinearLayout content, top, footer;
     public final Activity activity;
-    private final FrameLayout root;
+    private final FrameLayout root, shell;
+    private final LinearLayout panel;
 
     public PanelLateral(Activity activity, int title) {
         this.activity = activity;
@@ -30,18 +31,21 @@ public class PanelLateral {
         root.setTag("rmxp_side_panel");
         root.setBackgroundColor(activity.getColor(R.color.rmxp_velo));
         root.setOnClickListener(v -> dismiss());
-        LinearLayout panel = new LinearLayout(activity);
+        panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setBackgroundResource(R.drawable.rmxp_panel);
         panel.setPadding(dp(16), dp(8), dp(16), dp(8));
         panel.setOnClickListener(v -> {});
         int width = Math.min(dp(400), activity.getResources().getDisplayMetrics().widthPixels);
-        root.addView(panel, new FrameLayout.LayoutParams(width, -1, Gravity.END));
+        shell = new FrameLayout(activity);
+        shell.addView(panel, new FrameLayout.LayoutParams(-1, -1));
+        root.addView(shell, new FrameLayout.LayoutParams(width, -1, Gravity.END));
         LinearLayout header = new LinearLayout(activity);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setBaselineAligned(false);
         TextView text = label(activity.getString(title), 18);
-        header.addView(text, new LinearLayout.LayoutParams(0, dp(44), 1));
+        text.setMinHeight(dp(44));
+        header.addView(text, new LinearLayout.LayoutParams(0, -2, 1));
         Button close = button(activity.getString(R.string.rmxp_edit_done), this::dismiss);
         close.setBackgroundTintList(android.content.res.ColorStateList.valueOf(activity.getColor(R.color.rmxp_ambar)));
         close.setTextColor(activity.getColor(R.color.rmxp_tinta));
@@ -67,8 +71,42 @@ public class PanelLateral {
         ViewGroup host = activity.findViewById(android.R.id.content);
         View panel = host.findViewWithTag("rmxp_side_panel");
         if (panel == null) return false;
-        host.removeView(panel);
+        View sheet = panel.findViewWithTag("rmxp_mapping_sheet");
+        if (sheet != null) ((ViewGroup) sheet.getParent()).removeView(sheet);
+        else host.removeView(panel);
         return true;
+    }
+
+    /** Modal sheet stays inside the drawer; background entries cannot receive focus. */
+    public View showSheet(LinearLayout body) {
+        FrameLayout overlay = new FrameLayout(activity);
+        overlay.setTag("rmxp_mapping_sheet");
+        overlay.setBackgroundColor(0x99000000);
+        overlay.setOnClickListener(v -> {});
+        panel.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(activity.getColor(R.color.rmxp_pizarra));
+        bg.setCornerRadii(new float[]{dp(20),dp(20),dp(20),dp(20),0,0,0,0});
+        body.setBackground(bg); body.setPadding(dp(20),dp(16),dp(20),dp(16));
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(false); scroll.addView(body);
+        overlay.addView(scroll, new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));
+        overlay.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob) -> {
+            int max = Math.max(dp(100), (b-t)*9/10);
+            body.measure(View.MeasureSpec.makeMeasureSpec(r-l,View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
+            ViewGroup.LayoutParams lp = scroll.getLayoutParams();
+            int height = Math.min(max,body.getMeasuredHeight());
+            if (lp.height != height) { lp.height=height; scroll.setLayoutParams(lp); }
+        });
+        overlay.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            public void onViewAttachedToWindow(View v) {}
+            public void onViewDetachedFromWindow(View v) {
+                panel.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
+            }
+        });
+        shell.addView(overlay,new FrameLayout.LayoutParams(-1,-1));
+        return overlay;
     }
 
     public int dp(float n) { return Math.round(n * activity.getResources().getDisplayMetrics().density); }
