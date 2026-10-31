@@ -184,3 +184,54 @@ Ambas correcciones son exclusivas del perfil experimental y se incluyen en la
 plantilla usada por PC y Android. En el log aparecen la inicialización corregida
 y los cambios de resolución. No se ejecutaron tests, APKs ni emuladores: falta
 confirmar la creación de partida y la presentación en el teléfono.
+
+## Revisión de compatibilidad publicada: imágenes y puntero (0.17)
+
+El error nuevo señala `rmxp-insurgence.rb:99` con ENOENT para
+`Graphics/Characters/base_surf`. Es una regresión del adaptador nativo de GIF:
+el [GifBitmap original](https://github.com/Dordevic/Pokemon-Open-Sky/blob/ad20f2cdd1be8dc1f3d793a04018e23114fd4d0e/Pokemon%20Open%20Sky/Scripts/SpriteWindow_sprites.rb)
+consulta BitmapCache y permite un bitmap transparente 32×32 cuando no se encuentra
+la imagen. El adaptador exigía que siempre hubiera un archivo físico cargable.
+Ahora usa BitmapWrapper, conserva la ruta canonicalizada y, únicamente para
+ENOENT, consulta la caché con el respaldo que ya ofrece el juego. No se crea ni
+sobrescribe `base_surf`, no se incluyen recursos ajenos y los errores nativos de
+decodificación de un archivo encontrado siguen propagándose. El respaldo queda
+registrado con la ruta para distinguir un recurso ausente de uno existente.
+
+Se corrige también `copy`: duplica los píxeles y todos los fotogramas disponibles
+en lugar de volver a leer el archivo y perder modificaciones. Se separan las
+instantáneas y el estado de cada copia; los BitmapWrapper conservan sus reglas
+de referencias. `frameDelay` acepta tanto el índice como la llamada sin índice que
+hace AnimatedBitmap; `totalFrames` devuelve la duración en cuadros de juego con
+la cadencia uniforme que expone el motor nativo. Los retardos variables por
+fotograma siguen siendo una limitación del decodificador actual.
+
+El puente de GetCursorPos devolvía siempre (0,0), y ScreenToClient borraba el punto.
+Ahora se capturan los lectores nativos mouse_x/mouse_y antes de cargar scripts y
+se conservan esas coordenadas al pasar al área cliente, porque SDL ya las convierte
+a coordenadas del juego. GetAsyncKeyState conserva el lector nativo de 0.15, que
+también soporta botones de ratón. Esto permite que el lector Mouse de Essentials
+reciba posiciones reales. Los menús con casillas sólo de ratón necesitan toque o
+ratón; no se afirma haber verificado su navegación ni la selección Challenge Run.
+
+### Cobertura de las fuentes públicas revisadas
+
+| Tema | Fuente pública | Estado en Portémon |
+| --- | --- | --- |
+| RGSS Linker y FMOD | Bindings de [joiplay-mkxp](https://github.com/enumag/joiplay-mkxp) y anuncio del plugin 1.00.69 | Adaptador ya integrado; mantiene las limitaciones de canales, bucles arbitrarios y streams en memoria |
+| Controles de Essentials | [JoiPlay, plugin 1.00.70/71](https://www.patreon.com/joiplay/posts/joiplay-1-01-61-36814990) | Lectura nativa y actualización antes del lector del juego desde 0.15; se añade posición real del ratón en 0.17 |
+| Challenge Run de Insurgence | [JoiPlay, plugin 1.00.82](https://www.patreon.com/joiplay/posts/joiplay-1-01-73-38783129) | Corrección anunciada sin algoritmo publicado en los archivos examinados; no se copia ni se presume equivalente al puente de ratón |
+| H-mode7 | [JoiPlay, plugin 1.20.00](https://www.patreon.com/joiplay/posts/joiplay-1-11-006-69419140) | Respaldo plano ya integrado; no implementa el renderizador Windows |
+| Errores de carga de imagen | Mismo anuncio, plugin 1.20.04; contrato de GifBitmap/BitmapCache del juego | Se restaura el respaldo de imagen ausente, limitado al adaptador de GifBitmap |
+| Caché de rutas | [Kirin, 0.1.6](https://www.playkirin.com/changes.html) | mkxp-z ya incluye caché de rutas; no se encontró código público de ese cambio de Kirin para trasladarlo |
+| Selección de Ruby | [Ayuda oficial de Kirin](https://www.playkirin.com/help.html) | Portémon sigue usando Ruby 3.1 con compatibilidad parcial; no se incluye otro intérprete Ruby |
+
+Se revisaron también preload.rb, postload.rb y el cargador de parches de la copia
+pública enumag/joiplay-mkxp. Esa revisión no permite reconstruir todo el conjunto
+privado de sustituciones de JoiPlay ni los parches internos de Kirin. No se copian
+anulaciones globales de comparaciones o de String que puedan silenciar errores y
+alterar la lógica del juego. Se conservan las correcciones previas de TEMP, WeakRef,
+Thread.critical, PSystem_Utilities, BGM Memory, LargePlane y resolución.
+
+Los cambios de 0.17 llegan a PC y Android por la plantilla compartida. Sin tests,
+APK ni emulador por petición del usuario; la partida completa sigue sin verificar.

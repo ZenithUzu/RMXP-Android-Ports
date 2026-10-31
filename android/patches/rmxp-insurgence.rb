@@ -91,13 +91,21 @@ if RmxpInsurgence::ENABLED
   end
 
   # Native libnsgif replaces GifLibrary's Windows DLL and temporary PNG extraction.
-  # Loading failures still raise with the requested path, rather than hiding missing assets.
+  # Preserve GifBitmap's original missing-file fallback; decode errors still raise.
   module RmxpInsurgence::NativeGif
     def initialize(file, hue=0)
       raise ArgumentError, "GIF filename is nil" if file.nil?
-      @rmxp_file, @rmxp_hue = file, hue
-      @rmxp_native = Bitmap.new(file)
-      @rmxp_native.hue_change(hue) if hue != 0
+      @rmxp_file, @rmxp_hue = canonicalize(file), hue
+      begin
+        @rmxp_native = BitmapWrapper.new(@rmxp_file)
+      rescue Errno::ENOENT
+        # The original GifBitmap deliberately falls back to a transparent 32x32
+        # bitmap after exhausting file/cache lookup (including optional base_surf).
+        @rmxp_native = BitmapCache.load_bitmap(@rmxp_file, hue, true)
+        System.puts("RMXP Insurgence: GifBitmap usa caché/respaldo para #{@rmxp_file}")
+      else
+        @rmxp_native.hue_change(hue) if hue != 0
+      end
       @rmxp_native.play if @rmxp_native.animated?
       @rmxp_snapshots = {}
       @gifbitmaps, @gifdelays = [@rmxp_native], [0]
@@ -108,7 +116,7 @@ if RmxpInsurgence::ENABLED
     def height; bitmap.height; end
     def currentIndex; !@rmxp_still && bitmap.animated? ? bitmap.current_frame : 0; end
     def length; @rmxp_still ? 1 : bitmap.frame_count; end
-    def totalFrames; length; end
+    def totalFrames; (length * frameDelay).ceil; end
     def [](index)
       return nil unless index.is_a?(Integer)
       index += length if index < 0
@@ -120,7 +128,7 @@ if RmxpInsurgence::ENABLED
       return enum_for(:each) unless block_given?
       length.times { |i| yield self[i] }
     end
-    def frameDelay(index)
+    def frameDelay(index=currentIndex)
       return 1 unless bitmap.animated?
       rate = bitmap.frame_rate
       rate > 0 ? [Graphics.frame_rate.to_f / rate, 1].max : 1
@@ -139,8 +147,16 @@ if RmxpInsurgence::ENABLED
       @disposed = true
     end
     def copy
-      duplicate = self.class.new(@rmxp_file, @rmxp_hue)
-      duplicate.deanimate if @rmxp_still
+      duplicate = clone
+      # Copy existing pixels/frames instead of reloading the file and losing edits.
+      pixels = bitmap.respond_to?(:copy) ? bitmap.copy : bitmap.clone
+      if pixels.animated?
+        @rmxp_still ? pixels.goto_and_stop(0) : pixels.goto_and_play(currentIndex)
+      end
+      duplicate.instance_variable_set(:@rmxp_native, pixels)
+      duplicate.instance_variable_set(:@rmxp_snapshots, {})
+      duplicate.instance_variable_set(:@gifbitmaps, [pixels])
+      duplicate.instance_variable_set(:@gifdelays, @gifdelays.dup)
       duplicate
     end
   end

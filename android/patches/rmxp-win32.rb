@@ -6,6 +6,8 @@ class RmxpWin32API
   # otherwise reading a key re-enters the game's partially initialized key arrays.
   NATIVE_KEY_STATE = Input.method(:pressex?)
   NATIVE_UPDATE = Input.method(:update)
+  NATIVE_MOUSE_X = Input.method(:mouse_x)
+  NATIVE_MOUSE_Y = Input.method(:mouse_y)
 
   def self.poll_input
     NATIVE_UPDATE.call
@@ -34,13 +36,18 @@ class RmxpWin32API
     when "GetWindowRect", "GetClientRect"
       a[1].replace([0, 0, Graphics.width, Graphics.height].pack("l4")) if a[1].is_a?(String)
       1
-    when "GetCursorPos", "ScreenToClient"
-      a.last.replace([0, 0].pack("l2")) if a.last.is_a?(String)
+    when "GetCursorPos"
+      return 0 unless a[0].is_a?(String)
+      a[0].replace([NATIVE_MOUSE_X.call, NATIVE_MOUSE_Y.call].pack("l2"))
       1
+    when "ScreenToClient", "ClientToScreen"
+      # SDL already reports game/client coordinates, including aspect/stretch scaling.
+      a.last.is_a?(String) && a.last.bytesize >= 8 ? 1 : 0
     when "GetUserDefaultLangID", "GetUserDefaultLCID", "GetSystemDefaultLangID" then 0x0C0A
     when "MessageBox" then (System.puts(a[1].to_s) rescue nil); 1
     when "FindWindow", "FindWindowEx", "GetActiveWindow", "GetForegroundWindow", "SetWindowPos",
-         "MoveWindow", "ShowWindow", "SetWindowLong", "SetWindowText", "ShowCursor", "keybd_event"
+         "MoveWindow", "ShowWindow", "SetWindowLong", "SetWindowText", "ShowCursor", "keybd_event",
+         "SetCapture", "ReleaseCapture"
       1
     else 0
     end

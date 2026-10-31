@@ -18,6 +18,16 @@ solo.
 
 **[Inicio rápido](#cómo-portar-un-juego) · [Requisitos](#lo-que-necesitas-una-sola-vez) · [Diagnóstico](#si-algo-falla) · [Créditos](#créditos) · [Licencia](#licencia)**
 
+## Corrección 0.17: imágenes y puntero en Insurgence/Detergent
+
+Se restaura el respaldo de GifBitmap para recursos ausentes como `base_surf`,
+respetando BitmapCache y sin crear archivos del juego. Se corrigen copias y consultas
+de duración de animaciones, y el puente Win32 entrega coordenadas reales del ratón.
+Se revisaron los parches públicos y anuncios de JoiPlay/Kirin; no se afirma tener
+sus correcciones privadas ni compatibilidad total. Las limitaciones y fuentes están
+documentadas en Portémon PC. Reconstruye el APK conservando firma y perfil experimental.
+No se ejecutaron tests, APKs ni emuladores; falta comprobar el juego en el teléfono.
+
 ## Corrección 0.16: nueva partida y tamaño de imagen
 
 El perfil experimental Insurgence/Detergent inicializa correctamente la parte
