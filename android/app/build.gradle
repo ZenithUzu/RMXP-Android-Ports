@@ -52,7 +52,7 @@ android {
     sourceSets {
         // Juego (assets/game/...) e icono preparados por la herramienta, fuera del proyecto
         if (project.hasProperty('gameAssets'))
-            main.assets.srcDirs = [prop('gameAssets', '')]
+            main.assets.srcDirs = [prop('gameAssets', ''), 'src/main/assets']
         if (project.hasProperty('gameRes'))
             release.res.srcDirs += [prop('gameRes', '')]
         if (prebuiltLibs != null)

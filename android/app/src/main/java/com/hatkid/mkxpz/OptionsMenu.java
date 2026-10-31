@@ -25,7 +25,6 @@ import android.widget.TextView;
 import java.io.File;
 import java.util.Map;
 
-import org.libsdl.app.SDLActivity;
 import com.hatkid.mkxpz.controles.Control;
 import com.hatkid.mkxpz.controles.PadMapper;
 import com.hatkid.mkxpz.controles.Teclas;
@@ -34,11 +33,12 @@ import com.hatkid.mkxpz.controles.TouchControls;
 /**
  * RMXP-Android-Ports: menú de opciones, medidor de FPS y conexión entre los controles
  * (en pantalla y mando físico) y el juego. Las opciones se guardan en SharedPreferences y
- * se mandan al motor con MainActivity.native* (ver graphics.cpp).
+ * se mandan al runtime elegido mediante MotorJuego.
  */
 public class OptionsMenu implements TouchControls.Actions
 {
     private final Activity mActivity;
+    private final MotorJuego mMotor;
     private final SharedPreferences mPrefs;
     private final String mGamePath;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -59,20 +59,26 @@ public class OptionsMenu implements TouchControls.Actions
 
     public OptionsMenu(Activity activity, String gamePath)
     {
+        this(activity, gamePath, new MotorJuego.Rgss());
+    }
+
+    public OptionsMenu(Activity activity, String gamePath, MotorJuego motor)
+    {
         mActivity = activity;
+        mMotor = motor;
         mGamePath = gamePath;
         mPrefs = activity.getSharedPreferences("rmxp_opciones", Activity.MODE_PRIVATE);
-        int rgss=1;
+        int rgss=motor.web()?3:1;
         try(java.io.BufferedReader reader=new java.io.BufferedReader(new java.io.FileReader(new File(gamePath,"rmxp_motor.txt")))) {
             int detected=Integer.parseInt(reader.readLine());
             if(detected>=1 && detected<=3)rgss=detected;
         } catch(java.io.IOException | NumberFormatException ignored) { /* Older APKs use the XP preset. */ }
         pad = new PadMapper(mPrefs, this, rgss);
-        partidas = new Partidas(activity, new File(gamePath));
+        partidas = new Partidas(activity, new File(gamePath), motor.web());
         registro = new Registro(activity, new File(gamePath));
         perfil = new Perfil(activity, mPrefs, this::recargarControles);
         controls = new TouchControls(activity, mPrefs, this, pad);
-        teclado = new Teclado(activity, mPrefs, shown -> {
+        teclado = new Teclado(activity, mPrefs, motor, shown -> {
             if (shown) pad.releaseAll();
             controls.keyboardVisible(shown);
         });
@@ -91,7 +97,7 @@ public class OptionsMenu implements TouchControls.Actions
         float dp = mActivity.getResources().getDisplayMetrics().density;
         controls.attachTo(layout);
 
-        mMedidor = new Medidor(mActivity, mPrefs, () -> mTurbo ? pref("velocidad", 5) : 1);
+        mMedidor = new Medidor(mActivity, mPrefs, () -> mTurbo ? pref("velocidad", 5) : 1, mMotor::frames);
         mMedidor.attachTo(layout);
         teclado.attachTo(layout); // encima de los controles
 
@@ -542,7 +548,7 @@ public class OptionsMenu implements TouchControls.Actions
         mSpeedValue.setText("x" + speed);
         controls.refreshTurbo();
         boolean paused = mBackground || ((isOpen() || controls.isEditing()) && pref("seguir_en_menu", 1) == 0);
-        MainActivity.nativeSetSpeed(paused ? 0 : mTurbo ? speed : 1);
+        mMotor.speed(paused ? 0 : mTurbo ? speed : 1);
         ((TextView) mRoot.findViewById(R.id.rmxp_status)).setText(
             paused ? R.string.rmxp_paused : R.string.rmxp_running);
     }
@@ -554,8 +560,7 @@ public class OptionsMenu implements TouchControls.Actions
         mStretchValue.setText(stretch + " %");
         // Filtro fijo "nítido" (vecino más cercano, como Kirin). Va después de nativeSetStretch,
         // que por dentro pide el filtro 3 (suave y borroso); la última orden es la que vale.
-        MainActivity.nativeSetStretch(stretch);
-        MainActivity.nativeSetVideo(0, 0);
+        mMotor.stretch(stretch);
     }
 
     /**
@@ -587,15 +592,7 @@ public class OptionsMenu implements TouchControls.Actions
         }
         // "Igual a la pantalla": el juego corre a tantos fps como Hz tenga la pantalla
         int target = fpsTarget(pref("fps", 0), mHz);
-        MainActivity.nativeSetFps(target);
-        android.view.Surface surface = SDLActivity.getNativeSurface();
-        if (surface != null && surface.isValid()) {
-            if (Build.VERSION.SDK_INT >= 31)
-                surface.setFrameRate(mHz, android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT,
-                    android.view.Surface.CHANGE_FRAME_RATE_ALWAYS);
-            else if (Build.VERSION.SDK_INT >= 30)
-                surface.setFrameRate(mHz, android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT);
-        }
+        mMotor.fps(target, mHz);
         if (Build.VERSION.SDK_INT >= 35) {
             try {
                 View.class.getMethod("setRequestedFrameRate", float.class).invoke(mActivity.getWindow().getDecorView(), (float)mHz);
@@ -623,8 +620,8 @@ public class OptionsMenu implements TouchControls.Actions
 
     // ---------------------------------------------------------------- controles → juego
 
-    @Override public void keyDown(int keycode) { SDLActivity.onNativeKeyDown(keycode); }
-    @Override public void keyUp(int keycode) { SDLActivity.onNativeKeyUp(keycode); }
+    @Override public void keyDown(int keycode) { mMotor.keyDown(keycode); }
+    @Override public void keyUp(int keycode) { mMotor.keyUp(keycode); }
     @Override public boolean turboOn() { return mTurbo; }
 
     @Override
@@ -675,6 +672,14 @@ public class OptionsMenu implements TouchControls.Actions
             controls.releasePressed(); pad.releaseAll();
         }
         applySpeed();
+    }
+
+    public void dispose() {
+        teclado.hide(); controls.releasePressed(); pad.releaseAll();
+        mHandler.removeCallbacksAndMessages(null);
+        if(mMedidor!=null)mMedidor.dispose();
+        partidas.dejarDeVigilar();
+        PanelLateral.dismissOpen(mActivity);
     }
 
     public void toggle()

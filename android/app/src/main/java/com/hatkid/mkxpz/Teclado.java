@@ -68,6 +68,7 @@ public class Teclado implements SDLActivity.KeyboardHook
     }
 
     private final Activity mActivity;
+    private final MotorJuego mMotor;
     private final SharedPreferences mPrefs;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private final int mAccent;
@@ -79,9 +80,10 @@ public class Teclado implements SDLActivity.KeyboardHook
     private final VisibilitySink mVisibility;
 
 
-    public Teclado(Activity activity, SharedPreferences prefs, VisibilitySink visibility)
+    public Teclado(Activity activity, SharedPreferences prefs, MotorJuego motor, VisibilitySink visibility)
     {
         mActivity = activity;
+        mMotor = motor;
         mVisibility = visibility;
         mPrefs = prefs;
         mAccent = activity.getColor(R.color.rmxp_ambar);
@@ -102,7 +104,7 @@ public class Teclado implements SDLActivity.KeyboardHook
         lp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_BOTTOM);
         parent.addView(mPanel, lp);
         build();
-        SDLActivity.sKeyboardHook = this;
+        if (!mMotor.web()) SDLActivity.sKeyboardHook = this;
     }
 
     private void build()
@@ -173,27 +175,27 @@ public class Teclado implements SDLActivity.KeyboardHook
                         return true;
                     }
                     if (code == KeyEvent.KEYCODE_CTRL_LEFT || code == KeyEvent.KEYCODE_ALT_LEFT) {
-                        if (mModifiers.remove(code)) SDLActivity.onNativeKeyUp(code);
-                        else { mModifiers.add(code); SDLActivity.onNativeKeyDown(code); }
+                        if (mModifiers.remove(code)) mMotor.keyUp(code);
+                        else { mModifiers.add(code); mMotor.keyDown(code); }
                         mHandler.post(this::build);
                         return true;
                     }
                     if (code != 0) {
                         mDown.add(code);
-                        SDLActivity.onNativeKeyDown(code);
+                        mMotor.keyDown(code);
                     }
                     if (text != null && mModifiers.isEmpty())
-                        SDLActivity.commitText(letter && mShift ? text.toUpperCase() : text);
+                        mMotor.text(letter && mShift ? text.toUpperCase() : text);
                     if (letter && mShift) {
                         mShift = false;
-                        SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_SHIFT_LEFT);
+                        mMotor.keyUp(KeyEvent.KEYCODE_SHIFT_LEFT);
                         mHandler.post(this::build);
                     }
                     // Borrar y flechas se repiten al dejarlas presionadas
                     if (code == KeyEvent.KEYCODE_DEL || code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT || code == KeyEvent.KEYCODE_DPAD_UP || code == KeyEvent.KEYCODE_DPAD_DOWN) {
                         repeat[0] = new Runnable() {
                             public void run() {
-                                SDLActivity.onNativeKeyDown(code);
+                                mMotor.keyDown(code);
                                 mHandler.postDelayed(this, 60);
                             }
                         };
@@ -207,7 +209,7 @@ public class Teclado implements SDLActivity.KeyboardHook
                     if (repeat[0] != null)
                         mHandler.removeCallbacks(repeat[0]);
                     if (code > 0 && mDown.remove(code))
-                        SDLActivity.onNativeKeyUp(code);
+                        mMotor.keyUp(code);
                     return true;
             }
             return true;
@@ -219,8 +221,8 @@ public class Teclado implements SDLActivity.KeyboardHook
     {
         if (code == SHIFT) {
             mShift = !mShift;
-            if (mShift) SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_SHIFT_LEFT);
-            else SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_SHIFT_LEFT);
+            if (mShift) mMotor.keyDown(KeyEvent.KEYCODE_SHIFT_LEFT);
+            else mMotor.keyUp(KeyEvent.KEYCODE_SHIFT_LEFT);
         } else if (code == TAMANO) {
             mPrefs.edit().putInt("teclado_tam", (mPrefs.getInt("teclado_tam", 1) + 1) % ALTOS.length).apply();
         } else if (code == CERRAR) {
@@ -233,12 +235,12 @@ public class Teclado implements SDLActivity.KeyboardHook
     private void releaseKeys(boolean modifiers)
     {
         mHandler.removeCallbacksAndMessages(null);
-        for (int key : mDown) SDLActivity.onNativeKeyUp(key);
+        for (int key : mDown) mMotor.keyUp(key);
         mDown.clear();
         if (modifiers) {
-            for (int key : mModifiers) SDLActivity.onNativeKeyUp(key);
+            for (int key : mModifiers) mMotor.keyUp(key);
             mModifiers.clear();
-            if (mShift) SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_SHIFT_LEFT);
+            if (mShift) mMotor.keyUp(KeyEvent.KEYCODE_SHIFT_LEFT);
             mShift = false;
         }
     }

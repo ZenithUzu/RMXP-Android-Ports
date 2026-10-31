@@ -35,17 +35,18 @@ public class Medidor
         R.string.rmxp_meter_ram, R.string.rmxp_meter_cpu, R.string.rmxp_meter_battery };
     private final Activity mActivity;
     private final SharedPreferences mPrefs;
-    private final IntSupplier mSpeed;
+    private final IntSupplier mSpeed, mFrames;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private TextView mLabel;
     private int mLastFrames;
     private long mLastCpu, mLastTime;
 
-    public Medidor(Activity activity, SharedPreferences prefs, IntSupplier speed)
+    public Medidor(Activity activity, SharedPreferences prefs, IntSupplier speed, IntSupplier frames)
     {
         mActivity = activity;
         mPrefs = prefs;
         mSpeed = speed;
+        mFrames = frames;
     }
 
     private boolean on(int i) { return mPrefs.getBoolean(KEYS[i], i == 0 && mPrefs.getInt("ver_fps", 0) == 1); }
@@ -87,7 +88,7 @@ public class Medidor
         mLabel.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> place());
         layout.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> place());
 
-        mLastFrames = MainActivity.nativeGetDrawnFrames();
+        mLastFrames = mFrames.getAsInt();
         mLastTime = SystemClock.elapsedRealtime();
         mLastCpu = cpuTicks();
         apply();
@@ -98,6 +99,8 @@ public class Medidor
             }
         });
     }
+
+    public void dispose() { mHandler.removeCallbacksAndMessages(null); }
 
     private void place()
     {
@@ -155,7 +158,7 @@ public class Medidor
     private void update()
     {
         long now = SystemClock.elapsedRealtime();
-        int frames = MainActivity.nativeGetDrawnFrames();
+        int frames = mFrames.getAsInt();
         long cpu = cpuTicks();
         float seconds = Math.max(0.001f, (now - mLastTime) / 1000f);
         if (mLabel.getVisibility() == View.VISIBLE) {

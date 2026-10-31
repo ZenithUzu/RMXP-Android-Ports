@@ -34,9 +34,16 @@ public class Partidas
 
     private final Activity mActivity;
     private final File mDataDir, mGameDir;
+    private final boolean mWeb;
 
     public Partidas(Activity activity, File gameDir)
     {
+        this(activity,gameDir,false);
+    }
+
+    public Partidas(Activity activity, File gameDir, boolean web)
+    {
+        mWeb=web;
         mActivity = activity;
         mDataDir = activity.getFilesDir();
         mGameDir = gameDir;
@@ -45,13 +52,13 @@ public class Partidas
     static boolean isSave(File f)
     {
         String n = f.getName().toLowerCase();
-        return f.isFile() && (n.endsWith(".rxdata") || n.endsWith(".rvdata") || n.endsWith(".rvdata2"));
+        return f.isFile() && (n.endsWith(".rxdata") || n.endsWith(".rvdata") || n.endsWith(".rvdata2") || n.endsWith(".rpgsave"));
     }
 
     private List<File> saves()
     {
         List<File> list = new ArrayList<>();
-        for (File dir : new File[] { mDataDir, mGameDir }) {
+        for (File dir : mWeb ? new File[] {mGameDir} : new File[] { mDataDir, mGameDir }) {
             File[] files = dir.listFiles();
             if (files != null)
                 for (File f : files)
@@ -141,9 +148,9 @@ public class Partidas
         int n = 0;
         for (Uri uri : uris) {
             String name = displayName(uri);
-            if (name == null || !name.toLowerCase().matches(".*\\.(rxdata|rvdata2?)$"))
+            if (name == null || name.contains("/") || name.contains("\\") || !name.toLowerCase().matches(".*\\.(rxdata|rvdata2?|rpgsave)$"))
                 continue;
-            File target = new File(gameDirSaves || new File(mGameDir, name).exists() ? mGameDir : mDataDir, name);
+            File target = new File(mWeb || gameDirSaves || new File(mGameDir, name).exists() ? mGameDir : mDataDir, name);
             if (target.exists()) // copia de seguridad de la partida que había antes
                 target.renameTo(new File(target.getPath() + ".respaldo"));
             try (InputStream in = mActivity.getContentResolver().openInputStream(uri); OutputStream out = new FileOutputStream(target)) {
@@ -294,7 +301,7 @@ public class Partidas
                 if (!isSave(f))
                     continue;
                 File enJuego = new File(mGameDir, f.getName());
-                File dentro = enJuego.exists() || gameDirSaves ? enJuego : new File(mDataDir, f.getName());
+                File dentro = mWeb || enJuego.exists() || gameDirSaves ? enJuego : new File(mDataDir, f.getName());
                 if (copiarSiMasNueva(f, dentro))
                     entraron++;
             }
@@ -348,19 +355,24 @@ public class Partidas
     {
         if (!mObservers.isEmpty())
             return;
-        for (File dir : new File[] { mDataDir, mGameDir }) {
+        for (File dir : mWeb ? new File[] {mGameDir} : new File[] { mDataDir, mGameDir }) {
             android.os.FileObserver o = new android.os.FileObserver(dir.getPath(),
                     android.os.FileObserver.CLOSE_WRITE | android.os.FileObserver.MOVED_TO) {
                 @Override
                 public void onEvent(int event, String path)
                 {
-                    if (path != null && path.toLowerCase().matches(".*\\.(rxdata|rvdata2?)$"))
+                    if (path != null && path.toLowerCase().matches(".*\\.(rxdata|rvdata2?|rpgsave)$"))
                         sincronizar();
                 }
             };
             o.startWatching();
             mObservers.add(o);
         }
+    }
+
+    public void dejarDeVigilar() {
+        for(android.os.FileObserver observer:mObservers)observer.stopWatching();
+        mObservers.clear();
     }
 
     private void toast(int text)

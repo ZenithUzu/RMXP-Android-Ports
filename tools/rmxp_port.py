@@ -90,6 +90,13 @@ def read_text(path):
 def game_info(root):
     """Devuelve dict con title, author, version leídos del juego."""
     info = {"title": os.path.basename(os.path.normpath(root)), "author": "", "version": ""}
+    for prefix in ("", "www/"):
+        system = os.path.join(root, prefix, "data", "System.json")
+        if os.path.isfile(system):
+            try:
+                info["title"] = json.loads(read_text(system)).get("gameTitle") or info["title"]
+            except (ValueError, OSError):
+                pass
     ini = rmxp_analyze.find(root, "Game.ini")
     if ini:
         m = re.search(r"^\s*Title\s*=\s*(.+?)\s*$", read_text(ini), re.M | re.I)
@@ -346,6 +353,19 @@ def stage_game(root, work, info, soundfont, log, ruby_lib=None, ligero=False, in
     shutil.copytree(largo(root), largo(game), ignore=shutil.ignore_patterns(
         "*.exe", "*.dll", "*.EXE", "*.DLL", "desktop.ini", "Thumbs.db", "*.url", "*.URL", "*.lnk"))
 
+    if engine["id"] == "mv":
+        with open(os.path.join(game, "portemon_runtime.json"), "w", encoding="utf-8") as stream:
+            json.dump({"engine": "mv", "root": engine["webRoot"]}, stream)
+        # Never include another machine's save files in a new installation.
+        for prefix in ("", "www/"):
+            shutil.rmtree(os.path.join(game, prefix, "save"), ignore_errors=True)
+        log("Motor: RPG Maker MV · Android System WebView · experimental")
+        return assets
+
+    # A source copied from an earlier MV export must never switch an RGSS APK's launcher.
+    runtime_marker = os.path.join(game, "portemon_runtime.json")
+    if os.path.isfile(runtime_marker):
+        os.remove(runtime_marker)
     patches = sorted(f for f in os.listdir(os.path.join(ANDROID, "patches")) if f.endswith(".rb"))
     for f in patches:
         shutil.copy2(os.path.join(ANDROID, "patches", f), game)
@@ -708,8 +728,6 @@ def port(root, author=None, version=None, title=None, icon=None, soundfont=None,
     """Proceso completo. Devuelve la ruta del APK."""
     if root.lower().endswith(".zip") and os.path.isfile(root):
         root = abrir_zip(root, log)
-    if not rmxp_analyze.find(root, "Game.ini"):
-        raise PortError("Esa carpeta no tiene Game.ini. Elige la carpeta principal del juego.")
     try:
         rmxp_analyze.engine_info(root, game_engine)
     except (ValueError, OSError) as error:
@@ -764,9 +782,9 @@ def abrir_zip(path, log=print):
         if d[len(dest):].count(os.sep) > 3:
             dirs[:] = []
             continue
-        if any(f.lower() == "game.ini" for f in files):
+        if any(f.lower() == "game.ini" for f in files) or os.path.isfile(os.path.join(d,"js","rpg_core.js")) or os.path.isfile(os.path.join(d,"www","js","rpg_core.js")):
             return d
-    raise PortError("Ese .zip no tiene Game.ini. Elige el .zip del juego (o su carpeta).")
+    raise PortError("No encontré un juego XP/VX/VX Ace o MV en ese ZIP.")
 
 
 @workspace_operation
@@ -908,7 +926,7 @@ def gui(initial=None):
         fields[key] = entry
 
     extras = section("03  /  RECURSOS", "Icono y música MIDI opcionales.")
-    engine_names = {"Automático": "auto", "RPG Maker XP": "xp", "RPG Maker VX": "vx", "RPG Maker VX Ace": "ace"}
+    engine_names = {"Automático": "auto", "RPG Maker XP": "xp", "RPG Maker VX": "vx", "RPG Maker VX Ace": "ace", "RPG Maker MV (experimental)": "mv"}
     engine_choice = tk.StringVar(value="Automático")
     label(extras, "Motor del juego", fg=C["liquen"], font=f_small).pack(fill="x")
     engine_picker = ttk.Combobox(extras, textvariable=engine_choice, values=list(engine_names), state="readonly")
@@ -950,7 +968,7 @@ def gui(initial=None):
             return
         try:
             detected = rmxp_analyze.engine_info(state["root"], engine_names[engine_choice.get()])
-            engine_hint.config(text="%s · RGSS%d · mkxp-z" % (detected["nombre"], detected["rgssVersion"]), fg=C["liquen"])
+            engine_hint.config(text=("MV · Android System WebView · experimental" if detected["id"] == "mv" else "%s · RGSS%d · mkxp-z" % (detected["nombre"], detected["rgssVersion"])), fg=C["liquen"])
             insurgence_toggle.config(state="normal" if detected["rgssVersion"] == 1 else "disabled")
             if detected["rgssVersion"] != 1:
                 insurgence.set(False)
@@ -1263,7 +1281,7 @@ def main():
     ap.add_argument("--autor"), ap.add_argument("--version"), ap.add_argument("--nombre")
     ap.add_argument("--icono", help="PNG para el icono"), ap.add_argument("--soundfont", help=".sf2 para MIDI")
     ap.add_argument("--motor", help="carpeta lib/ con el motor compilado (en vez de descargarlo)")
-    ap.add_argument("--motor-juego", choices=["auto", "xp", "vx", "ace"], default="auto", help="motor del juego (detección automática por defecto)")
+    ap.add_argument("--motor-juego", choices=["auto", "xp", "vx", "ace", "mv"], default="auto", help="motor del juego (detección automática por defecto)")
     ap.add_argument("--insurgence", action="store_true", help="perfil experimental para Insurgence/Detergent y Ruby antiguo")
     ap.add_argument("--ligero", action="store_true", help="ahorrar espacio: Graphics/Audio se leen del APK")
     ap.add_argument("--fondo-icono", choices=sorted(FONDOS_ICONO), default="gris", help="color detrás del icono")

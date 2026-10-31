@@ -215,6 +215,15 @@ ENGINES = {"xp": (1, "RPG Maker XP", "rxdata", "Game.rgssad"),
 
 def engine_info(root, choice="auto"):
     """Resolve one supported RGSS runtime and a usable script source, without changing files."""
+    # MV Windows exports keep the web game in www/; web exports use the root.
+    for prefix in ("", "www/"):
+        if all(os.path.isfile(os.path.join(root, prefix + name)) for name in
+               ("index.html", "js/rpg_core.js", "js/rpg_managers.js", "data/System.json")):
+            if choice in ("auto", "mv"):
+                return {"id": "mv", "nombre": "RPG Maker MV (experimental)",
+                        "rgssVersion": 0, "scripts": "", "archivo": None, "webRoot": prefix}
+    if choice == "mv":
+        raise ValueError("MV necesita index.html, js/rpg_core.js, js/rpg_managers.js y data/System.json en la raíz o www/.")
     if choice != "auto" and choice not in ENGINES:
         raise ValueError("Motor desconocido: " + str(choice))
     ini = find(root, "Game.ini")
@@ -279,6 +288,18 @@ def analyze(root, game_engine="auto"):
     r = {"carpeta": os.path.abspath(root), "problemas": [], "avisos": [], "info": {}}
     P, A, I = r["problemas"].append, r["avisos"].append, r["info"]
 
+    try:
+        engine = engine_info(root, game_engine)
+        if engine["id"] == "mv":
+            I["motor"] = "mv"
+            I["runtime"] = "Android System WebView"
+            A("MV experimental: requiere Android System WebView actualizado. Plugins de Node.js/NW.js y funciones en línea no están soportados.")
+            r["veredicto"] = "RPG Maker MV · experimental"
+            return r
+    except (ValueError, OSError) as error:
+        P(str(error))
+        r["veredicto"] = "No se pudo detectar el motor"
+        return r
     ini = find(root, "Game.ini")
     if not ini:
         P("No hay Game.ini: esta no parece la carpeta raiz del juego.")

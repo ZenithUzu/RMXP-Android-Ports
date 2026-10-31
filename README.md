@@ -18,6 +18,21 @@ solo.
 
 **[Inicio rápido](#cómo-portar-un-juego) · [Requisitos](#lo-que-necesitas-una-sola-vez) · [Diagnóstico](#si-algo-falla) · [Créditos](#créditos) · [Licencia](#licencia)**
 
+## Novedades 0.14: RPG Maker MV experimental
+
+Ya se puede elegir MV en **Motor del juego**, en PC y Android. Se detectan los
+juegos con `index.html`, `js/rpg_core.js`, `js/rpg_managers.js` y `data/System.json`,
+en la raíz o en `www/`. El APK usa Android System WebView y el JavaScript del
+propio juego, con los mismos controles, menú, personalización y gestor de partidas.
+El adaptador guarda archivos `.rpgsave` importables y exportables con ese gestor.
+No incluye el motor comercial ni ejecuta plugins de Node.js/NW.js o DLL de Windows;
+esta primera integración es para juegos sin funciones en línea. MZ queda pendiente.
+
+No se ejecutaron tests, APKs ni emuladores. Actions compila los cambios; el soporte
+se marca experimental hasta comprobar cada juego en el teléfono. Para actualizar
+juegos existentes, reconstruye sus APK **conservando la firma**.
+
+
 ## Sobre el proyecto
 
 Proyecto personal de **ZenithUzu**, desarrollado **por pasatiempo y sin fines de lucro** para aprender, experimentar y facilitar la creación de ports de RPG Maker para Android. Se mantiene en el tiempo libre; las actualizaciones y la atención de errores dependen de esa disponibilidad.
