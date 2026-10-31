@@ -18,6 +18,14 @@ solo.
 
 **[Inicio rápido](#cómo-portar-un-juego) · [Requisitos](#lo-que-necesitas-una-sola-vez) · [Diagnóstico](#si-algo-falla) · [Créditos](#créditos) · [Licencia](#licencia)**
 
+## Corrección 0.15: teclado de Essentials antiguo
+
+Se evita que la lectura Win32 vuelva a entrar en el propio lector de teclado del
+juego y se actualiza la entrada nativa antes de sus contadores. El cambio llega a
+los APK generados en PC y Android mediante la plantilla compartida. Corrige un
+defecto de compatibilidad relacionado con `PSystem_Controls`; el arranque completo
+de Detergent sigue pendiente de comprobar. Reconstruye el APK conservando la firma.
+
 ## Novedades 0.14: RPG Maker MV experimental
 
 Ya se puede elegir MV en **Motor del juego**, en PC y Android. Se detectan los

@@ -2,6 +2,15 @@
 # v16-v18) llaman funciones de Windows para el teclado, el tamaño de ventana, leer Game.ini,
 # etc. Aquí se responden las más comunes con lo equivalente; el resto devuelve 0.
 class RmxpWin32API
+  # Essentials replaces Input.pressex? with a Win32API reader. Keep the C methods,
+  # otherwise reading a key re-enters the game's partially initialized key arrays.
+  NATIVE_KEY_STATE = Input.method(:pressex?)
+  NATIVE_UPDATE = Input.method(:update)
+
+  def self.poll_input
+    NATIVE_UPDATE.call
+  end
+
   def initialize(dll, func, *_)
     @dll = File.basename(dll.to_s.tr("\\", "/")).downcase.delete(" _").sub(/\.dll\z/, "")
     @func = func.to_s.sub(/[AW]\z/, "") # GetPrivateProfileStringA -> GetPrivateProfileString
@@ -16,7 +25,7 @@ class RmxpWin32API
     end
     case @func
     when "GetAsyncKeyState", "GetKeyState"
-      Input.pressex?(a[0].to_i) ? 0x8000 : 0 # el motor entiende los códigos de tecla de Windows
+      NATIVE_KEY_STATE.call(a[0].to_i) ? 0x8000 : 0 # el motor entiende los códigos de tecla de Windows
     when "GetPrivateProfileString"           # (sección, clave, por defecto, búfer, tamaño, archivo)
       v = RmxpWin32API.ini(a[5], a[0], a[1]) || a[2].to_s
       a[3].replace(v[0, a[4].to_i - 1].to_s.ljust(a[3].size, "\0")) if a[3].is_a?(String)

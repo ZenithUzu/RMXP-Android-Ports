@@ -137,3 +137,24 @@ incorporado. Tampoco se ocultan recursos ausentes o dañados: el perfil sigue si
 experimental, no una garantía de que Insurgence y todos sus forks completen el juego.
 Las partidas online, todos los canales FMOD y bucles arbitrarios conservan las
 limitaciones documentadas arriba. No se ejecutaron pruebas, APKs ni emuladores.
+
+## Teclado antiguo de Essentials (0.15)
+
+El adaptador Win32 conservaba una llamada dinámica a `Input.pressex?`. Los scripts
+`PSystem_Controls` y `PokemonControls` antiguos redefinen ese método usando
+`GetAsyncKeyState`: volver a llamarlo desde el adaptador reentraba en el código del
+juego, incluso mientras estaba inicializando sus tablas de teclas. Se captura ahora
+el método nativo antes de evaluar los scripts del juego.
+
+Cuando se reconoce el lector antiguo (`@keystate`, `updateKeyState` y Win32), se
+inserta una actualización nativa de SDL al principio de su `Input.update`. Se
+conservan sus asignaciones y sus contadores; no se sustituyen comparaciones con
+`nil` ni se ocultan excepciones. El cambio se hace en memoria, sin añadir líneas
+ni modificar scripts originales o partidas. La plantilla compartida aplica la misma
+corrección a los APK creados en PC y Android.
+
+Referencia de la implementación antigua:
+[PSystem_Controls](https://github.com/griest024/essentials-sample-project/blob/d792b74bdceb737b8117e97d4a66651238fa1d9d/export/scripts/PSystem_Controls.rb).
+La captura de Detergent informa línea 217, pero no incluye su fuente exacta:
+la correspondencia exacta de esa línea y la ejecución posterior siguen pendientes
+de comprobar en el teléfono. No se ejecutaron tests, APKs ni emuladores.
