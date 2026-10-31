@@ -18,6 +18,15 @@ solo.
 
 **[Inicio rápido](#cómo-portar-un-juego) · [Requisitos](#lo-que-necesitas-una-sola-vez) · [Diagnóstico](#si-algo-falla) · [Créditos](#créditos) · [Licencia](#licencia)**
 
+## Corrección 0.16: nueva partida y tamaño de imagen
+
+El perfil experimental Insurgence/Detergent inicializa correctamente la parte
+nativa de LargePlane, cuyo destructor se llama al salir del menú inicial. También
+sincroniza el lienzo del motor con la resolución que declara el juego para evitar
+la imagen reducida y desplazada. Se conservan proporción, estiramiento, controles
+y ajustes de FPS. Reconstruye el APK con el perfil activado y la misma firma.
+Pendiente de comprobar en el teléfono; no se ejecutaron tests, APKs ni emuladores.
+
 ## Corrección 0.15: teclado de Essentials antiguo
 
 Se evita que la lectura Win32 vuelva a entrar en el propio lector de teclado del

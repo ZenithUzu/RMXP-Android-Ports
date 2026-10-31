@@ -8,6 +8,25 @@ if RmxpInsurgence::ENABLED
   raise "El perfil Insurgence necesita motor-v15 o posterior" unless System.respond_to?(:legacy_critical=)
   require "weakref"
 
+  # Sprite_Resizer may report 512x384 while the native XP canvas stays 640x480.
+  # Keep the game resolution and Android's final aspect/stretch scaling in agreement.
+  RmxpInsurgence::NATIVE_WIDTH = Graphics.method(:width)
+  RmxpInsurgence::NATIVE_HEIGHT = Graphics.method(:height)
+  RmxpInsurgence::NATIVE_RESIZE = Graphics.method(:resize_screen)
+  def RmxpInsurgence.sync_screen
+    width, height = Graphics.width, Graphics.height
+    return unless width.is_a?(Integer) && height.is_a?(Integer) &&
+      width.between?(1, 8192) && height.between?(1, 8192)
+    return if width == RmxpInsurgence::NATIVE_WIDTH.call && height == RmxpInsurgence::NATIVE_HEIGHT.call
+    RmxpInsurgence::NATIVE_RESIZE.call(width, height)
+    System.puts("RMXP Insurgence: resolución nativa #{width}x#{height}")
+  end
+  display_update = Graphics.method(:update)
+  Graphics.define_singleton_method(:update) do |*args|
+    RmxpInsurgence.sync_screen
+    display_update.call(*args)
+  end
+
   # The old BitmapCache WeakRef registers Ruby 1.8 finalizers that use Thread.critical.
   # Use MRI's maintained weak references, not locks from a GC/finalizer callback.
   if defined?($RGSS_SCRIPTS) && $RGSS_SCRIPTS.is_a?(Array)
@@ -17,6 +36,15 @@ if RmxpInsurgence::ENABLED
       if entry[1].to_s.include?("BitmapCache") && source.include?("@@id_rev_map") && source.include?("Thread.critical")
         source = source.sub(/^class WeakRef\b.*?(?=^class WeakHashtable\b)/m) do |old|
           "\n" * old.count("\n") # Preserve reported script line numbers.
+        end
+      end
+      # LargePlane uses a Sprite for drawing, but its dispose calls Plane#dispose.
+      # Initialize the inherited native Plane too; do not suppress disposal errors.
+      if entry[1].to_s.include?("SpriteWindow_sprites")
+        source = source.sub(/(^class LargePlane[ \t]*<[ \t]*Plane\b.*?^[ \t]*def initialize\(([a-zA-Z_]\w*)[ \t]*=[ \t]*nil\)[ \t]*\r?\n)([ \t]*)(@__sprite[ \t]*=[ \t]*Sprite\.new\(\2\))/m) do
+          fixed = "#{$1}#{$3}super(#{$2}); #{$4}"
+          System.puts("RMXP Insurgence: LargePlane inicializa Plane nativo")
+          fixed
         end
       end
       entry[3] = source

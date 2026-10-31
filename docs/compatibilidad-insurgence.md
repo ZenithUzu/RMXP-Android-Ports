@@ -158,3 +158,29 @@ Referencia de la implementación antigua:
 La captura de Detergent informa línea 217, pero no incluye su fuente exacta:
 la correspondencia exacta de esa línea y la ejecución posterior siguen pendientes
 de comprobar en el teléfono. No se ejecutaron tests, APKs ni emuladores.
+
+## Cierre del menú inicial y resolución (0.16)
+
+El log `inicio.txt` ya alcanza el menú y falla al iniciar partida, durante
+`pbEndScene → pbDisposeSpriteHash → AnimatedPlane#dispose → LargePlane#dispose`.
+La línea 892 de la implementación pública de
+[SpriteWindow_sprites](https://github.com/Dordevic/Pokemon-Open-Sky/blob/ad20f2cdd1be8dc1f3d793a04018e23114fd4d0e/Pokemon%20Open%20Sky/Scripts/SpriteWindow_sprites.rb)
+llama a `super` para destruir Plane, pero LargePlane sólo inicializa un Sprite.
+mkxp-z exige que el objeto nativo haya sido inicializado. El perfil inserta
+`super(viewport)` antes de crear ese Sprite, sólo cuando reconoce el constructor
+conocido de LargePlane. Conserva el destructor, los números de línea y la liberación
+de recursos; no captura ni oculta errores de MKXPError.
+
+El antiguo Sprite_Resizer también puede redefinir Graphics.width/height sin
+cambiar el tamaño del lienzo nativo. Se conservan los métodos nativos de consulta
+y resize_screen, y antes de dibujar se sincroniza la resolución cuando hay una
+diferencia. Esto evita dibujar un juego de 512×384 dentro de un lienzo 640×480,
+que deja espacio negro adicional abajo y a la derecha. No se fuerza una resolución
+fija, no se cambia el objetivo de FPS y se mantiene el estiramiento elegido en el
+menú. Las bandas laterales normales siguen existiendo al conservar la proporción
+original en pantallas anchas.
+
+Ambas correcciones son exclusivas del perfil experimental y se incluyen en la
+plantilla usada por PC y Android. En el log aparecen la inicialización corregida
+y los cambios de resolución. No se ejecutaron tests, APKs ni emuladores: falta
+confirmar la creación de partida y la presentación en el teléfono.
